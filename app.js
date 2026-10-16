@@ -970,6 +970,7 @@ routes.einstellungen = () => {
     ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
     ${acc('brand', 'tag-fill', 'Name der App', esc(brandFull()), brandEditorHTML())}
     ${acc('colors', 'palette2', 'Farben', `${esc(themeDef(s.theme).name)} · eure Farbwelt`, `<p class="small soft">Acht weiche Farbwelten oder eine eigene Kombination, dazu eine Lieblingsfarbe für Mama, Papa und das Baby.</p>${go('#/colors', 'Farben ändern')}`)}
+    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, Hessisch, Bayrisch oder Schwäbisch wählen', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('banner', 'image', 'Banner der Startseite', esc(bannerSub()), bannerBody)}
     ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
     ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
@@ -978,7 +979,6 @@ routes.einstellungen = () => {
     ${acc('city', 'geo-alt-fill', 'Ort für Tipps', esc(tipsCity()), `<p class="small soft">In welcher Stadt wohnt ihr? Für Frankfurt gibt es ausgewählte Anlaufstellen, für jeden anderen Ort sammelt ihr eigene.</p><label for="cityInput">Stadt oder Region</label><input id="cityInput" maxlength="40" value="${esc(s.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><div class="hstack gap-2 mt-2">${go('#/tips', 'Zu den Tipps')}</div>`)}
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
-    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, Hessisch, Bayrisch oder Schwäbisch wählen', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('export', 'box-arrow-up', 'Datenexport', 'Alles lesbar mitnehmen: JSON, CSV oder HTML', go('#/export', 'Daten exportieren'))}
     ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>

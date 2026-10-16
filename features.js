@@ -537,15 +537,15 @@ function storyData() {
   ] };
 }
 const fruitHue = name => [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+const storyColors = () => { const cs = getComputedStyle(document.documentElement); return { strong: cs.getPropertyValue('--primary-strong').trim() || '#0d3b24', text: cs.getPropertyValue('--text').trim() || '#1d3b2e' }; };
 function storySlideHTML(S, i) {
-  const sl = S.slides[i];
-  const art = sl.id === 'size' ? `<div class="st-circle"><div class="st-fruit" style="--fh:${fruitHue(S.fruit)}"><i class="st-leaf"></i></div></div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
-    : sl.id === 'dev' ? `<div class="st-egg" aria-hidden="true">${bi('heart-fill')}</div><p class="st-cap">Woche ${S.week}</p>`
-    : `<dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
+  const sl = S.slides[i], col = storyColors();
+  const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
+    : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong)}</div><p class="st-cap">Woche ${S.week}</p>`
+    : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
   return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
-}
-// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
-function drawStory(S, i) {
+}// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
+function drawStory(S, i, imgs = {}) {
   const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
   const bg = v('--bg') || '#fbf4f2', s2 = v('--surface-2') || '#f4e6e3', pri = v('--primary') || '#ae5f6a', strong = v('--primary-strong') || '#8b4752', text = v('--text') || '#3a2c2d', soft = v('--text-soft') || '#6e5a59', fam = (v('--font') || 'sans-serif'), sl = S.slides[i];
   const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, s2); g.addColorStop(1, bg); x.fillStyle = g; x.fillRect(0, 0, W, H);
@@ -555,21 +555,26 @@ function drawStory(S, i) {
   x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96));
   if (sl.id === 'size') {
     x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(W / 2, 1090, 360, 0, 7); x.fill();
+    if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 250, 840, 500, 500); else {
     const hue = fruitHue(S.fruit), gr = x.createRadialGradient(W / 2 - 70, 1030, 20, W / 2, 1090, 250); gr.addColorStop(0, `hsl(${hue} 80% 70%)`); gr.addColorStop(1, `hsl(${hue} 70% 45%)`); x.fillStyle = gr; x.beginPath(); x.arc(W / 2, 1110, 240, 0, 7); x.fill();
-    x.fillStyle = `hsl(${(hue + 110) % 360} 55% 38%)`; x.beginPath(); x.ellipse(W / 2 + 40, 850, 90, 38, -0.5, 0, 7); x.fill(); x.fillRect(W / 2 - 6, 845, 12, 50);
+    x.fillStyle = `hsl(${(hue + 110) % 360} 55% 38%)`; x.beginPath(); x.ellipse(W / 2 + 40, 850, 90, 38, -0.5, 0, 7); x.fill(); x.fillRect(W / 2 - 6, 845, 12, 50); }
     x.fillStyle = text; x.font = `700 56px ${fam}`; x.fillText(sl.lines.join(' · '), W / 2, 1560);
   } else if (sl.id === 'dev') {
-    x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF');
+    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 330, 760, 660, 792); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
     x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680);
   } else {
-    x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = 620 + Math.floor(n / 2) * 280; x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 90); });
+    if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 190, 0, 7); x.fill(); x.drawImage(im, cx - 150, 490, 300, im === imgs.baby ? 360 : 300); }); }
+    x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = (imgs.baby ? 960 : 620) + Math.floor(n / 2) * (imgs.baby ? 190 : 280); x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 80); });
     x.fillStyle = s2; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, 840, 30, 15) : x.rect(120, 1500, 840, 30); x.fill(); x.fillStyle = strong; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30, 15) : x.rect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30); x.fill();
   }
   x.textAlign = 'center'; heart(W / 2 - 200, H - 150, 1.1, getComputedStyle(document.documentElement).getPropertyValue('--heart-mama').trim() || pri); heart(W / 2 - 160, H - 150, 1.1, getComputedStyle(document.documentElement).getPropertyValue('--heart-papa').trim() || pri);
   x.fillStyle = strong; x.font = `700 42px ${fam}`; x.fillText(`${brandName()}  ${brandSub()}`, W / 2 + 40, H - 135);
   return c;
 }
-const storyFile = async (S, i) => { const blob = await new Promise(r => drawStory(S, i).toBlob(r, 'image/png')); return new File([blob], `${fileSafe(S.kid)}-woche-${S.week}-${S.slides[i].id}.png`, { type: 'image/png' }); };
+// SVG-Zeichnung als Bild laden (für das Bild zum Teilen)
+const svgImage = svg => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+async function storyImages(S, i) { const col = storyColors(), id = S.slides[i].id, out = {}; try { if (id !== 'dev') out.fruit = await svgImage(fruitSVG(S.fruit)); if (id !== 'size') out.baby = await svgImage(babySVG(col.text, '#ffffff', col.strong)); } catch { /* Ersatzzeichnung */ } return out; }
+const storyFile = async (S, i) => { const blob = await new Promise(async r => drawStory(S, i, await storyImages(S, i)).toBlob(r, 'image/png')); return new File([blob], `${fileSafe(S.kid)}-woche-${S.week}-${S.slides[i].id}.png`, { type: 'image/png' }); };
 function saveFileBlob(f) { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(f), download: f.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 async function shareImages(files, S) {
   const text = retitleStr(`${S.kid} in Woche ${S.week}: so groß wie ${FRUIT_ART[S.fruit] || 'ein'} ${S.fruit}. ${brandFull()}`);
