@@ -406,7 +406,7 @@ function maybeInstall() {
 function reloadApp() { location.reload(); }
 const GUIDE_STEPS = [
   ['house-heart-fill', 'Unten wohnt das Wichtigste', 'Heute ist euer Überblick, dazu das gemeinsame Tagebuch und das Fotoalbum. Daneben hat jede und jeder ein eigenes Plätzchen mit Namen und Foto.'],
-  ['grid-fill', 'Oben rechts wartet alles Weitere', 'Teilen, Mehr mit allen Funktionen und die Einstellungen, dort auch Farben, Schrift und Hell oder Dunkel. Und wenn ihr euch mal verlauft: Das Häuschen mit Herz bringt euch immer nach Hause.'],
+  ['grid-fill', 'Oben rechts wartet alles Weitere', 'Teilen, die Schatzkiste mit allen Funktionen und die Einstellungen, dort auch Farben, Schrift und Hell oder Dunkel. Und wenn ihr euch mal verlauft: Das Häuschen mit Herz bringt euch immer nach Hause.'],
   ['people-fill', 'Jeder weiß, was für ihn ist', 'Jede Seite trägt ein kleines Schild: Mama, Papa oder Gemeinsam. Gemeinsam erkennt ihr an den zwei Herzen in euren Lieblingsfarben.'],
   ['shield-check', 'Alles bleibt bei euch', 'Eure Erinnerungen liegen nur auf diesem Gerät. Mit der PIN schützt ihr sie, mit dem Backup sichert ihr sie.'],
   ['stars', 'Jeden Tag ein Lächeln', 'Täglich neue Sprüche, Ideen und kleine Aufgaben machen Mut. Schaut gemeinsam rein: Zu zweit macht es doppelt Freude.']

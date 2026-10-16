@@ -5,7 +5,7 @@ const CACHE = PREFIX + VERSION;
 // Mehrere Apps teilen sich die Domain (z. B. nosz.github.io/app1, /app2, /babylove): Dieser Service Worker fasst nur eigene Caches und nur Adressen unter seinem eigenen Pfad an
 const SCOPE_PATH = new URL(self.registration.scope).pathname;
 const SHELL = [
-  './', './index.html', './styles.css', './app.js', './content.js', './features.js', './extras.js', './printing.js',
+  './', './index.html', './styles.css', './app.js', './content.js', './features.js', './extras.js', './printing.js', './search.js',
   './vendor/bootstrap/bootstrap.min.css', './vendor/bootstrap/bootstrap.bundle.min.js',
   './vendor/bootstrap-icons/bootstrap-icons.min.css', './vendor/bootstrap-icons/fonts/bootstrap-icons.woff2',
   './vendor/bootstrap-icons/fonts/bootstrap-icons.woff',

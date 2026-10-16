@@ -905,3 +905,62 @@ body:not(.onboarding) #view > h1:first-child{position:sticky;top:calc(var(--topb
 .wish-send .btn{min-height:48px}
 
 .chip.chip-free{background:transparent;border:1.5px dashed var(--line);color:var(--text-soft)}
+
+/* Suche über alle Bereiche */
+.today-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.today-row .today { flex: 0 1 auto; margin: 0; }
+.search-box { position: relative; flex: 1 1 200px; min-width: 170px; }
+.search-box > .bi-search { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--primary-strong); pointer-events: none; z-index: 1; }
+.search-box input[type="search"] { width: 100%; height: 44px; padding: 0 40px 0 38px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); font-size: .95rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 10%, transparent); -webkit-appearance: none; appearance: none; }
+.search-box input[type="search"]::-webkit-search-cancel-button { display: none; }
+.search-box input[type="search"]:focus { outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; border-color: var(--primary); }
+.sq-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--primary-strong); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.sq-clear[hidden], .search-panel[hidden] { display: none; }
+.search-panel { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: min(92vw, 480px); max-height: min(70vh, 560px); overflow: auto; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 44px rgba(0, 0, 0, .22); padding: 8px; }
+.sr-head { padding: 6px 10px 8px; }
+.sr-group + .sr-group { margin-top: 4px; }
+.sr-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 4px; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; color: var(--text-soft); }
+.sr-clear { border: 0; background: none; color: var(--primary-strong); font-size: .78rem; text-transform: none; letter-spacing: 0; font-weight: 700; padding: 4px 6px; }
+.sr-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; color: var(--text); text-decoration: none; min-height: 48px; }
+.sr-item > .bi:first-child { flex: none; width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--primary-strong); font-size: 1.05rem; }
+.sr-item:hover, .sr-item.on { background: color-mix(in srgb, var(--primary) 12%, var(--surface)); }
+.sr-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sr-text b { font-weight: 700; overflow-wrap: anywhere; }
+.sr-text small { color: var(--text-soft); overflow-wrap: anywhere; }
+.sr-go { color: var(--text-soft); flex: none; }
+.sr-recent { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 10px 10px; }
+.sr-chip { border: 1.5px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 99px; padding: 6px 12px; font-size: .88rem; display: inline-flex; align-items: center; gap: 6px; }
+.sr-empty { display: flex; flex-direction: column; gap: 4px; padding: 14px 12px; text-align: center; }
+mark, .search-banner b { background: #ffe27a; color: #2a1a1a; border-radius: 4px; padding: 0 2px; box-shadow: 0 0 0 1px rgba(240, 163, 28, .5); }
+.search-banner b { font-weight: 800; }
+.search-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px 10px 14px; border-radius: 14px; background: color-mix(in srgb, #ffe27a 28%, var(--surface)); border: 1.5px solid #f0c24a; color: var(--text); font-size: .92rem; }
+.search-banner > span { flex: 1; min-width: 0; }
+.search-banner .btn { flex: none; }
+
+.sr-wrap{display:inline}
+
+.page-search{margin:4px 0 14px}.page-search .search-box{flex:none;width:100%}.page-search .search-panel{left:0;right:auto;width:100%}
+
+body:not(.onboarding) #view > .page-search + h1{position:sticky;top:calc(var(--topbar-h,60px) - 6px);z-index:10;margin-left:-16px;margin-right:-16px;padding:8px 16px;background:color-mix(in srgb,var(--bg) 94%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.page-search{margin:2px 0 8px}
+
+/* Suche steht neben dem Seitentitel (Schatzkiste, Einstellungen), auf dem Handy darüber */
+.page-search--inline { float: right; width: min(52%, 340px); margin: 14px 0 0 12px; }
+.page-search--inline .search-box { width: 100%; min-width: 0; }
+.page-search--inline .search-panel { left: auto; right: 0; width: min(92vw, 480px); }
+@media (max-width: 640px) { .page-search--inline { float: none; width: 100%; margin: 2px 0 8px; } .page-search--inline .search-panel { left: 0; right: auto; width: 100%; } }
+
+/* Suchfeld bleibt beim Scrollen oben stehen */
+.search-box.stuck { position: fixed; z-index: 30; margin: 0; flex: none; min-width: 0; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .18)); }
+.search-box.stuck .search-panel { top: calc(100% + 6px); }
+@media (max-width: 640px) { body:not(.onboarding) #view > .page-search + h1 { position: static; margin-left: 0; margin-right: 0; padding: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
+/* Obere Leiste mit Suche bleibt beim Scrollen fest unter der Kopfleiste (Startseite, Schatzkiste, Einstellungen) */
+.title-bar, .today-sticky { position: sticky; top: calc(var(--topbar-h, 60px) - 6px); z-index: 20; margin-left: -16px; margin-right: -16px; padding: 8px 16px; background: color-mix(in srgb, var(--bg) 94%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.title-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 4px; }
+.title-bar > h1 { flex: 1 1 auto; margin: 0; min-width: 0; }
+.title-bar > .search-box { flex: 0 1 340px; min-width: 200px; }
+.today-sticky { margin-top: 2px; margin-bottom: 8px; }
+.title-bar .search-panel, .today-sticky .search-panel { right: 16px; }
+@media (max-width: 640px) { .title-bar > .search-box { flex: 1 1 100%; } .title-bar .search-panel, .today-sticky .search-panel { left: 16px; right: 16px; width: auto; } }
+

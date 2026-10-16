@@ -393,7 +393,7 @@ function homeLayout() {
 const saveHome = (order, on) => { state.settings.home = { ...(state.settings.home || {}), order, on: [...on] }; save(); };
 
 /* ---------- Zur Startseite hinzufügen: jede Seite lässt sich als Kachel auf die Startseite legen ---------- */
-// Seiten, die als Favorit möglich sind: Tagebuch, Fotos und alle Funktionen aus "Mehr" (ohne Einstellungen)
+// Seiten, die als Favorit möglich sind: Tagebuch, Fotos und alle Funktionen aus der Schatzkiste (ohne Einstellungen)
 const pinInfo = () => { const m = { diary: ['journal-text', 'Tagebuch'], photos: ['images', 'Fotos'] }; HUB.forEach(([k, i, t]) => { if (k !== 'einstellungen' && k !== 'more') m[k] = [i, labelOf(t)]; }); return m; };
 const homePins = () => { const info = pinInfo(); return ((state.settings.home || {}).pins || []).filter(k => info[k]); };
 function setHomePin(key, wanted) {
@@ -472,7 +472,8 @@ routes.home = () => {
   const { order, on } = homeLayout();
   view.innerHTML = `
     <div class="greet">${avatarStack()}
-      <div class="greet-text"><p class="greet-hello">${greet}</p><p class="today" id="todayLine">${bi('calendar-heart')}${esc(todayLong())}</p></div></div>
+      <div class="greet-text"><p class="greet-hello">${greet}</p></div></div>
+    <div class="today-row today-sticky"><p class="today" id="todayLine">${bi('calendar-heart')}${esc(todayLong())}</p>${searchBoxHTML()}</div>
     <h1>${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
     ${heroHTML(p)}
     ${order.filter(id => on.has(id)).map(id => HOME_RENDER[id]()).join('')}
@@ -483,6 +484,7 @@ routes.home = () => {
   const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (papaName(q) === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };
   const r = $('#reveal');
   if (r) r.onclick = () => { $('#secret').classList.add('show'); clearTimeout(r.t); r.t = setTimeout(() => $('#secret')?.classList.remove('show'), 5000); };
+  if (typeof bindSearch === 'function') bindSearch();
 };
 
 // Einstellungen: Startseite einrichten (Vorlage, Bausteine ein/aus, Reihenfolge, Favoriten)
@@ -990,7 +992,7 @@ routes.einstellungen = () => {
     <b class="d-block mt-3">Vorschau</b><div id="bannerPrev" class="mt-2">${heroHTML() || '<div class="card center soft">Der Banner ist leer und wird auf der Startseite nicht angezeigt.</div>'}</div>
     <button type="button" class="btn btn-text mt-2" id="bnReset">Auf Standard zurücksetzen</button>`;
   view.innerHTML = `
-    <h1>Einstellungen</h1><p class="soft">Tippe einen Bereich an, dann klappt er auf. Es ist immer nur einer offen, so bleibt alles übersichtlich.</p>
+    <div class="title-bar"><h1>Einstellungen</h1>${searchBoxHTML()}</div><p class="soft">Tippe einen Bereich an, dann klappt er auf. Es ist immer nur einer offen, so bleibt alles übersichtlich.</p>
     <h2 class="set-group">Eure App</h2>
     ${acc('brand', 'tag-fill', 'Name der App', esc(brandFull()), brandEditorHTML())}
     ${isStandalone() ? '' : acc('install', 'download', 'App installieren?', 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet. Diese Frage erscheint nur, solange die App noch nicht installiert ist.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} Installieren oder Anleitung zeigen</button>`)}
@@ -1017,6 +1019,7 @@ routes.einstellungen = () => {
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
     <p class="version" id="appVersion">${esc(versionLine())}</p>
     <p class="version" id="appThanks">Viel Spaß und Freude wünscht euch Norbert Szpak</p>
+    <p class="version" id="appIdeas">Wenn du Ideen hast, wie die BABYLOVE-App noch besser wird, dann schreib mir einfach eine Mail: <a href="mailto:n.szpak@web.de">n.szpak@web.de</a></p>
     <p class="version" id="appOpen">Open-Source-Projekt: offen, ohne Werbung und ohne Tracking.</p>`;
   const panels = [...view.querySelectorAll('details.acc')];
   panels.forEach(d => d.addEventListener('toggle', () => {
@@ -1053,7 +1056,7 @@ routes.einstellungen = () => {
   const tsw = $('#toastSw'); if (tsw) tsw.onchange = () => { if (tsw.checked) s.toasts = true; else delete s.toasts; save(); const sub = $('[data-sub="hints"]'); if (sub) sub.textContent = tsw.checked ? 'An, kurze Bestätigung unten' : 'Aus, nur Probleme melden sich'; };
   const nr = $('#navReset'); if (nr) nr.onclick = () => { delete s.navItems; save(); buildNav(); render(); toast('Menü unten ist wieder im Standard'); };
   view.querySelectorAll('[data-navicon]').forEach(b => b.onclick = () => { if (b.dataset.navicon === 'photo') s.navIcon = 'photo'; else delete s.navIcon; save(); updateNavAvatar(); render(); toast(s.navIcon === 'photo' ? 'Im Menü stehen jetzt die Profilfotos.' : 'Im Menü stehen wieder die Herzen.'); });
-  fillStorage(); const cu = $('#checkUpdate'); if (cu) cu.onclick = async () => { cu.disabled = true; const r = await checkForUpdate(); cu.disabled = false; toast(r === 'new' ? 'Neue Version gefunden. Sie wird gleich angeboten.' : r === 'current' ? 'Ihr habt schon die neueste Version.' : r === 'none' ? 'Updates werden in der installierten oder online geöffneten App geprüft.' : 'Updates konnten gerade nicht geprüft werden. Bitte später noch einmal versuchen.'); };
+  fillStorage(); if (typeof bindSearch === 'function') bindSearch(); const cu = $('#checkUpdate'); if (cu) cu.onclick = async () => { cu.disabled = true; const r = await checkForUpdate(); cu.disabled = false; toast(r === 'new' ? 'Neue Version gefunden. Sie wird gleich angeboten.' : r === 'current' ? 'Ihr habt schon die neueste Version.' : r === 'none' ? 'Updates werden in der installierten oder online geöffneten App geprüft.' : 'Updates konnten gerade nicht geprüft werden. Bitte später noch einmal versuchen.'); };
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
   const range = $('#fsRange'), setScale = (v, commit) => { v = Math.min(FONT_SCALE.max, Math.max(FONT_SCALE.min, Math.round(v / FONT_SCALE.step) * FONT_SCALE.step)); s.fontScale = v; range.value = v; range.setAttribute('aria-valuetext', v + ' Prozent'); $('#fsValue').textContent = v; applyTheme(); if (commit) { save(); cheer('style'); } };
   range.addEventListener('input', () => setScale(+range.value, false)); range.addEventListener('change', () => setScale(+range.value, true));
@@ -1120,7 +1123,7 @@ const NAV_ITEMS = {
   mama: { route: 'settings', href: '#/settings', who: 'mama' },
   papa: { route: 'papa', href: '#/papa', who: 'partner' },
   photos: { route: 'photos', href: '#/photos', icon: 'images', label: 'Fotos' },
-  more: { route: 'more', href: '#/more', icon: 'grid-fill', label: 'Mehr' },
+  more: { route: 'more', href: '#/more', icon: 'grid-fill', label: 'Schatzkiste' },
   planner: { route: 'planner', href: '#/planner', icon: 'check2-square', label: 'Planer' },
   water: { route: 'water', href: '#/water', icon: 'droplet-half', label: 'Wasser' },
   yoga: { route: 'yoga', href: '#/yoga', icon: 'flower2', label: 'Yoga' },
@@ -1258,7 +1261,7 @@ const SETTINGS_SUB = new Set(['colors', 'backup', 'homeconfig', 'applock', 'quot
 // Unterseiten mit eigener Rücksprung-Adresse und passendem Menüpunkt unten
 const BACK = { diaryprint: ['#/diary', 'Tagebuch'], wishprint: ['#/wishes', 'Wunschliste'], lettersprint: ['#/letters', 'Briefe ans Baby'], wishlistprint: ['#/wishes', 'Wunschliste'] };
 const NAV_FOR = { diaryprint: 'diary', wishprint: 'more', wishlistprint: 'more', lettersprint: 'more', photos: 'diary' };
-// Wer eine Seite von der Startseite aus öffnet (Favorit, Schnellzugriff), landet mit Zurück auch wieder dort und nicht unter Mehr
+// Wer eine Seite von der Startseite aus öffnet (Favorit, Schnellzugriff), landet mit Zurück auch wieder dort und nicht in der Schatzkiste
 let lastKey = null, cameFromHome = false;
 function render() {
   const name = location.hash.replace(/^#\//, '') || 'home';
@@ -1269,7 +1272,7 @@ function render() {
   document.body.classList.toggle('onboarding', needsSetup);
   const inNav = [...document.querySelectorAll('#nav a')].map(a => a.dataset.route), navOn = inNav.includes(key) ? key : navKey;
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.route === navOn));
-  // Mehr und Einstellungen stehen oben rechts: dort zeigt sich, wo man gerade ist
+  // Schatzkiste und Einstellungen stehen oben rechts: dort zeigt sich, wo man gerade ist
   const topHome = $('#topHome'); if (topHome) topHome.classList.toggle('active', key === 'home');
   const topMore = $('#topMore'), topSet = $('#topSettings');
   if (topMore) topMore.classList.toggle('active', navKey === 'more' && key !== 'einstellungen');
@@ -1288,14 +1291,15 @@ function render() {
   }
   // Kennzeichnung unter der Überschrift: Mama, Papa oder gemeinsam (zwei Herzen)
   const au = PAGE_AUDIENCE[key];
-  if (h1 && au) h1.insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
-  if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) h1.insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
+  if (h1 && au) (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
+  if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
   // Immer gleiche Orientierung: Häuschen mit Herz (Startseite) und ein Schritt zurück in den Bereich
-  const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? (cameFromHome ? ['#/', 'Startseite'] : ['#/more', 'Mehr']) : null;
+  const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? (cameFromHome ? ['#/', 'Startseite'] : ['#/more', 'Schatzkiste']) : null;
   if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite" title="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back" aria-label="Zurück zu ${backTo[1]}">${bi('arrow-left-circle-fill')} Zurück zu ${backTo[1]}</a></div>`);
   if (backTo) view.insertAdjacentHTML('beforeend', `<div class="back-foot no-print"><a href="${backTo[0]}" class="back-bottom">${bi('arrow-left')} Zurück zu ${backTo[1]}</a></div>`);
   view.insertAdjacentHTML('beforeend', `<div class="brand-foot"><span data-brand-name>${esc(brandName())}</span> <i data-brand-by>${esc(brandSub())}</i></div>`);
   enhance(view);
+  if (typeof applySearchMark === 'function') applySearchMark(key);
   hydrateImages();
   if (key !== lastKey) window.scrollTo(0, 0);
   lastKey = key;

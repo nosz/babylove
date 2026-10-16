@@ -77,11 +77,12 @@ X.more = () => {
   const out = []; let open = false;
   HUB.forEach(h => { if (HUB_GROUPS[h[0]]) { if (open) out.push('</div>'); out.push(`<h2 class="hub-group">${HUB_GROUPS[h[0]]}</h2><div class="grid">`); open = true; } out.push(tile(h)); });
   if (open) out.push('</div>');
-  view.innerHTML = `${intro('Mehr', 'Alles, was eine Schwangerschaft so braucht. Und ein bisschen mehr.')}
+  view.innerHTML = `<div class="title-bar"><h1>Schatzkiste</h1>${searchBoxHTML()}</div><p class="soft">Alles, was eine Schwangerschaft so braucht. Und ein bisschen mehr.</p>
     ${out.join('')}
     <h2 class="hub-group">Empfehlungen</h2>
     <div class="card hub-ext-sw"><div class="hm-row" style="border:0;padding:0"><label class="keep hm-text" for="extSw"><b>Empfehlungen anzeigen</b><span class="small soft">Weitere Angebote, die in einem neuen Tab im Browser öffnen</span></label><input type="checkbox" role="switch" id="extSw" ${showExt ? 'checked' : ''} aria-label="Empfehlungen anzeigen"></div></div>
     ${showExt ? `<div class="grid" id="extGrid">${HUB_EXTERNAL.map(([u, i, t, d]) => `<a class="card link-card hub hub-ext" href="${u}" target="_blank" rel="noopener noreferrer">${i === 'fuel-heart' ? `<span class="fuel-heart" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" focusable="false"><rect x="6" y="40" width="28" height="4" rx="2" fill="currentColor"/><rect x="8" y="5" width="24" height="36" rx="5" fill="currentColor"/><rect x="12" y="10" width="16" height="14" rx="3" fill="#fff"/><path d="M20 21.6C14.6 18.2 14.2 14.6 16.6 13.4c1.7-.8 2.9 0 3.4 1 .5-1 1.7-1.8 3.4-1 2.4 1.2 2 4.8-3.4 8.2z" fill="var(--heart-mama,#c4566a)"/><rect x="12" y="29" width="16" height="3" rx="1.5" fill="#fff" opacity=".55"/><path d="M32 15h3.5a3 3 0 0 1 3 3v15a2.5 2.5 0 0 0 5 0V20l-3-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : bi(i)}<b>${t}</b><span class="small soft">${d}</span><span class="small soft hub-ext-note">${bi('box-arrow-up-right')} Öffnet im Browser, Internet nötig</span></a>`).join('')}</div>` : ''}`;
+  if (typeof bindSearch === 'function') bindSearch();
   $('#extSw').onchange = e => { state.settings.hideExt = !e.target.checked; save(); render(); };
 };
 
@@ -322,12 +323,15 @@ function praisePool(kind = 'mama') {
   if (!dia.length) return base;
   return state.settings.dialectFreq === 'often' ? dia : [...dia, ...dia, ...base.slice(0, Math.max(2, Math.round(dia.length * .6)))];
 }
-const praiseLine = kind => pick(praisePool(kind));function celebrate(kind = 'water') {
+const praiseLine = kind => pick(praisePool(kind));
+// Das Lob des Tages beim Wasserziel: wird beim Erreichen gewürfelt und gilt dann für den ganzen Tag (Karte und Banner zeigen dasselbe), morgen kommt ein neues
+function waterPraiseToday() { const d = iso(today()); if (!state.praiseToday || state.praiseToday.d !== d) { state.praiseToday = { d, text: praiseLine('water') }; save(); } return state.praiseToday.text; }function celebrate(kind = 'water') {
   confetti(220);
   const st = state.settings, who = kind === 'together' ? [st.mama, st.partner].map(v => String(v || '').trim()).filter(Boolean).join(' und ') : String(st.mama || '').trim();
+  const line = kind === 'together' ? praiseLine('together') : waterPraiseToday();
   const old = document.getElementById('praisePop'); if (old) old.remove();
   const el = document.createElement('div'); el.id = 'praisePop'; el.className = 'praise-pop'; el.setAttribute('role', 'status');
-  el.innerHTML = `<div class="pp-card"><span class="pp-ico">${bi('trophy-fill')}</span><b>Tagesziel erreicht!</b>${who ? `<span class="pp-name">Bravo, ${esc(who)}!</span>` : ''}<p>${esc(praiseLine(kind === 'together' ? 'together' : 'water'))}</p><span class="pp-stars" aria-hidden="true">${bi('stars')}</span><button type="button" class="btn btn-solid theme-primary">Danke, das tut gut!</button></div>`;
+  el.innerHTML = `<div class="pp-card"><span class="pp-ico">${bi('trophy-fill')}</span><b>Tagesziel erreicht!</b>${who ? `<span class="pp-name">Bravo, ${esc(who)}!</span>` : ''}<p>${esc(line)}</p><span class="pp-stars" aria-hidden="true">${bi('stars')}</span><button type="button" class="btn btn-solid theme-primary">Danke, das tut gut!</button></div>`;
   document.body.appendChild(el);
   const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
   el.onclick = close; setTimeout(() => { if (el.isConnected) close(); }, 6500);
@@ -340,10 +344,10 @@ X.water = () => {
   view.innerHTML = `${intro('Wasser-Tracker', 'Dein Körper besteht zu großen Teilen aus Wasser. Und gerade baust du noch einen dazu.')}
     <div class="card center ${n >= goal ? 'goal-card' : ''}"><div style="font-size:3rem;font-weight:800">${n} <span class="soft" style="font-size:1.2rem">/ ${goal} Gläser</span></div>
       <div class="progress my-3" role="progressbar" aria-label="Wasserziel" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${goal}"><div class="progress-bar" style="width:${Math.min(100, n / goal * 100)}%"></div></div>
-      ${n >= goal ? `<p class="soft mb-2">${n * 250} ml</p>${goalBanner(dailyPick(praisePool('water'), 'praise-water'))}` : `<p class="soft">${n * 250} ml · ${msgs}</p>`}
+      ${n >= goal ? `<p class="soft mb-2">${n * 250} ml</p>${goalBanner(waterPraiseToday())}` : `<p class="soft">${n * 250} ml · ${msgs}</p>`}
       <div class="hstack gap-2 justify-content-center"><button class="btn btn-subtle theme-secondary" id="minus" aria-label="Ein Glas weniger">${bi('dash-lg')}</button><button class="btn btn-solid theme-primary" id="plus" style="min-width:140px">${bi('droplet-fill')} Glas getrunken</button></div></div>
     <div class="card"><label for="goal" class="form-label">Tagesziel (Gläser à 250 ml)</label><input id="goal" type="number" min="1" max="20" value="${goal}"><p class="small soft mt-2 mb-0">Wie viel für dich passt, klärst du mit Arzt oder Hebamme.</p></div>`;
-  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); celebrate('water'); toast('Tagesziel erreicht! ' + praiseLine('water')); } else cheer('water'); };
+  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); celebrate('water'); toast('Tagesziel erreicht! ' + waterPraiseToday()); } else cheer('water'); };
   $('#minus').onclick = () => { state.water[d] = Math.max(0, n - 1); save(); render(); };
   $('#goal').onchange = e => { state.waterGoal = Math.min(20, Math.max(1, +e.target.value || 8)); save(); render(); };
 };
