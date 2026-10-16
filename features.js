@@ -36,6 +36,7 @@ const shareApp = () => shareThing({
 /* ---------- Hub ---------- */
 const HUB = [
   ['partner', 'people-fill', 'Partner-Modus', 'Wochenstand und wie du richtig gut unterstützt'],
+  ['photos', 'images', 'Fotoalbum', 'Bilder mit Woche und Beschriftung'],
   ['letters', 'envelope-heart', 'Briefe ans Baby', 'Text oder Sprachnachricht für später'],
   ['names', 'tags', 'Namensfinder', 'Favoriten, gemeinsam abstimmen'],
   ['milestones', 'stars', 'Meilensteine', 'Mit Foto, zum Teilen'],
@@ -56,10 +57,7 @@ const HUB = [
 ];
 X.more = () => {
   view.innerHTML = `${intro('Mehr', 'Alles, was eine Schwangerschaft so braucht. Und ein bisschen mehr.')}
-    <div class="grid">${HUB.map(([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${t}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`).join('')}</div>
-    <button class="btn btn-solid theme-primary w-100" id="shareApp">${bi('share-fill')} BABYLOVE teilen</button>
-    <p class="small soft center" style="margin-top:8px">Teilt nur den Link zur App, keine deiner Daten.</p>`;
-  $('#shareApp').onclick = shareApp;
+    <div class="grid">${HUB.map(([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${t}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`).join('')}</div>`;
 };
 
 /* ---------- Partner-Modus ---------- */
@@ -270,17 +268,33 @@ X.vits = () => {
   $('#vf').onsubmit = e => { e.preventDefault(); v.push({ id: uid(), name: $('#vn').value.trim() }); save(); render(); cheer('add'); };
 };
 
+/* ---------- Konfetti und Erfolgsmeldung, wenn ein Tagesziel erreicht ist ---------- */
+// Konfetti regnet kurz über den Bildschirm (nicht bei "Bewegung reduzieren"), liefert die Zahl der Teilchen zurück
+function confetti(n = 70) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+  document.querySelectorAll('.confetti').forEach(c => c.remove());
+  const root = getComputedStyle(document.documentElement), cols = ['--primary', '--accent', '--heart-mama', '--heart-papa', '--heart-kid', '--ok'].map(v => root.getPropertyValue(v).trim()).filter(Boolean);
+  const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i'), r = Math.random;
+    p.style.cssText = `left:${(r() * 100).toFixed(1)}%;background:${cols[i % cols.length]};--x:${Math.round((r() - .5) * 160)}px;--r:${Math.round(r() * 900 - 450)}deg;--d:${(2.4 + r() * 1.6).toFixed(2)}s;--delay:${(r() * .6).toFixed(2)}s;width:${6 + Math.round(r() * 5)}px;height:${9 + Math.round(r() * 7)}px`;
+    if (i % 4 === 0) p.style.borderRadius = '50%';
+    box.appendChild(p);
+  }
+  document.body.appendChild(box); setTimeout(() => box.remove(), 4600); return n;
+}
+const goalBanner = (text, title = 'Tagesziel erreicht!') => `<div class="goal-win" role="status">${bi('trophy-fill')}<div><b>${esc(title)}</b><span>${esc(text)}</span></div></div>`;
 /* ---------- Wasser ---------- */
 X.water = () => {
   const d = iso(today()), n = state.water[d] || 0, goal = state.waterGoal || 8;
   const msgs = n === 0 ? 'Noch trocken wie die Wüste. Auf geht’s!' : n < goal ? 'Weiter so, das Baby schwimmt sich gerade warm.' : 'Ziel erreicht! Du bist ein Wasserfall der Motivation.';
   view.innerHTML = `${intro('Wasser-Tracker', 'Dein Körper besteht zu großen Teilen aus Wasser. Und gerade baust du noch einen dazu.')}
-    <div class="card center"><div style="font-size:3rem;font-weight:800">${n} <span class="soft" style="font-size:1.2rem">/ ${goal} Gläser</span></div>
+    <div class="card center ${n >= goal ? 'goal-card' : ''}"><div style="font-size:3rem;font-weight:800">${n} <span class="soft" style="font-size:1.2rem">/ ${goal} Gläser</span></div>
       <div class="progress my-3" role="progressbar" aria-label="Wasserziel" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${goal}"><div class="progress-bar" style="width:${Math.min(100, n / goal * 100)}%"></div></div>
-      <p class="soft">${n * 250} ml · ${msgs}</p>
+      ${n >= goal ? `<p class="soft mb-2">${n * 250} ml</p>${goalBanner('Du bist ein Wasserfall der Motivation.')}` : `<p class="soft">${n * 250} ml · ${msgs}</p>`}
       <div class="hstack gap-2 justify-content-center"><button class="btn btn-subtle theme-secondary" id="minus" aria-label="Ein Glas weniger">${bi('dash-lg')}</button><button class="btn btn-solid theme-primary" id="plus" style="min-width:140px">${bi('droplet-fill')} Glas getrunken</button></div></div>
     <div class="card"><label for="goal" class="form-label">Tagesziel (Gläser à 250 ml)</label><input id="goal" type="number" min="1" max="20" value="${goal}"><p class="small soft mt-2 mb-0">Wie viel für dich passt, klärst du mit Arzt oder Hebamme.</p></div>`;
-  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal) toast('Wasserziel geschafft. Du bist ein Wasserfall der Motivation!'); else cheer('water'); };
+  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); confetti(); toast('Tagesziel erreicht! Du bist ein Wasserfall der Motivation.'); } else cheer('water'); };
   $('#minus').onclick = () => { state.water[d] = Math.max(0, n - 1); save(); render(); };
   $('#goal').onchange = e => { state.waterGoal = Math.min(20, Math.max(1, +e.target.value || 8)); save(); render(); };
 };
@@ -408,14 +422,14 @@ function togetherCard() {
     <p class="mt-2 mb-2">${esc(idea[0])}</p>
     ${idea[1] ? `<a class="tg-go" href="#/${idea[1]}">Los geht’s ${bi('arrow-right')}</a>` : ''}
     <div class="hstack gap-2">${person('mama')}${person('partner')}</div>
-    <div class="small soft mt-2">${msg}</div><div class="tg-dots mt-2" aria-label="Letzte 7 Tage">${dots}</div></div>`;
+    ${both ? goalBanner(msg) : `<div class="small soft mt-2">${msg}</div>`}<div class="tg-dots mt-2" aria-label="Letzte 7 Tage">${dots}</div></div>`;
 }
 function bindTogether() {
   view.querySelectorAll('[data-tg]').forEach(b => b.onclick = () => {
     const day = iso(today()); state.together = state.together || {};
     const t = state.together[day] = state.together[day] || {}, who = b.dataset.tg, was = togetherDone(day);
     t[who] = !t[who]; save(); render();
-    if (!was && togetherDone(day)) toast(pick(TOGETHER_DONE));
+    if (!was && togetherDone(day)) { confetti(); toast(pick(TOGETHER_DONE)); }
   });
 }
 

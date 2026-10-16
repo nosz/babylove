@@ -220,7 +220,8 @@ function showSplash() {
 }
 
 function appStart() {
-  if (lockOn() && cryptoOk()) showLock(() => { showSplash(); setTimeout(maybeGuide, 500); }); else { showSplash(); setTimeout(maybeGuide, 500); }
+  const go = () => { showSplash(); setTimeout(maybeGuide, 500); setTimeout(maybeInstall, 4500); };
+  if (lockOn() && cryptoOk()) showLock(go); else go();
 }
 document.addEventListener('visibilitychange', () => {
   if (!lockOn() || !cryptoOk()) return;
@@ -328,13 +329,55 @@ EXTRA_ROUTES.privacy = () => {
     <p class="small soft">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
     <p class="version" id="appVersion">${esc(versionLine())}</p>`;
 };
+/* ==================== App installieren (PWA) ==================== */
+// Fragt einmal freundlich nach, ob BABYLOVE als App auf den Startbildschirm soll. Nur im Browser, nie wenn schon installiert, höchstens dreimal im Abstand von 7 Tagen, jederzeit wieder in den Einstellungen.
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+window.addEventListener('appinstalled', () => { installEvt = null; if (typeof state !== 'undefined') { state.settings.installAsk = { ...(state.settings.installAsk || {}), done: true }; save(); } });
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const installPlatform = () => { const ua = navigator.userAgent || ''; if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios'; return /Android/.test(ua) ? 'android' : 'desktop'; };
+const INSTALL_BENEFITS = [
+  ['lightning-charge-fill', 'Ein Tipp, und ihr seid drin', 'Das Symbol liegt auf dem Startbildschirm, wie bei jeder anderen App.'],
+  ['wifi-off', 'Funktioniert auch ohne Internet', 'Perfekt für Funklöcher im Wartezimmer oder im Kreißsaal.'],
+  ['phone', 'Mehr Platz, keine Browserleiste', 'Die App füllt den ganzen Bildschirm und fühlt sich richtig gut an.'],
+  ['shield-check', 'Eure Daten bleiben bei euch', 'Die Installation ändert daran nichts. Alles bleibt auf diesem Gerät.']
+];
+const INSTALL_STEPS = {
+  ios: ['Tippe unten in Safari auf das Teilen-Symbol, das Quadrat mit dem Pfeil nach oben.', 'Scrolle ein Stück und wähle „Zum Home-Bildschirm“.', 'Tippe oben rechts auf „Hinzufügen“. Fertig.'],
+  android: ['Tippe oben rechts im Browser auf die drei Punkte.', 'Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.', 'Bestätige mit „Installieren“. Fertig.'],
+  desktop: ['Suche in der Adressleiste das Installieren-Symbol, einen Monitor mit Pfeil, oder öffne das Browser-Menü.', 'Wähle „BABYLOVE installieren“ oder „Seite als App installieren“.', 'Bestätige mit „Installieren“. Fertig.']
+};
+function showInstall(manual) {
+  if (sheet.open) return;
+  const plat = installPlatform(), s = state.settings, who = [s.mama, s.partner].filter(Boolean).map(esc).join(' &amp; ') || 'ihr zwei', can = !!installEvt;
+  openSheet(`<div class="guide-head"><div class="guide-heart">${duoHearts()}</div><div class="guide-brand"><span data-brand-name>${esc(brandName())}</span> <i data-brand-by>${esc(brandSub())}</i></div>
+    <h2>${manual ? 'App installieren' : `${who}, soll BABYLOVE auf euren Startbildschirm?`}</h2><p class="soft mb-0">Macht aus eurer Seite eine richtige App. Kostenlos, ohne App-Store und jederzeit wieder entfernbar.</p></div>
+    <ol class="guide-list">${INSTALL_BENEFITS.map(([icon, title, text]) => `<li><div class="guide-ico">${bi(icon)}</div><div><b>${esc(title)}</b><p class="small soft mb-0">${esc(text)}</p></div></li>`).join('')}</ol>
+    ${can ? '' : `<div class="install-steps"><b>So geht’s auf ${plat === 'ios' ? 'dem iPhone oder iPad' : plat === 'android' ? 'Android' : 'dem Computer'}</b><ol class="small mb-0">${INSTALL_STEPS[plat].map(t => `<li>${esc(t)}</li>`).join('')}</ol></div>`}
+    ${can ? `<button class="btn btn-solid theme-primary w-100 mt-2" id="instGo" type="button">${bi('download')} Jetzt installieren</button>` : ''}
+    ${manual ? `<button class="btn ${can ? 'btn-text' : 'btn-solid theme-primary'} w-100 mt-2" id="instClose" type="button">Schließen</button>`
+      : `<div class="hstack gap-2 mt-2"><button class="btn btn-subtle theme-secondary flex-grow-1" id="instLater" type="button">Später erinnern</button><button class="btn btn-text flex-grow-1" id="instNever" type="button">Nicht mehr fragen</button></div>`}`, el => {
+    const ask = () => state.settings.installAsk || {};
+    $('#instGo', el)?.addEventListener('click', async () => { const ev = installEvt; installEvt = null; closeSheet(); try { await ev.prompt(); const r = await ev.userChoice; if (r && r.outcome === 'accepted') toast('BABYLOVE ist installiert. Viel Freude damit!'); } catch { /* Abbruch */ } });
+    $('#instClose', el)?.addEventListener('click', closeSheet);
+    $('#instLater', el)?.addEventListener('click', closeSheet); $('#instNever', el)?.addEventListener('click', () => { state.settings.installAsk = { ...ask(), never: true }; save(); closeSheet(); toast('Alles klar, wir fragen nicht mehr. In den Einstellungen findet ihr „App installieren“ jederzeit.'); });
+  });
+  if (!manual) { const a = state.settings.installAsk || {}; state.settings.installAsk = { ...a, at: iso(today()), n: (a.n || 0) + 1 }; save(); }
+}
+function maybeInstall() {
+  const s = state.settings, a = s.installAsk || {};
+  if (!s.dueDate || !s.guideSeen || a.never || a.done || (a.n || 0) >= 3 || isStandalone() || !window.isSecureContext || appLocked || $('#splash') || sheet.open) return;
+  if (a.at && daysSince(a.at) < 7) return;
+  try { if (sessionStorage.getItem('bl-install')) return; sessionStorage.setItem('bl-install', '1'); } catch { /* ohne Speicher trotzdem fragen */ }
+  showInstall(false);
+}
 /* ==================== Kurzanleitung: sofort verstehen ==================== */
 // Erscheint einmal nach dem Einrichten, ist jederzeit in den Einstellungen wieder erreichbar.
 // Seite neu laden (als eigene Funktion, damit Tests das Neuladen abfangen können)
 function reloadApp() { location.reload(); }
 const GUIDE_STEPS = [
   ['house-heart-fill', 'Unten wohnt das Wichtigste', 'Heute ist euer Überblick, dazu das gemeinsame Tagebuch und das Fotoalbum. Daneben hat jede und jeder ein eigenes Plätzchen mit Namen und Foto.'],
-  ['grid-fill', 'Oben rechts wartet alles Weitere', 'Teilen, Hell oder Dunkel, Mehr mit allen Funktionen und die Einstellungen. Und wenn ihr euch mal verlauft: Das Häuschen mit Herz bringt euch immer nach Hause.'],
+  ['grid-fill', 'Oben rechts wartet alles Weitere', 'Teilen, Mehr mit allen Funktionen und die Einstellungen, dort auch Farben, Schrift und Hell oder Dunkel. Und wenn ihr euch mal verlauft: Das Häuschen mit Herz bringt euch immer nach Hause.'],
   ['people-fill', 'Jeder weiß, was für ihn ist', 'Jede Seite trägt ein kleines Schild: Für Mama, Für Papa oder Gemeinsam. Gemeinsam erkennt ihr an den zwei Herzen in euren Lieblingsfarben.'],
   ['shield-check', 'Alles bleibt bei euch', 'Eure Erinnerungen liegen nur auf diesem Gerät. Mit der PIN schützt ihr sie, mit dem Backup sichert ihr sie.'],
   ['stars', 'Jeden Tag ein Lächeln', 'Täglich neue Sprüche, Ideen und kleine Aufgaben machen Mut. Schaut gemeinsam rein: Zu zweit macht es doppelt Freude.']
@@ -348,5 +391,5 @@ function showGuide() {
     <button class="btn btn-solid theme-primary w-100 mt-2" id="guideOk" type="button">Los geht’s, wir freuen uns!</button>`, el => {
     $('#guideOk', el).onclick = () => { state.settings.guideSeen = true; save(); closeSheet(); cheer('save'); };
   });
-  sheet.addEventListener('close', () => { if (!state.settings.guideSeen) { state.settings.guideSeen = true; save(); } }, { once: true });
+  sheet.addEventListener('close', () => { if (!state.settings.guideSeen) { state.settings.guideSeen = true; save(); } setTimeout(maybeInstall, 1500); }, { once: true });
 }function maybeGuide() { if (state.settings.dueDate && !state.settings.guideSeen && !appLocked && !$('#splash') && !sheet.open) showGuide(); }

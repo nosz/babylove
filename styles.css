@@ -622,3 +622,36 @@ a.link-card.hub .aud { margin-top: 8px; }
 .avatar img { object-position: 50% 30%; }
 img[data-img][style*="width:100%"] { max-height: 72vh; object-fit: contain; background: var(--surface-2); }
 .photo-slots .slot img { object-fit: cover; object-position: 50% 30%; }
+
+/* App installieren */
+.install-steps { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.install-steps ol { padding-left: 1.2rem; margin-top: 6px; }
+
+/* Untere Navigation: weicher statt hart (runde Ecken, sanfter Schatten, leicht durchscheinend) */
+#nav { background: color-mix(in srgb, var(--surface) 94%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 0; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px color-mix(in srgb, var(--primary) 16%, transparent), 0 -1px 0 color-mix(in srgb, var(--line) 60%, transparent); padding-top: 4px; }
+#nav a { font-weight: 600; letter-spacing: .01em; transition: color .2s ease; }
+#nav a i { transition: background .25s ease, transform .25s ease; }
+#nav a.active i { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+@media (prefers-reduced-motion: reduce) { #nav a, #nav a i { transition: none; } }
+
+/* Erfolgsmeldung und Konfetti */
+.goal-win { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; margin: 6px 0 12px; border-radius: 16px; background: color-mix(in srgb, var(--ok) 14%, var(--surface)); border: 2px solid var(--ok); color: var(--text); animation: goal-pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
+.goal-win > .bi { flex: none; font-size: 2rem; color: var(--ok); }
+.goal-win b { display: block; font-size: 1.1rem; } .goal-win span { display: block; color: var(--text-soft); font-size: .92rem; }
+.goal-card { border-color: var(--ok); }
+.together.done { border-color: var(--ok); }
+@keyframes goal-pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -16px; display: block; border-radius: 2px; opacity: 0; animation: confetti-fall var(--d, 3s) cubic-bezier(.25, .6, .4, 1) var(--delay, 0s) forwards; }
+@keyframes confetti-fall { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 1; } 85% { opacity: 1; } 100% { transform: translate3d(var(--x, 0), 108vh, 0) rotate(var(--r, 360deg)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } .goal-win { animation: none; } }
+
+/* Menü unten: Profilfotos größer, mit Ring in der Lieblingsfarbe */
+#nav a img.avatar-nav { width: 32px; height: 32px; border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
+#navMeImg { box-shadow: 0 0 0 2px var(--heart-mama, var(--line)) !important; } #navPaImg { box-shadow: 0 0 0 2px var(--heart-papa, var(--line)) !important; }
+#nav a.active img.avatar-nav { transform: scale(1.08); }
+#nav a.active { color: var(--primary-strong); font-weight: 800; }
+
+/* Profilfoto im Menü: Bild wird rund abgeschnitten (bei overflow: visible ragt ein Bild mit object-fit sonst eckig heraus) */
+img.avatar, #nav a img.avatar-nav, .avatar img, .slot img { overflow: hidden; border-radius: 50%; }
+.slot img { border-radius: 14px; }

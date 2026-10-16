@@ -84,7 +84,7 @@ function toast(msg) {
 /* ---------- Speicher: Daten in localStorage, Bilder in IndexedDB (nur lokal) ---------- */
 const KEY = 'babylove:v1';
 const emptyState = () => ({
-  settings: { dueDate: '', nick: 'Krümel', secretName: '', mama: '', partner: '', theme: 'rose', mode: 'auto' },
+  settings: { dueDate: '', nick: 'Krümel', secretName: '', mama: '', partner: '', theme: 'mauve', mode: 'auto' },
   diary: [], photos: [], todos: DEFAULT_TODOS.map(text => ({ id: uid(), text, done: false })), appts: [],
   together: {}, letters: [], names: [], wishes: [], lists: {}, water: {}, waterGoal: 8, vits: [], vitLog: {}, contacts: [], pass: [], baby: [], sleepStart: null,
   milestones: MEILENSTEINE.map(([id, title, icon]) => ({ id, title, icon, date: '', note: '', photoId: null }))
@@ -221,7 +221,7 @@ const hexToHsl = hex => {
 };
 // Hell: Werte aus THEME_DEFS. Dunkel: aus dem Farbton der Primärfarbe abgeleitet (helle Primärfarbe, dunkle Schrift darauf).
 // Eigene Farbkombination: Hauptfarbe, Akzent und Hintergrund-Ton frei wählbar. Texte und Flächen werden automatisch so berechnet, dass sie gut lesbar bleiben.
-const themeDef = id => id === 'custom' ? customThemeDef() : (THEME_DEFS[id] || THEME_DEFS.rose);
+const themeDef = id => id === 'custom' ? customThemeDef() : (THEME_DEFS[id] || THEME_DEFS.mauve);
 const CUSTOM_DEFAULT = { primary: '#A0537A', accent: '#E3B27A', bg: '#FAF3F6' };
 const customColors = () => { const c = state.settings.customTheme || {}; return { primary: isHex(c.primary) ? c.primary.toUpperCase() : CUSTOM_DEFAULT.primary, accent: isHex(c.accent) ? c.accent.toUpperCase() : CUSTOM_DEFAULT.accent, bg: isHex(c.bg) ? c.bg.toUpperCase() : CUSTOM_DEFAULT.bg }; };
 function customThemeDef() {
@@ -280,7 +280,7 @@ function fontScale() {
 }
 function applyTheme() {
   const s = state.settings, root = document.documentElement;
-  if (!THEME_DEFS[s.theme] && s.theme !== 'custom') s.theme = 'rose';
+  if (!THEME_DEFS[s.theme] && s.theme !== 'custom') s.theme = 'mauve';
   root.dataset.theme = s.theme;
   const dark = s.mode === 'dark' || (s.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   root.dataset.mode = dark ? 'dark' : 'light';
@@ -740,7 +740,8 @@ const kidPhotoBlock = () => { const list = photosOf('kid');
     <p class="small soft mt-2 mb-0">Zum Beispiel das Ultraschallbild oder später ein Foto von ${nick()}. Bis zu ${MAX_PHOTOS} Bilder, sie bleiben auf diesem Gerät und werden automatisch verkleinert.</p></div>`; };
 const personBlock = who => {
   const s = state.settings, w = WHO[who], list = photosOf(who), inputId = who === 'mama' ? 'sm' : 'sp';
-  const slots = slotsHTML(who, list); data-person="${who}">
+  const slots = slotsHTML(who, list);
+  return `<div class="card person-form" data-person="${who}">
     <label for="${inputId}">Name</label>
     <input id="${inputId}" value="${esc(s[w.name])}" autocomplete="given-name" maxlength="30" placeholder="${who === 'mama' ? 'Dein Name, z. B. Sarah' : 'Dein Name, z. B. Norbert'}">
     <label class="keep form-label mt-3" for="${who}-title">Anrede in der App</label>
@@ -866,6 +867,7 @@ routes.einstellungen = () => {
     ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
     ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
     ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
+    ${acc('install', 'download', 'App installieren', isStandalone() ? 'Schon installiert, schön!' : 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} ${isStandalone() ? 'So funktioniert es' : 'Installieren oder Anleitung zeigen'}</button>`)}
     ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
@@ -880,6 +882,7 @@ routes.einstellungen = () => {
     else if (settingsOpen === d.dataset.acc) settingsOpen = null;
   }));
   const g = $('#openGuide'); if (g) g.onclick = showGuide;
+  const oi = $('#openInstall'); if (oi) oi.onclick = () => showInstall(true);
   bindBrandEditor();
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
   const range = $('#fsRange'), setScale = (v, commit) => { v = Math.min(FONT_SCALE.max, Math.max(FONT_SCALE.min, Math.round(v / FONT_SCALE.step) * FONT_SCALE.step)); s.fontScale = v; range.value = v; range.setAttribute('aria-valuetext', v + ' Prozent'); $('#fsValue').textContent = v; applyTheme(); if (commit) { save(); cheer('style'); } };
@@ -1009,7 +1012,7 @@ function applyBrand() {
   const link = document.querySelector('link[rel="manifest"]'); if (!link) return;
   if (isDefaultBrand()) { if (brandManifestUrl) { URL.revokeObjectURL(brandManifestUrl); brandManifestUrl = null; } if (link.getAttribute('href') !== 'manifest.webmanifest') link.setAttribute('href', 'manifest.webmanifest'); return; }
   const base = new URL('./', location.href).href, u = p => new URL(p, location.href).href;
-  const m = { name: full, short_name: name.length > 30 ? name.slice(0, 29) + '…' : name, description: 'Begleite deine Schwangerschaft mit Liebe, Humor und eigenen Bildern.', lang: 'de', id: base, start_url: base + 'index.html', scope: base, display: 'standalone', orientation: 'portrait', background_color: '#FBF6F3', theme_color: '#C97B84',
+  const m = { name: full, short_name: name.length > 30 ? name.slice(0, 29) + '…' : name, description: 'Begleite deine Schwangerschaft mit Liebe, Humor und eigenen Bildern.', lang: 'de', id: base, start_url: base + 'index.html', scope: base, display: 'standalone', orientation: 'portrait', background_color: '#FAF3F6', theme_color: '#A0537A',
     icons: [{ src: u('icons/icon-192.png'), sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: u('icons/icon-512.png'), sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: u('icons/icon-512-maskable.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' }] };
   if (brandManifestUrl) URL.revokeObjectURL(brandManifestUrl);
   brandManifestUrl = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' })); link.setAttribute('href', brandManifestUrl);
@@ -1042,7 +1045,7 @@ const SETTINGS_PAGES = new Set(['einstellungen', 'colors', 'backup', 'homeconfig
 const SETTINGS_SUB = new Set(['colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']);
 // Unterseiten mit eigener Rücksprung-Adresse und passendem Menüpunkt unten
 const BACK = { diaryprint: ['#/diary', 'Tagebuch'], wishprint: ['#/wishes', 'Wunschliste'] };
-const NAV_FOR = { diaryprint: 'diary', wishprint: 'more' };
+const NAV_FOR = { diaryprint: 'diary', wishprint: 'more', photos: 'diary' };
 let lastKey = null;
 function render() {
   const name = location.hash.replace(/^#\//, '') || 'home';
