@@ -358,7 +358,7 @@ const HOME_MODULES = {
   tips:      { label: 'Tipps vor Ort', desc: 'Hebammen, Kurse, Beratung, Infoabende (Ort frei wählbar)', icon: 'geo-alt-fill' },
   last:      { label: 'Zuletzt festgehalten', desc: 'Das neueste Foto aus Tagebuch oder Album', icon: 'clock-history' }
 };
-const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'together', 'daily', 'family', 'secret'] };
+const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'together', 'daily', 'family', 'secret', 'tips'] };
 const HOME_PRESETS = { simple: ['quick', 'pins', 'together', 'daily'], all: Object.keys(HOME_MODULES), default: HOME_DEFAULT.on };
 
 function homeLayout() {
