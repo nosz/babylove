@@ -986,7 +986,8 @@ routes.einstellungen = () => {
     ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
     <p class="version" id="appVersion">${esc(versionLine())}</p>
-    <p class="version" id="appThanks">Viel Spaß und Freude wünscht euch Norbert Szpak</p>`;
+    <p class="version" id="appThanks">Viel Spaß und Freude wünscht euch Norbert Szpak</p>
+    <p class="version" id="appOpen">Open-Source-Projekt: offen, ohne Werbung und ohne Tracking.</p>`;
   const panels = [...view.querySelectorAll('details.acc')];
   panels.forEach(d => d.addEventListener('toggle', () => {
     if (d.open) { settingsOpen = d.dataset.acc; panels.forEach(o => { if (o !== d && o.open) o.open = false; }); }
@@ -1203,7 +1204,8 @@ function render() {
   if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) h1.insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
   // Immer gleiche Orientierung: Häuschen mit Herz (Startseite) und ein Schritt zurück in den Bereich
   const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? ['#/more', 'Mehr'] : null;
-  if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back">${bi('chevron-left')} ${backTo[1]}</a></div>`);
+  if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite" title="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back" aria-label="Zurück zu ${backTo[1]}">${bi('arrow-left-circle-fill')} Zurück zu ${backTo[1]}</a></div>`);
+  if (backTo) view.insertAdjacentHTML('beforeend', `<div class="back-foot no-print"><a href="${backTo[0]}" class="back-bottom">${bi('arrow-left')} Zurück zu ${backTo[1]}</a></div>`);
   view.insertAdjacentHTML('beforeend', `<div class="brand-foot"><span data-brand-name>${esc(brandName())}</span> <i data-brand-by>${esc(brandSub())}</i></div>`);
   enhance(view);
   hydrateImages();
