@@ -911,9 +911,9 @@ body:not(.onboarding) #view > h1:first-child{position:sticky;top:calc(var(--topb
 .today-row .today { flex: 0 1 auto; margin: 0; }
 .search-box { position: relative; flex: 1 1 200px; min-width: 170px; }
 .search-box > .bi-search { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--primary-strong); pointer-events: none; z-index: 1; }
-.search-box input[type="search"] { width: 100%; height: 44px; padding: 0 40px 0 38px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); font-size: .95rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 10%, transparent); -webkit-appearance: none; appearance: none; }
-.search-box input[type="search"]::-webkit-search-cancel-button { display: none; }
-.search-box input[type="search"]:focus { outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; border-color: var(--primary); }
+.search-box input#sq { width: 100%; height: 44px; padding: 0 40px 0 38px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); font-size: .95rem; box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 10%, transparent); -webkit-appearance: none; appearance: none; }
+.search-box input#sq::-webkit-search-cancel-button,.search-box input#sq::-webkit-search-decoration,.search-box input#sq::-ms-clear { display: none; -webkit-appearance: none; }
+.search-box input#sq:focus { outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; border-color: var(--primary); }
 .sq-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--primary-strong); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .sq-clear[hidden], .search-panel[hidden] { display: none; }
 .search-panel { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: min(92vw, 480px); max-height: min(70vh, 560px); overflow: auto; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 44px rgba(0, 0, 0, .22); padding: 8px; }
@@ -976,7 +976,7 @@ body:not(.onboarding) #view > .page-search + h1{position:sticky;top:calc(var(--t
 .imp-warn { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #f0a31c 16%, var(--surface)); border: 1.5px solid #f0c24a; font-size: .92rem; }
 .imp-warn > .bi { color: #c98200; font-size: 1.2rem; flex: none; margin-top: 2px; }
 .imp-undo { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
-.ob-import { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 18px 0 6px; text-align: center; }
+.ob-import { display: flex; justify-content: center; margin: 0; text-align: center; }
 
 /* Startseite: Suche steht oben neben den Namen und bleibt beim Scrollen fest */
 .greet-sticky { position: sticky; top: calc(var(--topbar-h, 60px) - 6px); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 -16px; padding: 8px 16px; background: color-mix(in srgb, var(--bg) 94%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
@@ -986,3 +986,17 @@ body:not(.onboarding) #view > .page-search + h1{position:sticky;top:calc(var(--t
 @media (max-width: 640px) { .greet-sticky .search-box { flex: 1 1 100%; max-width: none; } .greet-sticky .search-panel { left: 0; right: 0; width: auto; } }
 
 .today-row{margin-bottom:10px}
+
+.chip.chip-undo{border:1.5px solid var(--line);cursor:pointer;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.85rem;min-height:30px}.chip.chip-undo .bi-x-lg{font-size:.75rem;opacity:.7}.chip.chip-undo:hover{background:color-mix(in srgb,#d6364a 14%,var(--surface-2))}
+
+/* Wunschzettel: deutlicher Hinweis unter den Versandwegen */
+.wish-note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--primary) 12%,var(--surface,#fff));border:1px solid var(--line);border-left:5px solid var(--primary);font-size:1rem;line-height:1.45}
+.wish-note .bi{font-size:1.25rem;color:var(--primary);flex:none;margin-top:1px}
+
+/* Datensicherung: zwei klare Karten */
+.bk-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:600px){.bk-grid{grid-template-columns:1fr 1fr}}
+.bk-card{text-align:center;display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.bk-card h2{margin:4px 0 0;font-size:1.2rem}
+.bk-card p{margin:0 0 10px}
+.bk-ico{width:56px;height:56px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;color:var(--primary);background:color-mix(in srgb,var(--primary) 14%,var(--surface,#fff))}

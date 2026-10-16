@@ -35,13 +35,22 @@ const SEARCH_SETTINGS = [
   ['storage', 'Speicherplatz', 'Datenspeicher Bilder Größe'], ['export', 'Datenexport', 'JSON CSV Daten mitnehmen'], ['privacy', 'Datenschutz und Sicherheit', 'Privatsphäre'],
   ['guide', 'Kurzanleitung', 'Hilfe erklärt'], ['update', 'Version und Updates', 'Neue Version aktualisieren']
 ];
+// Zusätzliche Suchwörter, damit man alles auch unter dem Begriff findet, den man im Kopf hat
+const SEARCH_SYNONYMS = {
+  wishes: 'Geschenke Geschenkideen schenken Wunschzettel Babyparty Baby-Shower', diary: 'Notizen Erinnerungen Eintrag Stimmung Schwangerschaftstagebuch', photos: 'Bilder Album Bauchfotos Ultraschall',
+  letters: 'Brief schreiben Sprachnachricht Nachricht ans Baby', names: 'Vornamen Babynamen Namensliste abstimmen', milestones: 'Meilenstein Erinnerung erste Male Highlights',
+  lists: 'Kliniktasche Packliste Erstausstattung Behörden Checkliste Koffer', planner: 'Aufgaben To-do Termine Arzttermin Kalender Erinnerung', contacts: 'Hebamme Arzt Notfall Telefon Nummer Klinik',
+  pass: 'Mutterpass Werte Gewicht Blutdruck Untersuchung', baby: 'Stillen Windeln Schlaf Tracker', water: 'trinken Glas Flüssigkeit Durst', vits: 'Vitamine Folsäure Eisen Tabletten Erinnerung',
+  food: 'Essen Ernährung erlaubt verboten Lebensmittel', recipes: 'Kochen Rezepte Einkaufsliste', move: 'Sport Bewegung Beckenboden Training', yoga: 'Dehnen Übungen Entspannung Rücken', breathing: 'Atmen Geburt Entspannung Wehen',
+  weekstory: 'Story Bilder teilen Größe Gewicht Entwicklung Woche', jokes: 'Witze lachen Humor Spaß', tips: 'Tipps vor Ort Hebamme Kurse Beratung Stadt', partner: 'Papa Unterstützung Partner Modus'
+};
 const SEARCH_SKIP = new Set(['id', 'photoId', 'audioId', 'date', 'mood', 'icon', 'color', 'time', 'by', 'link']);
 const searchStrings = o => Object.entries(o || {}).filter(([k, v]) => typeof v === 'string' && v.trim() && !SEARCH_SKIP.has(k) && !/^https?:/.test(v)).map(([, v]) => v.trim());
 
 // Alle durchsuchbaren Stellen der App (Bereiche, Einstellungen und eure eigenen Einträge)
 function buildSearchIndex() {
   const out = [], add = (group, icon, route, title, text = '', extra = {}) => { if (title || text) out.push({ group, icon, route, title: String(title || ''), text: String(text || ''), ...extra }); };
-  HUB.forEach(([k, i, t, d]) => { if (k !== 'einstellungen') add('Bereiche', i, k, labelOf(t), d); });
+  HUB.forEach(([k, i, t, d]) => { if (k !== 'einstellungen') add('Bereiche', i, k, labelOf(t), [d, SEARCH_SYNONYMS[k] || ''].join(' ')); });
   add('Bereiche', 'heart-fill', 'settings', navLabel('mama'), 'Foto, Titel und Lieblingsfarbe'); add('Bereiche', 'heart-fill', 'papa', navLabel('papa'), 'Foto, Titel und Lieblingsfarbe');
   SEARCH_SETTINGS.forEach(([id, t, kw]) => add('Einstellungen', 'gear-fill', 'einstellungen', t, kw, { open: id }));
   (state.wishes || []).forEach(w => add('Wunschliste', 'gift', 'wishes', w.text, [w.assigned ? 'bei ' + w.assigned : '', w.link || ''].join(' ')));
@@ -75,7 +84,7 @@ function searchRemember(q) {
 }
 
 const searchBoxHTML = () => `<div class="search-box" id="searchBox" role="search"><i class="bi bi-search" aria-hidden="true"></i>
-  <input id="sq" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Suchen: Wünsche, Tagebuch, Yoga …" aria-label="Suche in der ganzen App" role="combobox" aria-expanded="false" aria-controls="searchPanel" aria-autocomplete="list" maxlength="60">
+  <input id="sq" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Suchen: Wünsche, Tagebuch, Yoga …" aria-label="Suche in der ganzen App" role="combobox" aria-expanded="false" aria-controls="searchPanel" aria-autocomplete="list" maxlength="60">
   <button type="button" class="sq-clear" id="sqClear" aria-label="Suche leeren" hidden>${bi('x-lg')}</button>
   <div class="search-panel" id="searchPanel" role="listbox" aria-label="Suchergebnisse" hidden></div></div>`;
 
@@ -118,7 +127,7 @@ function bindSearch() {
     const chip = e.target.closest('[data-sr-recent]'); if (chip) { input.value = searchRecent()[+chip.dataset.srRecent] || ''; paint(); input.focus(); return; }
     if (e.target.closest('#srClearRecent')) { state.settings.recentSearches = []; save(); paint(); }
   });
-  if (!window.__searchDocBound) { window.__searchDocBound = true; document.addEventListener('click', e => { const b = document.getElementById('searchBox'); if (b && !b.contains(e.target)) { const p = b.querySelector('#searchPanel'), i = b.querySelector('#sq'); if (p) p.hidden = true; if (i) i.setAttribute('aria-expanded', 'false'); } }); }
+  if (!window.__searchDocBound) { window.__searchDocBound = true; document.addEventListener('click', e => { const b = document.getElementById('searchBox'); if (b && !e.composedPath().includes(b)) { const p = b.querySelector('#searchPanel'), i = b.querySelector('#sq'); if (p) p.hidden = true; if (i) i.setAttribute('aria-expanded', 'false'); } }); }
 }
 
 // Nach dem Öffnen: Fundstellen auf der Zielseite markieren, Hinweisleiste zum Entfernen anzeigen, zur ersten Fundstelle scrollen

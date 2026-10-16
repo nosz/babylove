@@ -1,5 +1,5 @@
 // BABYLOVE by Sarah: Service Worker. Version muss zu APP_VERSION in content.js passen.
-const VERSION = '2.0.1';
+const VERSION = '2.5.0';
 const PREFIX = 'babylove-';
 const CACHE = PREFIX + VERSION;
 // Mehrere Apps teilen sich die Domain (z. B. nosz.github.io/app1, /app2, /babylove): Dieser Service Worker fasst nur eigene Caches und nur Adressen unter seinem eigenen Pfad an

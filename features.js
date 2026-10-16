@@ -52,7 +52,7 @@ const HUB = [
   ['vits', 'capsule', 'Vitamine', 'Tägliche Erinnerung'],
   ['water', 'droplet-half', 'Wasser-Tracker', 'Gläser pro Tag'],
   ['lists', 'bag-heart', 'Checklisten', 'Kliniktasche, Erstausstattung, Behörden'],
-  ['wishes', 'gift', 'Wunschliste', 'Damit Oma nicht dreimal Söckchen schenkt'],
+  ['wishes', 'gift', 'Wunschliste', 'Wünsche und Geschenke, damit Oma nicht dreimal Söckchen schenkt'],
   ['names', 'tags', 'Namensfinder', 'Favoriten, gemeinsam abstimmen'],
   ['planner', 'check2-square', 'Planer', 'To-dos und Termine'],
   ['contacts', 'telephone-fill', 'Kontakte & Notfall', 'Hebamme, Arzt, wichtige Nummern'],
@@ -223,13 +223,14 @@ X.wishes = () => {
   const w = state.wishes;
   view.innerHTML = `${intro('Wunschliste', 'Sag es lieber vorher, sonst gibt es 14 Mützen in Größe 50.')}
     ${w.length ? `<div class="card">${w.map(x => `<div class="todo ${x.got ? 'done' : ''}"><input type="checkbox" id="w${x.id}" data-g="${x.id}" ${x.got ? 'checked' : ''}>
-      <label for="w${x.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(x.text)}</span>${x.assigned ? ` <span class="chip">${bi('person-check')} bei ${esc(x.assigned)}</span>` : x.got ? '' : ` <span class="chip chip-free">${bi('person-dash')} Noch niemand zugewiesen</span>`}${isUrl(x.link) ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')}</a>` : ''}</label>
+      <label for="w${x.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(x.text)}</span>${x.assigned ? ` <button type="button" class="chip chip-undo" data-un="${x.id}" aria-label="Zuweisung an ${esc(x.assigned)} zurücknehmen" title="Zuweisung zurücknehmen">${bi('person-check')} bei ${esc(x.assigned)} ${bi('x-lg')}</button>` : x.got ? '' : ` <span class="chip chip-free">${bi('person-dash')} Noch niemand zugewiesen</span>`}${isUrl(x.link) ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')}</a>` : ''}</label>
       <button class="btn btn-text theme-danger btn-sm" data-d="${x.id}" aria-label="Entfernen">${bi('x-lg')}</button></div>`).join('')}</div>` : empty('gift', 'Noch leer. Ein Kinderwagen mit Getränkehalter? Nur zu!')}
-    <form id="wf" class="mt-3"><input id="wt" placeholder="Wunsch, z. B. Tragetuch" aria-label="Wunsch" maxlength="80" required><input id="wl" type="url" placeholder="Link (optional)" aria-label="Link zum Wunsch (optional)" style="margin-top:8px"><button class="btn btn-solid theme-primary w-100 mt-2">Hinzufügen</button></form>
-    <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-solid theme-primary flex-grow-1" href="#/wishprint">${bi('printer')} Wunschzettel drucken</a><a class="btn btn-subtle theme-secondary flex-grow-1" href="#/wishlistprint">${bi('file-earmark-richtext')} Vorschau und Export</a>${w.length ? `<button class="btn btn-subtle theme-secondary flex-grow-1" id="shw">${bi('share')} Liste teilen</button>` : ''}</div>`;
+    <form id="wf" class="mt-3"><input id="wt" placeholder="Wunsch, z. B. Tragetuch" aria-label="Wunsch" maxlength="80" required><input id="wl" type="url" placeholder="Link (optional)" aria-label="Link zum Wunsch (optional)" style="margin-top:8px"><button class="btn btn-solid theme-primary w-100 mt-2">${bi('plus-lg')} Neuen Wunsch hinzufügen</button></form>
+    <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-solid theme-primary flex-grow-1" href="#/wishprint">${bi('printer')} Wünsche zuordnen und drucken</a><a class="btn btn-subtle theme-secondary flex-grow-1" href="#/wishlistprint">${bi('eye')} Alle Wünsche anschauen</a>${w.length ? `<button class="btn btn-subtle theme-secondary flex-grow-1" id="shw">${bi('share')} Wunschliste teilen</button>` : ''}</div>`;
   $('#wf').onsubmit = e => { e.preventDefault(); state.wishes.push({ id: uid(), text: $('#wt').value.trim(), link: $('#wl').value.trim(), got: false }); save(); render(); cheer('add'); };
   view.querySelectorAll('[data-g]').forEach(c => c.onchange = () => { state.wishes.find(x => x.id === c.dataset.g).got = c.checked; save(); render(); });
   view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { state.wishes = state.wishes.filter(x => x.id !== b.dataset.d); save(); render(); });
+  view.querySelectorAll('[data-un]').forEach(b => b.onclick = () => { const w = state.wishes.find(x => x.id === b.dataset.un); if (w) { const who = w.assigned; delete w.assigned; save(); render(); toast('Zuweisung an ' + who + ' zurückgenommen. Der Wunsch ist wieder frei.'); } });
   const sh = $('#shw'); if (sh) sh.onclick = () => shareThing({ title: 'Unsere Wunschliste', text: 'Unsere Wunschliste:\n' + w.filter(x => !x.got).map(x => `• ${x.text}${x.link ? ' ' + x.link : ''}`).join('\n') });
 };
 
@@ -526,8 +527,7 @@ X.breathing = () => {
         <div class="seg" role="group" aria-label="Dauer" style="margin:0">${[1, 3, 5].map(m => `<button type="button" data-bmin="${m}" class="${breathMin === m ? 'on' : ''}" aria-pressed="${breathMin === m}">${m} Min.</button>`).join('')}</div></div>
     </div>
     <h2>Übung wählen</h2>
-    <div class="breath-list" role="radiogroup" aria-label="Atemübung">${BREATH_EXERCISES.map(e => `<button type="button" class="breath-opt ${e.id === ex.id ? 'on' : ''}" role="radio" aria-checked="${e.id === ex.id}" data-bex="${e.id}"><span class="bo-name">${e.name}</span><span class="small soft">${e.tag} · ${rhythm(e)}</span></button>`).join('')}</div>
-    <div class="card breath-howto"><b>${esc(ex.name)}</b><p class="soft mt-1">${esc(ex.intro)}</p><ol class="mb-2">${ex.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>${ex.fun ? `<p class="small soft mb-0">${esc(ex.fun)}</p>` : ''}</div>
+    <div class="breath-list" role="radiogroup" aria-label="Atemübung">${BREATH_EXERCISES.map(e => `<button type="button" class="breath-opt ${e.id === ex.id ? 'on' : ''}" role="radio" aria-checked="${e.id === ex.id}" data-bex="${e.id}"><span class="bo-name">${e.name}</span><span class="small soft">${e.tag} · ${rhythm(e)}</span></button>${e.id === ex.id ? `<div class="card breath-howto"><b>${esc(ex.name)}</b><p class="soft mt-1">${esc(ex.intro)}</p><ol class="mb-2">${ex.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>${ex.fun ? `<p class="small soft mb-0">${esc(ex.fun)}</p>` : ''}</div>` : ''}`).join('')}</div>
     <div class="card"><b>${bi('shield-check')} Sicher atmen</b><ul class="small mt-2 mb-0">${BREATH_SAFETY.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
     <p class="small soft">Anregungen aus: ${BREATH_SOURCES.map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`).join(', ')}. Diese Übungen ersetzen keinen Geburtsvorbereitungskurs und keine Beratung durch Hebamme oder Frauenarzt.</p>`;
   $('#bStart').onclick = () => breathRun ? stopBreath() : startBreath(ex, breathMin);

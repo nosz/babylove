@@ -16,18 +16,32 @@ const WISH_TONES = {
     'Bevor du wieder 14 Strampler in Größe 50 kaufst: Hier stehen die Dinge, die wir wirklich brauchen. Mit Liebe, Dankbarkeit und einem Augenzwinkern.',
     'Du wurdest offiziell zur Wunscherfüllungs-Zentrale ernannt. Deine Mission, falls du sie annimmst, steht unten. Sie zerstört sich nach dem Einkauf leider nicht von selbst.',
     'Wir haben lange überlegt, was wir uns wünschen. Ergebnis: das hier. Und Schlaf. Aber den kann man leider nicht einpacken.',
-    'Diese Liste ist bewusst kurz, damit der Einkauf nicht in einem Kinderwagen-Marathon endet. Wir lieben dich dafür, dass du dir die Mühe machst.'] },
+    'Diese Liste ist bewusst kurz, damit der Einkauf nicht in einem Kinderwagen-Marathon endet. Wir lieben dich dafür, dass du dir die Mühe machst.',
+    'Unser Baby hat noch keine Meinung, wir aber schon. Hier kommt die Liste der Dinge, die uns wirklich weiterhelfen. Du bist dabei unser Lieblingsmensch.',
+    'Eine kleine Mission mit großer Wirkung: Such dir einen Wunsch aus, und du machst zwei müde Eltern und ein winziges Wesen glücklich.',
+    'Wir haben gelernt: Babys brauchen wenig, Eltern brauchen Kaffee. Diese Liste kümmert sich um den Rest. Danke, dass du mitdenkst.'] },
   herzlich: { label: 'Herzlich', lines: [
     'Wir freuen uns so sehr auf unser Baby und danken dir von Herzen, dass du uns dabei begleitest. Diese Wünsche liegen uns besonders am Herzen.',
     'Mit dir an unserer Seite fühlt sich alles leichter an. Wenn du uns eine Freude machen möchtest, sind das die Dinge, die wir gerade am meisten brauchen.',
-    'Danke, dass du Teil dieser besonderen Zeit bist. Aus unserer Wunschliste haben wir drei Dinge für dich herausgesucht.'] },
-  kurz: { label: 'Kurz', lines: ['Diese Dinge brauchen wir gerade besonders. Vielen Dank!'] }
+    'Danke, dass du Teil dieser besonderen Zeit bist. Aus unserer Wunschliste haben wir ein paar Dinge für dich herausgesucht.',
+    'Jeder liebe Mensch macht diese Zeit schöner. Wenn du magst, findest du hier, was uns gerade besonders helfen würde.',
+    'Bald wird unser Leben ein bisschen lauter und sehr viel bunter. Wir freuen uns, dass du dabei bist, und haben uns ein paar Wünsche überlegt.'] },
+  kurz: { label: 'Kurz', lines: ['Diese Dinge brauchen wir gerade besonders. Vielen Dank!', 'Eine kleine Wunschliste, ganz ohne Stress. Danke dir!', 'Das würde uns gerade richtig helfen. Von Herzen danke!'] }
 };
-const WISH_FOOT = {
-  humor: 'Bitte gib kurz Bescheid, welchen Wunsch du erfüllst, damit nichts doppelt im Kinderzimmer landet. Danke, dass es dich gibt.',
-  herzlich: 'Sag uns einfach kurz, welchen Wunsch du dir ausgesucht hast, damit wir uns doppelt freuen können. Danke von Herzen.',
-  kurz: 'Bitte kurz Bescheid geben, welchen Wunsch du übernimmst.'
+const WISH_FOOTS = {
+  humor: ['Bitte gib kurz Bescheid, welchen Wunsch du erfüllst, damit nichts doppelt im Kinderzimmer landet. Danke, dass es dich gibt.',
+    'Sag uns kurz, welchen Wunsch du übernimmst. Dann wird nichts doppelt gekauft, und wir können dich später mit Kuchen bestechen. Danke!',
+    'Kleiner Hinweis zum Schluss: Bitte kurz melden, was du besorgst. Das Baby weiß dann schon, wen es später anlächeln muss. Danke dir!'],
+  herzlich: ['Sag uns einfach kurz, welchen Wunsch du dir ausgesucht hast, damit wir uns doppelt freuen können. Danke von Herzen.',
+    'Gib uns gern kurz Bescheid, was du übernimmst. Dein Gedanke an uns ist schon das schönste Geschenk. Danke!',
+    'Danke, dass du an uns denkst. Schreib uns einfach, welchen Wunsch du erfüllst, und wir freuen uns schon auf den Moment.'],
+  kurz: ['Bitte kurz Bescheid geben, welchen Wunsch du übernimmst.', 'Kurze Nachricht genügt, welchen Wunsch du erfüllst. Danke!']
 };
+// Zufallstexte: ein Startwert pro Seitenaufruf, damit Vorschau und Nachricht denselben Text zeigen
+let wishSeed = Math.floor(Math.random() * 997);
+const wishIntro = (cfg, n) => { const l = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines; return l[(wishSeed + n) % l.length]; };
+const wishFoot = cfg => { const f = WISH_FOOTS[cfg.tone] || WISH_FOOTS.humor; return f[(wishSeed + 1) % f.length]; };
+const WISH_LINES = ['Wir freuen uns riesig auf dich und das Baby!', 'Du machst unsere Vorfreude noch größer. Danke dafür!', 'Bald gibt es jemanden mehr, der dich liebhaben wird.', 'Egal, was du aussuchst: Es kommt von dir und ist deshalb perfekt.', 'Auf bald, mit Umarmung und Vorfreude!', 'Ohne dich wäre diese Zeit nur halb so schön.'];
 const WISH_DEFAULT = { to: '', count: 3, tone: 'humor', child: 'nick', message: '', sel: [] };
 const wishCfg = () => Object.assign({}, WISH_DEFAULT, state.settings.wishPrint || {});
 const saveWishCfg = c => { state.settings.wishPrint = c; save(); };
@@ -36,30 +50,35 @@ const childLabel = c => c.child === 'secret' && state.settings.secretName ? stat
 // Nachricht zum Versenden (Text für Teilen, E-Mail, WhatsApp): gleicher Inhalt wie der Zettel, mit Humor und klarer Bitte
 function wishMessage(cfg) {
   const to = (cfg.to || '').trim(), chosen = cfg.sel.map(id => state.wishes.find(w => w.id === id)).filter(Boolean).slice(0, cfg.count);
-  const lines = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines, intro = lines[(cfg.to.length + chosen.length) % lines.length], from = namesLine(), kid = childLabel(cfg);
+  const lines = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines, intro = wishIntro(cfg, chosen.length), from = namesLine(), kid = childLabel(cfg);
   const list = chosen.map((w, i) => `${i + 1}. ${w.text}${isUrl(w.link) ? `\n   ${w.link}` : ''}`).join('\n');
   const subject = `${to ? to + ', ' : ''}ein Wunschzettel von ${from || 'uns'}${kid ? ' für ' + kid : ''}`;
-  const text = [`${to ? `Hallo ${to},` : 'Hallo,'}`, '', intro, '', 'Unsere Wünsche an dich:', list, '', cfg.message.trim(), cfg.message.trim() ? '' : null, WISH_FOOT[cfg.tone] || WISH_FOOT.humor, '', `Alles Liebe${from ? ', ' + from : ''}`, brandFull()].filter(x => x !== null).join('\n');
+  const text = [`${to ? `Hallo ${to},` : 'Hallo,'}`, '', intro, '', 'Unsere Wünsche an dich:', list, '', cfg.message.trim(), cfg.message.trim() ? '' : null, wishFoot(cfg), '', `Alles Liebe${from ? ', ' + from : ''}`, brandFull()].filter(x => x !== null).join('\n');
   return { subject: retitleStr(subject), text: retitleStr(text), count: chosen.length };
 }
 
 function wishSheetHTML(cfg) {
   const to = (cfg.to || '').trim(), chosen = cfg.sel.map(id => state.wishes.find(w => w.id === id)).filter(Boolean).slice(0, cfg.count);
-  const lines = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines, intro = lines[(cfg.to.length + chosen.length) % lines.length];
+  const lines = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines, intro = wishIntro(cfg, chosen.length);
   const kid = childLabel(cfg), from = namesLine();
   return `<article class="print-doc wish-doc">
     <header class="pd-head wd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><div class="wd-hearts">${printHearts()}</div><h2>Wunschzettel</h2><p class="pd-for">${to ? `für ${esc(to)}` : 'für dich'}</p></header>
     <p class="pd-from">${from ? `Von ${esc(from)}` : 'Von uns'}${kid ? `, für unser Baby ${esc(kid)}` : ', für unser Baby'}</p>
-    <p class="pd-intro">${to ? `Hallo ${esc(to)}, ` : ''}${esc(intro)}</p>
+    <p class="pd-intro">${to ? `Hallo ${esc(to)}! ` : ''}${esc(intro)}</p>
     ${chosen.length ? `<ol class="pd-wishes">${chosen.map(w => `<li><span class="pd-gift" aria-hidden="true">${bi('gift-fill')}</span><div class="pd-wish"><b>${esc(w.text)}</b>${isUrl(w.link) ? `<span class="pd-link">${esc(w.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span>` : ''}<span class="pd-done">Erledigt von: <i></i></span></div></li>`).join('')}</ol>`
       : '<p class="pd-empty">Wähle oben bis zu drei Wünsche aus, dann erscheinen sie hier.</p>'}
     ${cfg.message.trim() ? `<p class="pd-note">${esc(cfg.message.trim()).replace(/\n/g, '<br>')}</p>` : ''}
-    <footer class="pd-foot"><p>${esc(WISH_FOOT[cfg.tone] || WISH_FOOT.humor)}</p><div class="pd-sign">${esc(brandName())} <i>${esc(brandSub())}</i> · ${fmtDate(iso(today()))}</div></footer></article>`;
+    <footer class="pd-foot"><p>${esc(wishFoot(cfg))}</p><div class="pd-sign">${esc(brandName())} <i>${esc(brandSub())}</i> · ${fmtDate(iso(today()))}</div></footer></article>`;
 }
 
 EXTRA_ROUTES.wishprint = () => {
   const cfg = wishCfg(), open = state.wishes.filter(w => !w.got);
-  cfg.sel = cfg.sel.filter(id => open.some(w => w.id === id));
+  // Zur Wahl stehen nur freie Wünsche und die, die schon dieser Person gehören (nichts, was bei anderen liegt)
+  const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const avail = () => open.filter(w => !w.assigned || sameName(w.assigned, cfg.to));
+  const wishRows = () => avail().map(w => `<div class="todo"><input type="checkbox" id="wsel_${w.id}" data-ws="${w.id}"><label for="wsel_${w.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(w.text)}</span>${w.assigned ? ` <button type="button" class="chip chip-undo" data-un="${w.id}" aria-label="Zuweisung an ${esc(w.assigned)} zurücknehmen" title="Zuweisung zurücknehmen">bei ${esc(w.assigned)} ${bi('x-lg')}</button>` : ''}</label></div>`).join('') || '<p class="soft mb-0 p-2">Alle offenen Wünsche sind schon bei anderen Personen. Wähle oben jemand anderen oder lege neue Wünsche an.</p>';
+  const hiddenNote = () => { const n = open.length - avail().length; return n ? `${n} ${n === 1 ? 'Wunsch ist' : 'Wünsche sind'} schon bei anderen Personen und ${n === 1 ? 'wird' : 'werden'} hier nicht angeboten.` : ''; };
+  cfg.sel = cfg.sel.filter(id => avail().some(w => w.id === id));
   const contacts = (state.contacts || []).map(c => c.name);
   const people = [...new Set([...contacts, 'Oma', 'Opa', 'Tante', 'Onkel', 'Patentante', 'Patenonkel', 'Freundin', 'Freund'])].slice(0, 10);
   view.innerHTML = `<div class="no-print">${intro('Wunschzettel', 'In drei einfachen Schritten: Person wählen, Wünsche aussuchen, verschicken. Mit Humor und in schönem Layout.')}
@@ -70,14 +89,14 @@ EXTRA_ROUTES.wishprint = () => {
       <div class="chip-row mt-2" role="group" aria-label="Schnellauswahl">${people.slice(0, 6).map(n => `<button type="button" class="chip-btn ${cfg.to.trim() === n ? 'on' : ''}" data-who="${esc(n)}" aria-pressed="${cfg.to.trim() === n}">${esc(n)}</button>`).join('')}</div>
     </div>
     <h2>2. Wünsche auswählen <span class="chip" id="wp-counter"></span></h2>
-    ${open.length ? `<div class="card" id="wp-list">${open.map(w => `<div class="todo"><input type="checkbox" id="wsel_${w.id}" data-ws="${w.id}"><label for="wsel_${w.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(w.text)}</span>${w.assigned ? ` <span class="chip">bei ${esc(w.assigned)}</span>` : ''}</label></div>`).join('')}</div>
+    ${open.length ? `<div class="card" id="wp-list">${wishRows()}</div><p class="small soft mt-1 mb-0" id="wp-hidden">${hiddenNote()}</p>
       <button type="button" class="btn btn-text btn-sm mt-1" id="wsSuggest">${bi('magic')} Wünsche für mich aussuchen</button>`
       : `<div class="card center"><p class="mb-2">Noch keine offenen Wünsche.</p><a class="btn btn-solid theme-primary" href="#/wishes">${bi('plus-lg')} Zur Wunschliste</a></div>`}
     <h2>3. Verschicken</h2>
     <div class="card wish-send">
       <p class="small soft mb-2" id="wsHint" aria-live="polite"></p><button type="button" class="btn btn-solid theme-primary w-100" id="wsShare">${bi('send-fill')} Wunschzettel verschicken</button>
       <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-subtle theme-secondary flex-grow-1" id="wsWa" href="#" target="_blank" rel="noopener noreferrer">${bi('chat-heart')} WhatsApp</a><a class="btn btn-subtle theme-secondary flex-grow-1" id="wsMail" href="#" rel="noopener">${bi('envelope-heart')} E-Mail</a><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="wsCopy">${bi('clipboard-heart')} Text kopieren</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="doPrint">${bi('printer')} Drucken oder PDF</button></div>
-      <p class="small soft mt-2 mb-0">Die gewählten Wünsche werden beim Verschicken automatisch der Person zugewiesen. So wird nichts doppelt gekauft.</p>
+      <p class="wish-note mt-3 mb-0">${bi('info-circle-fill')} <span><b>Gut zu wissen:</b> Die gewählten Wünsche werden beim Verschicken automatisch der Person zugewiesen. So wird nichts doppelt gekauft.</span></p>
     </div>
     <details class="card wp-more" ${cfg.child === 'secret' ? 'open' : ''}><summary><b>${bi('sliders')} Weitere Einstellungen</b><span class="small soft">Anzahl, Tonfall, Name des Kindes, persönliche Zeile</span></summary>
       <label for="wp-count">Wie viele Wünsche soll die Person erfüllen?</label>
@@ -88,6 +107,7 @@ EXTRA_ROUTES.wishprint = () => {
       <div class="seg" style="margin:0"><button data-child="none" class="${cfg.child === 'none' ? 'on' : ''}">Kein Name</button><button data-child="nick" class="${cfg.child === 'nick' ? 'on' : ''}">Kosename${state.settings.nick ? ' (' + esc(state.settings.nick) + ')' : ''}</button>${state.settings.secretName ? `<button data-child="secret" class="${cfg.child === 'secret' ? 'on' : ''}">Echter Name</button>` : ''}</div>
       ${cfg.child === 'secret' ? '<p class="small soft mt-2 mb-0">Achtung: Der geheime Name wird dann gedruckt.</p>' : ''}
       <label for="wp-msg">Persönliche Zeile (optional)</label><textarea id="wp-msg" maxlength="240" style="min-height:70px" placeholder="z. B. Wir freuen uns auf Sonntag bei euch!">${esc(cfg.message)}</textarea>
+      <div class="hstack gap-2 flex-wrap mt-2"><button type="button" class="btn btn-subtle theme-secondary" id="wsLine">${bi('magic')} Zeile vorschlagen</button><button type="button" class="btn btn-subtle theme-secondary" id="wsShuffle">${bi('shuffle')} Andere Texte</button></div>
       <button class="btn btn-subtle theme-secondary mt-2" id="doAssign">${bi('person-check')} Nur zuweisen, ohne zu verschicken</button>
     </details>
     <h2>Vorschau</h2></div>
@@ -99,12 +119,18 @@ EXTRA_ROUTES.wishprint = () => {
     const cnt = $('#wp-counter'); if (cnt) cnt.textContent = `${cfg.sel.length} von ${cfg.count}`;
     $('#printArea').innerHTML = wishSheetHTML(cfg); saveWishCfg({ ...cfg }); if (typeof wsUpdate === 'function') wsUpdate();
   };
-  $('#wp-to').addEventListener('input', e => { cfg.to = e.target.value; refresh(); });
+  const bindUn = () => view.querySelectorAll('[data-un]').forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation(); const w = state.wishes.find(x => x.id === b.dataset.un); if (w) { const who = w.assigned; delete w.assigned; save(); rebuildList(); refresh(); toast('Zuweisung an ' + who + ' zurückgenommen.'); } });
+  const bindWs = () => view.querySelectorAll('[data-ws]').forEach(i => i.onchange = () => { cfg.sel = i.checked ? [...cfg.sel, i.dataset.ws] : cfg.sel.filter(x => x !== i.dataset.ws); refresh(); });
+  // Wechselt die Person, ändert sich die Auswahl: Wünsche anderer verschwinden, schon gewählte fallen heraus
+  const rebuildList = () => { const l = $('#wp-list'); if (!l) return; cfg.sel = cfg.sel.filter(id => avail().some(w => w.id === id)); l.innerHTML = wishRows(); const h = $('#wp-hidden'); if (h) h.textContent = hiddenNote(); bindWs(); bindUn(); };
+  $('#wp-to').addEventListener('input', e => { cfg.to = e.target.value; rebuildList(); refresh(); });
   $('#wp-msg').addEventListener('input', e => { cfg.message = e.target.value; refresh(); });
-  $('#wp-count').onchange = e => { cfg.count = +e.target.value; refresh(); };
+  $('#wsLine').onclick = () => { const cur = cfg.message.trim(); let l, g = 0; do { l = pick(WISH_LINES); } while (l === cur && ++g < 20); cfg.message = l; $('#wp-msg').value = l; refresh(); };
+  $('#wsShuffle').onclick = () => { wishSeed += 1 + Math.floor(Math.random() * 5); refresh(); toast('Neue Texte für Einleitung und Schluss.'); };
+  $('#wp-count').onchange =e => { cfg.count = +e.target.value; refresh(); };
   view.querySelectorAll('[data-tone]').forEach(b => b.onclick = () => { cfg.tone = b.dataset.tone; saveWishCfg({ ...cfg }); render(); });
   view.querySelectorAll('[data-child]').forEach(b => b.onclick = () => { cfg.child = b.dataset.child; saveWishCfg({ ...cfg }); render(); });
-  view.querySelectorAll('[data-ws]').forEach(i => i.onchange = () => { cfg.sel = i.checked ? [...cfg.sel, i.dataset.ws] : cfg.sel.filter(x => x !== i.dataset.ws); refresh(); });
+  bindWs(); bindUn();
   const assign = () => {
     const to = cfg.to.trim(); if (!to) { toast('Bitte erst eintragen, für wen der Zettel ist'); return false; }
     if (!cfg.sel.length) { toast('Bitte mindestens einen Wunsch auswählen'); return false; }
@@ -117,8 +143,8 @@ EXTRA_ROUTES.wishprint = () => {
   $('#wsShare').onclick = async () => { if (!wsReady()) return; const m = wishMessage(cfg); await shareThing({ title: m.subject, text: m.text }); render(); };
   $('#wsCopy').onclick = async () => { if (!wsReady()) return; try { await navigator.clipboard.writeText(wishMessage(cfg).text); toast('Wunschzettel-Text kopiert. Jetzt nur noch einfügen und abschicken.'); } catch { toast('Kopieren klappt hier leider nicht'); } };
   [$('#wsMail'), $('#wsWa')].forEach(a => a.addEventListener('click', e => { if (!wsReady()) e.preventDefault(); }));
-  view.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { cfg.to = b.dataset.who; $('#wp-to').value = cfg.to; view.querySelectorAll('[data-who]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); refresh(); });
-  const sg = $('#wsSuggest'); if (sg) sg.onclick = () => { const free = open.filter(w => !w.assigned), pool = (free.length >= cfg.count ? free : open); cfg.sel = pool.slice(0, cfg.count).map(w => w.id); refresh(); toast('Das sind meine Vorschläge. Du kannst sie jederzeit ändern.'); };
+  view.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { cfg.to = b.dataset.who; $('#wp-to').value = cfg.to; view.querySelectorAll('[data-who]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); rebuildList(); refresh(); });
+  const sg = $('#wsSuggest'); if (sg) sg.onclick = () => { const here = avail(), free = here.filter(w => !w.assigned), pool = (free.length >= cfg.count ? free : here); cfg.sel = pool.slice(0, cfg.count).map(w => w.id); refresh(); toast('Das sind meine Vorschläge. Du kannst sie jederzeit ändern.'); };
   refresh();
 };
 

@@ -344,7 +344,7 @@ routes.onboarding = () => {
     <div class="ob-head"><div class="ob-ico">${bi('heart-fill')}</div>
       <h1>Willkommen bei ${esc(brandName())}</h1>
       <p class="brand"><span data-brand-by>${esc(brandSub())}</span></p>
-      <p class="soft mb-0">Nur für euch: ohne Konto, alles bleibt auf diesem Gerät.</p></div>
+      <p class="soft mb-0">Ohne Konto, alles bleibt auf diesem Gerät.</p></div>
     <form class="card ob-form" id="ob" novalidate>
       <label for="due">Errechneter Geburtstermin</label>
       <input id="due" type="date" min="${iso(today())}" max="${iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))}" aria-describedby="dueErr">
@@ -354,9 +354,9 @@ routes.onboarding = () => {
       <label for="nick">Kosename fürs Baby</label>
       <input id="nick" value="Krümel" maxlength="24">
       <button class="btn btn-solid theme-primary w-100 ob-go">Los geht’s</button>
-      <p class="small soft center mb-0">Den echten Namen könnt ihr später geheim hinterlegen.</p>
+      <p class="small soft center mb-0">Den echten Namen später geheim hinterlegen.</p>
     </form>
-    <div class="ob-import"><span class="small soft">Neues Gerät? Schon ein Backup von früher?</span><button type="button" class="btn btn-subtle theme-secondary" id="obImport">${bi('upload')} Backup importieren</button><input id="impf" type="file" accept="application/json,.json" hidden></div>`;
+    <div class="ob-import"><button type="button" class="btn btn-text btn-sm" id="obImport">${bi('upload')} Neues Gerät? Backup importieren</button><input id="impf" type="file" accept="application/json,.json" hidden></div>`;
   $('#obImport').onclick = () => $('#impf').click(); $('#impf').onchange = importData;
   $('#ob').onsubmit = e => {
     e.preventDefault();
@@ -811,18 +811,24 @@ routes.colors = () => {
 routes.backup = () => {
   view.innerHTML = `
     <h1>Datensicherung</h1><p class="soft">Alles liegt nur auf diesem Gerät. Mach hin und wieder ein Backup, sonst sind die Erinnerungen bei einem Gerätewechsel weg.</p>
-    <h2>Export und Import</h2>
-    <div class="card">
-      <ol class="move-steps">
-        <li><span class="ms-n">1</span><div><b>Altes Gerät: Backup erstellen</b><p class="small soft mb-0">Speichert alle Einträge, Fotos und Einstellungen in einer Datei.</p></div></li>
-        <li><span class="ms-n">2</span><div><b>Datei zum neuen Gerät bringen</b><p class="small soft mb-0">Per E-Mail, Cloud, AirDrop, Nearby Share oder USB-Kabel.</p></div></li>
-        <li><span class="ms-n">3</span><div><b>Neues Gerät: Backup importieren</b><p class="small soft mb-0">BABYLOVE öffnen, auf „Backup importieren“ tippen und die Datei wählen. Auch gleich beim ersten Start möglich.</p></div></li>
-      </ol>
-      <div class="hstack gap-2 flex-wrap"><button class="btn btn-solid theme-primary flex-grow-1" id="exp">${bi('download')} Backup speichern</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="expShare">${bi('send')} An anderes Gerät senden</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="imp">${bi('upload')} Backup importieren</button><input id="impf" type="file" accept="application/json,.json" hidden></div>
-      <p class="small soft mt-3 mb-0">Die Datei enthält persönliche Daten und Fotos. Bewahre sie sicher auf und teile sie nur mit Menschen, denen du vertraust. Nach dem Import auf dem neuen Gerät kannst du die Datei löschen.</p>
-      ${localStorage.getItem(KEY + ':vorher') ? `<div class="imp-undo mt-3"><span class="small">Vor dem letzten Import wurde der frühere Stand gesichert.</span><button class="btn btn-text btn-sm" id="undoImp">${bi('arrow-counterclockwise')} Früheren Stand zurückholen</button></div>` : ''}
+    <div class="bk-grid">
+      <section class="card bk-card" aria-labelledby="bkSave">
+        <span class="bk-ico" aria-hidden="true">${bi('cloud-arrow-down')}</span>
+        <h2 id="bkSave">Sichern</h2>
+        <p class="soft">Eine Datei mit allen Einträgen, Fotos und Einstellungen.</p>
+        <button class="btn btn-solid theme-primary w-100" id="exp">${bi('download')} Backup speichern</button>
+        <button class="btn btn-text w-100 mt-1" id="expShare">${bi('send')} An anderes Gerät senden</button>
+      </section>
+      <section class="card bk-card" aria-labelledby="bkLoad">
+        <span class="bk-ico" aria-hidden="true">${bi('cloud-arrow-up')}</span>
+        <h2 id="bkLoad">Wiederherstellen</h2>
+        <p class="soft">Backup-Datei wählen, zum Beispiel auf einem neuen Gerät.</p>
+        <button class="btn btn-solid theme-primary w-100" id="imp">${bi('upload')} Backup importieren</button>
+        <input id="impf" type="file" accept="application/json,.json" hidden>
+      </section>
     </div>
-    <h2>Erinnerung</h2>
+    <p class="small soft mt-2">Gerätewechsel in drei Schritten: Backup speichern, Datei aufs neue Gerät bringen (E-Mail, Cloud, AirDrop oder Kabel), dort importieren. Die Datei enthält persönliche Daten und Fotos: sicher aufbewahren und nach dem Import löschen.</p>
+    ${localStorage.getItem(KEY + ':vorher') ? `<div class="imp-undo mt-2"><span class="small">Vor dem letzten Import wurde der frühere Stand gesichert.</span><button class="btn btn-text btn-sm" id="undoImp">${bi('arrow-counterclockwise')} Früheren Stand zurückholen</button></div>` : ''}    <h2>Erinnerung</h2>
     <div class="card">
       <p class="mb-2"><b>Letztes Backup:</b> ${state.settings.lastBackup ? `${fmtDate(state.settings.lastBackup)} (${daysSince(state.settings.lastBackup)} Tage her)` : 'noch nie'}</p>
       <label class="keep form-label">Erinnere mich alle …</label>
