@@ -774,3 +774,7 @@ h1, h2 { overflow-wrap: anywhere; }
 .fetal-list { list-style: none; padding: 0; margin: 0; } .fetal-row { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); } .fetal-row:last-child { border-bottom: 0; }
 .st-baby { width: 74%; } .st-baby svg { width: 100%; height: auto; } .st-bub { background: var(--surface-2); }
 .st-dia { display: inline-block; margin: -2px 0 8px; padding: 2px 12px; border-radius: 99px; background: var(--surface-2); color: var(--primary-strong); font-size: .78rem; font-weight: 700; font-style: italic; }
+
+/* Sprache der Wochen-Story */
+.st-lang { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; flex-wrap: wrap; } .st-lang label { margin: 0; font-weight: 700; color: var(--primary-strong); } .st-lang select { flex: 1; min-width: 10rem; max-width: 18rem; }
+.st-quote { font-style: italic; font-weight: 600; font-size: .9rem; margin: 6px 4px auto; line-height: 1.35; }

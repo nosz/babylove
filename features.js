@@ -552,7 +552,7 @@ function storyData() {
   const due = new Date(s.dueDate + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
   return { p, week: p.weeks, range: weekRange(p), fruit, kid, body, slides: [
     { id: 'size', title: sizeTitle, dia, lines: [`${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`, `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`, ...(body.date ? [`gemessen am ${fmtDate(body.date)}`] : [])] },
-    { id: 'dev', title: WEEK_DEV[w] },
+    { id: 'dev', title: WEEK_DEV[w], dia, quote: dia ? dailyPick(DIALECT_QUOTES[dia].mama, 'storyq-' + dia) : '' },
     { id: 'sum', title: 'Unsere Zusammenfassung', rows: [['SSW', `${p.weeks}+${p.days}`], ['Errechneter Termin', due], [body.mmM ? 'Größe (gemessen)' : 'Größe (Richtwert)', `${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`], [body.gM ? 'Gewicht (gemessen)' : 'Gewicht (Richtwert)', `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`], ['Schon geschafft', `${Math.max(0, p.elapsed)} Tage`], ['Noch ca.', `${Math.max(0, p.left)} Tage`]] }
   ] };
 }
@@ -561,7 +561,7 @@ const storyColors = () => { const cs = getComputedStyle(document.documentElement
 function storySlideHTML(S, i) {
   const sl = S.slides[i], col = storyColors();
   const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
-    : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong)}</div><p class="st-cap">Woche ${S.week}</p>`
+    : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong)}</div><p class="st-cap ${sl.quote ? 'st-quote' : ''}">${esc(sl.quote || 'Woche ' + S.week)}</p>`
     : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
   return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${sl.dia ? `<span class="st-dia">auf ${esc(DIALECTS[sl.dia])}</span>` : ''}${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
 }// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
@@ -581,7 +581,7 @@ function drawStory(S, i, imgs = {}) {
     x.fillStyle = text; x.font = `700 56px ${fam}`; x.fillText(sl.lines.join(' · '), W / 2, 1560);
   } else if (sl.id === 'dev') {
     if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 330, 800, 660, 660); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
-    x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680);
+    if (sl.quote) { x.fillStyle = text; wrap(sl.quote, 880, 46, 600); wrap(sl.quote, 880, 46, 600).forEach((l, k) => { x.font = `italic 600 46px ${fam}`; x.fillText(l, W / 2, 1600 + k * 62); }); } else { x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680); }
   } else {
     if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 190, 0, 7); x.fill(); x.drawImage(im, cx - 150, 490, 300, 300); }); }
     x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = (imgs.baby ? 960 : 620) + Math.floor(n / 2) * (imgs.baby ? 190 : 280); x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 80); });
@@ -616,11 +616,13 @@ function fetalCard(S) {
 X.weekstory = () => {
   const S = storyData(), n = S.slides.length; storyIdx = Math.max(0, Math.min(n - 1, storyIdx));
   view.innerHTML = `${intro('Wochen-Story', `Die aktuelle Entwicklung von ${esc(S.kid)} als drei schöne Bilder zum Teilen: mit Größenvergleich, Entwicklung und Zusammenfassung.`)}
+    <div class="st-lang"><label for="stDia" class="keep">${bi('translate')} Sprache der Story</label><select id="stDia" aria-label="Sprache der Story">${[['off', 'Hochdeutsch'], ...Object.entries(DIALECTS), ['alle', 'Bunt gemischt']].map(([k, l]) => `<option value="${k}" ${(state.settings.dialect || 'off') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
     <div class="story-wrap" id="storyWrap"><button type="button" class="st-nav st-prev" id="stPrev" aria-label="Voriges Bild">${bi('chevron-left')}</button><div id="storyBox">${storySlideHTML(S, storyIdx)}</div><button type="button" class="st-nav st-next" id="stNext" aria-label="Nächstes Bild">${bi('chevron-right')}</button></div>
     <div class="st-dots" role="group" aria-label="Bild wählen">${S.slides.map((s, i) => `<button type="button" class="st-dot ${i === storyIdx ? 'on' : ''}" data-st="${i}" aria-label="Bild ${i + 1} von ${n}" aria-pressed="${i === storyIdx}"></button>`).join('')}</div>
     <div class="hstack gap-2 flex-wrap mt-3"><button type="button" class="btn btn-solid theme-primary flex-grow-1" id="stShare">${bi('share-fill')} Dieses Bild teilen</button><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="stAll">${bi('images')} Alle drei teilen</button></div>
     ${fetalCard(S)}
     <p class="small soft mt-2" id="stNote">${S.body.mmM || S.body.gM ? `Größe und Gewicht dieser Woche sind eure eigenen Messwerte vom ${esc(fmtDate(S.body.date))}. Fehlende Werte sind Durchschnittswerte (Richtwerte).` : 'Größe und Gewicht sind Durchschnittswerte (Richtwerte). Eigene Messwerte könnt ihr oben eintragen.'} Beides ersetzt keine ärztliche Beratung. Auf dem Handy öffnet sich direkt das Teilen-Menü, am Computer werden die Bilder gespeichert.</p>`;
+  $('#stDia').onchange = e => { const k = e.target.value; if (k === 'off') { delete state.settings.dialect; delete state.settings.dialectFreq; } else state.settings.dialect = k; save(); render(); toast(k === 'off' ? 'Die Story ist wieder auf Hochdeutsch.' : `Die Story spricht jetzt ${k === 'alle' ? 'bunt gemischt' : DIALECTS[k]}!`); };
   const go = i => { storyIdx = (i + n) % n; render(); };
   $('#stPrev').onclick = () => go(storyIdx - 1); $('#stNext').onclick = () => go(storyIdx + 1);
   view.querySelectorAll('[data-st]').forEach(b => b.onclick = () => go(+b.dataset.st));
