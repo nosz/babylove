@@ -775,7 +775,7 @@ routes.einstellungen = () => {
     <h2>Schrift</h2>
     <div class="card" id="fontCard">
       <b id="ffLabel">Schriftart</b>
-      <div class="font-list mt-2" role="radiogroup" aria-labelledby="ffLabel">${Object.entries(FONT_FAMILIES).map(([k, f]) => `<button type="button" class="font-opt ${(s.fontFamily || 'soft') === k ? 'on' : ''}" role="radio" aria-checked="${(s.fontFamily || 'soft') === k}" data-ff="${k}" style="font-family:${f.stack}"><span class="fo-name">${f.label}</span><span class="fo-sample">Aa · Du schaffst das!</span><span class="fo-note small">${f.note}</span></button>`).join('')}</div>
+      <div class="font-list mt-2" role="radiogroup" aria-labelledby="ffLabel">${Object.entries(FONT_FAMILIES).map(([k, f]) => `<button type="button" class="font-opt ${(s.fontFamily || 'soft') === k ? 'on' : ''}" role="radio" aria-checked="${(s.fontFamily || 'soft') === k}" data-ff="${k}" style="font-family:${esc(f.stack)}"><span class="fo-name">${f.label}</span><span class="fo-sample">Aa · Du schaffst das!</span><span class="fo-note small">${f.note}</span></button>`).join('')}</div>
       <p class="small soft mt-2 mb-3">Alle Schriften sind auf jedem Gerät und in jedem Browser schon vorhanden: Sie laden schnell, funktionieren offline und übertragen nichts.</p>
       <b id="fsLabel">Schriftgröße</b>
       <div class="fs-row mt-2"><button type="button" class="btn btn-subtle theme-secondary" id="fsDown" aria-label="Schrift kleiner">${bi('dash-lg')}</button>
