@@ -7,7 +7,11 @@ const X = EXTRA_ROUTES;
 const bi = n => `<i class="bi bi-${n}" aria-hidden="true"></i>`;
 // Kennzeichnung: für wen ist etwas? Mama (rosé), Papa (blau) oder gemeinsam (immer zwei Herzen)
 const duoHearts = () => '<span class="duo" aria-hidden="true"><i class="bi bi-heart-fill"></i><i class="bi bi-heart-fill"></i></span>';
-const AUD = { mama: { label: 'Für Mama', icon: () => bi('person-heart') }, papa: { label: 'Für Papa', icon: () => bi('person-fill') }, together: { label: 'Gemeinsam', icon: duoHearts } };
+// Ist ein Profilfoto hinterlegt, steht in der Kennzeichnung das Foto statt des Symbols
+// (ohne Foto: Herz in der Lieblingsfarbe der Person)
+const heartOf = k => `<i class="bi bi-heart-fill" style="color:var(--heart-${k})" aria-hidden="true"></i>`;
+const audIcon = (who, k) => { const id = typeof randomPhoto === 'function' ? randomPhoto(who) : null; return id ? `<img class="aud-av" data-img="${id}" alt="">` : heartOf(k); };
+const AUD = { mama: { label: 'Für Mama', icon: () => audIcon('mama', 'mama') }, papa: { label: 'Für Papa', icon: () => audIcon('partner', 'papa') }, together: { label: 'Gemeinsam', icon: duoHearts } };
 const audBadge = (kind, size = '') => { const a = AUD[kind] || AUD.together; return `<span class="aud aud-${kind} ${size ? 'aud-' + size : ''}" data-aud="${kind}">${a.icon()}<span>${a.label}</span></span>`; };
 const hm = ts => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const isUrl = u => /^https?:\/\//i.test(u || '');
@@ -36,6 +40,7 @@ const shareApp = () => shareThing({
 /* ---------- Hub ---------- */
 const HUB = [
   ['partner', 'people-fill', 'Partner-Modus', 'Wochenstand und wie du richtig gut unterstützt'],
+  ['diary', 'journal-text', 'Tagebuch', 'Euer gemeinsames Tagebuch'],
   ['photos', 'images', 'Fotoalbum', 'Bilder mit Woche und Beschriftung'],
   ['letters', 'envelope-heart', 'Briefe ans Baby', 'Text oder Sprachnachricht für später'],
   ['names', 'tags', 'Namensfinder', 'Favoriten, gemeinsam abstimmen'],
@@ -46,6 +51,8 @@ const HUB = [
   ['recipes', 'cookie', 'Kochrezepte', 'Gesund, lecker, mit Einkaufsliste'],
   ['move', 'bicycle', 'Bewegung', 'Pro Trimester, Beckenboden, Yoga'],
   ['breathing', 'wind', 'Atemübungen', 'Ruhig atmen, Kraft sammeln'],
+  ['weekstory', 'stars', 'Wochen-Story', 'Die Entwicklung deines Babys schön teilen'],
+  ['jokes', 'balloon-heart-fill', 'Babywitze', 'Zum Schmunzeln und Mutmachen'],
   ['vits', 'capsule', 'Vitamine', 'Tägliche Erinnerung'],
   ['water', 'droplet-half', 'Wasser-Tracker', 'Gläser pro Tag'],
   ['contacts', 'telephone-fill', 'Kontakte & Notfall', 'Hebamme, Arzt, wichtige Nummern'],
@@ -78,7 +85,7 @@ const papaDailyCard = tri => `<div class="card papa-daily">${papaRow('bullseye',
   ${papaRow('lightbulb', `Tipp für das ${tri}. Trimester`, 'papaTip', dailyPick(quotePool('papaTips', tri), 'tip' + tri), 'newPapaTip', 'Neuer Tipp')}
   ${papaRow('chat-quote', 'Motivation', 'papaMsg', partnerMsgToday(), 'newPapaMsg', 'Neuer Spruch')}</div>`;
 const bindTip = tri => {
-  const b = $('#newPapaTip'); if (b) b.onclick = () => { $('#papaTip').textContent = papaName(nextPapaTip(tri)); };
+  const b = $('#newPapaTip'); if (b) b.onclick = () => { const cur = $('#papaTip').textContent; let q, g = 0; do { q = papaName(nextPapaTip(tri)); } while (q === cur && ++g < 20); $('#papaTip').textContent = q; };
   const m = $('#newMission'); if (m) m.onclick = () => { const pool = quotePool('missions'), cur = $('#papaMission').textContent; let q, g = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++g < 20); $('#papaMission').textContent = papaName(q); };
   const s = $('#newPapaMsg'); if (s) s.onclick = () => { const cur = $('#papaMsg').textContent; let q, g = 0; do { q = papaName(partnerMsg()); } while (q === cur && ++g < 20); $('#papaMsg').textContent = q; };
 };
@@ -101,6 +108,7 @@ X.letters = () => {
     ${l.length ? l.map(x => `<article class="card entry"><div class="meta"><b>${fmtDate(x.date)}</b><button class="btn btn-text theme-danger btn-sm" data-del="${x.id}" aria-label="Brief löschen">${bi('trash')}</button></div>
       ${x.text ? `<p style="margin-top:10px;white-space:pre-wrap">${esc(x.text)}</p>` : ''}${x.audioId ? `<audio controls preload="none" data-aud="${x.audioId}" style="width:100%;margin-top:8px"></audio>` : ''}</article>`).join('')
       : empty('envelope-heart', 'Der erste Brief wartet. „Liebes Baby, wir haben gerade Pizza gegessen …“ ist völlig okay.')}
+    <a class="btn btn-subtle theme-secondary w-100 mt-2" href="#/lettersprint">${bi('book-half')} Als Erinnerungsbuch exportieren</a>
     ${fabBtn('add', 'pencil-fill', 'Neuen Brief schreiben')}`;
   $('#add').onclick = letterForm;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -199,7 +207,7 @@ X.wishes = () => {
       <label for="w${x.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(x.text)}</span>${x.assigned ? ` <span class="chip">${bi('person-check')} bei ${esc(x.assigned)}</span>` : ''}${isUrl(x.link) ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')}</a>` : ''}</label>
       <button class="btn btn-text theme-danger btn-sm" data-d="${x.id}" aria-label="Entfernen">${bi('x-lg')}</button></div>`).join('')}</div>` : empty('gift', 'Noch leer. Ein Kinderwagen mit Getränkehalter? Nur zu!')}
     <form id="wf" class="mt-3"><input id="wt" placeholder="Wunsch, z. B. Tragetuch" aria-label="Wunsch" maxlength="80" required><input id="wl" type="url" placeholder="Link (optional)" aria-label="Link zum Wunsch (optional)" style="margin-top:8px"><button class="btn btn-solid theme-primary w-100 mt-2">Hinzufügen</button></form>
-    <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-solid theme-primary flex-grow-1" href="#/wishprint">${bi('printer')} Wunschzettel drucken</a>${w.length ? `<button class="btn btn-subtle theme-secondary flex-grow-1" id="shw">${bi('share')} Liste teilen</button>` : ''}</div>`;
+    <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-solid theme-primary flex-grow-1" href="#/wishprint">${bi('printer')} Wunschzettel drucken</a><a class="btn btn-subtle theme-secondary flex-grow-1" href="#/wishlistprint">${bi('file-earmark-richtext')} Vorschau und Export</a>${w.length ? `<button class="btn btn-subtle theme-secondary flex-grow-1" id="shw">${bi('share')} Liste teilen</button>` : ''}</div>`;
   $('#wf').onsubmit = e => { e.preventDefault(); state.wishes.push({ id: uid(), text: $('#wt').value.trim(), link: $('#wl').value.trim(), got: false }); save(); render(); cheer('add'); };
   view.querySelectorAll('[data-g]').forEach(c => c.onchange = () => { state.wishes.find(x => x.id === c.dataset.g).got = c.checked; save(); render(); });
   view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { state.wishes = state.wishes.filter(x => x.id !== b.dataset.d); save(); render(); });
@@ -416,7 +424,7 @@ function togetherCard() {
     : t.mama || t.partner ? `Fehlt noch: ${esc(t.mama ? names.partner : names.mama)}. Holt euch kurz zusammen, es dauert nur eine Minute.`
     : 'Schaut heute zu zweit rein. Das ist das schönste Ritual der Schwangerschaft.';
   const dots = Array.from({ length: 7 }, (_, i) => { const d = iso(new Date(today().getTime() - (6 - i) * DAY)); return `<span class="tg-dot ${togetherDone(d) ? 'on' : ''}" title="${d}"></span>`; }).join('');
-  const person = who => `<button class="tg-btn ${t[who] ? 'on' : ''}" data-tg="${who}" aria-pressed="${!!t[who]}">${personAvatar(who, 'avatar-sm') || bi('person-fill')}<span data-name="${who}" data-fallback="${who === 'mama' ? 'Mama' : 'Papa'}">${esc(names[who])}</span>${bi(t[who] ? 'check-circle-fill' : 'circle')}</button>`;
+  const person = who => `<button class="tg-btn ${t[who] ? 'on' : ''}" data-tg="${who}" aria-pressed="${!!t[who]}">${personAvatar(who, 'avatar-sm') || heartOf(who === 'mama' ? 'mama' : 'papa')}<span data-name="${who}" data-fallback="${who === 'mama' ? 'Mama' : 'Papa'}">${esc(names[who])}</span>${bi(t[who] ? 'check-circle-fill' : 'circle')}</button>`;
   return `<div class="card together ${both ? 'done' : ''}">
     <div class="hstack gap-2"><b class="flex-grow-1">${duoHearts()} Gemeinsam heute</b><span class="chip">${bi('fire')} Serie: ${n} ${n === 1 ? 'Tag' : 'Tage'}</span></div>
     <p class="mt-2 mb-2">${esc(idea[0])}</p>
@@ -480,4 +488,107 @@ X.breathing = () => {
   $('#bStart').onclick = () => breathRun ? stopBreath() : startBreath(ex, breathMin);
   view.querySelectorAll('[data-bmin]').forEach(b => b.onclick = () => { breathMin = +b.dataset.bmin; view.querySelectorAll('[data-bmin]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); });
   view.querySelectorAll('[data-bex]').forEach(b => b.onclick = () => { breathSel = b.dataset.bex; render(); });
+};
+
+/* ---------- Babywitze ---------- */
+let jokeCat = 'alle';
+const jokeFavs = () => (state.jokeFav = state.jokeFav || []);
+X.jokes = () => {
+  const fav = jokeFavs(), all = JOKES.map(([c, t]) => ({ c, t })), list = all.filter(j => jokeCat === 'alle' ? true : jokeCat === 'fav' ? fav.includes(j.t) : j.c === jokeCat);
+  const today = dailyPick(all.map(j => j.t), 'joke');
+  const card = j => `<article class="card joke"><p class="joke-t">${esc(j.t)}</p><div class="hstack gap-2 justify-content-between"><span class="chip">${esc(JOKE_CATS[j.c])}</span><span class="hstack gap-1"><button type="button" class="btn btn-text btn-sm joke-btn ${fav.includes(j.t) ? 'on' : ''}" data-jfav="${esc(j.t)}" aria-pressed="${fav.includes(j.t)}" aria-label="${fav.includes(j.t) ? 'Nicht mehr merken' : 'Merken'}">${bi(fav.includes(j.t) ? 'heart-fill' : 'heart')}</button><button type="button" class="btn btn-text btn-sm joke-btn" data-jshare="${esc(j.t)}" aria-label="Witz teilen">${bi('share')}</button></span></div></article>`;
+  view.innerHTML = `${intro('Babywitze', 'Lachen ist die beste Vorbereitung. Schwangerschaftswitze mit Niveau, zum Schmunzeln, Teilen und Mutmachen.')}
+    <div class="card joke-day"><div class="small soft mb-1">${bi('stars')} Witz des Tages</div><p class="joke-t big-joke" id="jokeToday">${esc(today)}</p>
+      <div class="hstack gap-2 flex-wrap"><button type="button" class="btn btn-solid theme-primary" id="jokeNew">${bi('arrow-repeat')} Noch einer</button><button type="button" class="btn btn-subtle theme-secondary" id="jokeShare">${bi('share')} Teilen</button></div></div>
+    <div class="chip-row" role="group" aria-label="Kategorie">${[['alle', 'Alle'], ...Object.entries(JOKE_CATS), ['fav', `Gemerkt (${fav.length})`]].map(([k, l]) => `<button type="button" class="chip-btn ${jokeCat === k ? 'on' : ''}" data-jcat="${k}" aria-pressed="${jokeCat === k}">${l}</button>`).join('')}</div>
+    ${list.length ? list.map(card).join('') : '<div class="card center soft">Noch nichts gemerkt. Tippe bei einem Witz auf das Herz.</div>'}
+    <p class="small soft center">Alle Witze sind selbst geschrieben und für alle Ohren geeignet. Lachen tut gut, euch und dem Baby.</p>`;
+  const cur = () => $('#jokeToday').textContent;
+  $('#jokeNew').onclick = () => { const pool = all.map(j => j.t); let q, g = 0; do { q = pick(pool); } while (q === cur() && ++g < 20); $('#jokeToday').textContent = q; };
+  $('#jokeShare').onclick = () => shareThing({ title: 'Babywitz', text: `${cur()}\n\n${brandFull()}` });
+  view.querySelectorAll('[data-jcat]').forEach(b => b.onclick = () => { jokeCat = b.dataset.jcat; render(); });
+  view.querySelectorAll('[data-jshare]').forEach(b => b.onclick = () => shareThing({ title: 'Babywitz', text: `${b.dataset.jshare}\n\n${brandFull()}` }));
+  view.querySelectorAll('[data-jfav]').forEach(b => b.onclick = () => { const t = b.dataset.jfav; state.jokeFav = fav.includes(t) ? fav.filter(x => x !== t) : [...fav, t]; save(); render(); });
+};
+
+/* ---------- Wochen-Story: die aktuelle Entwicklung des Babys schön teilen (drei Bilder im Hochformat) ---------- */
+let storyIdx = 0;
+const weekBody = w => {
+  w = Math.max(4, Math.min(42, w)); let lo = WEEK_BODY[0], hi = WEEK_BODY[WEEK_BODY.length - 1];
+  for (let i = 0; i < WEEK_BODY.length - 1; i++) if (w >= WEEK_BODY[i][0] && w <= WEEK_BODY[i + 1][0]) { lo = WEEK_BODY[i]; hi = WEEK_BODY[i + 1]; break; }
+  const t = hi[0] === lo[0] ? 0 : (w - lo[0]) / (hi[0] - lo[0]);
+  return { mm: Math.round(lo[1] + (hi[1] - lo[1]) * t), g: Math.round(lo[2] + (hi[2] - lo[2]) * t) };
+};
+const fmtMM = mm => mm < 100 ? `${mm} mm` : `${(mm / 10).toFixed(1).replace('.', ',')} cm`;
+const fmtG = g => g < 1 ? 'unter 1 g' : g < 1000 ? `${g} g` : `${(g / 1000).toFixed(1).replace('.', ',')} kg`;
+function weekRange(p) {
+  const lmp = new Date(state.settings.dueDate + 'T00:00'); lmp.setDate(lmp.getDate() - 280);
+  const s = new Date(lmp); s.setDate(lmp.getDate() + p.weeks * 7); const e = new Date(s); e.setDate(s.getDate() + 6);
+  const mon = d => d.toLocaleDateString('de-DE', { month: 'long' }), short = d => d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+  return s.getMonth() === e.getMonth() ? `${s.getDate()}.–${e.getDate()}. ${mon(e)}` : `${short(s)}–${short(e)}`;
+}
+function storyData() {
+  const p = pregnancy(), s = state.settings, kid = (s.nick || '').trim() || 'Dein Baby', w = Math.max(4, Math.min(42, p.weeks)), [, fruit] = fruitFor(p.weeks), body = weekBody(w), art = FRUIT_ART[fruit] || 'ein';
+  const due = new Date(s.dueDate + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  return { p, week: p.weeks, range: weekRange(p), fruit, kid, body, slides: [
+    { id: 'size', title: `${kid} ist so groß wie ${art} ${fruit}`, lines: [`ca. ${fmtMM(body.mm)}`, `ca. ${fmtG(body.g)}`] },
+    { id: 'dev', title: WEEK_DEV[w] },
+    { id: 'sum', title: 'Unsere Zusammenfassung', rows: [['SSW', `${p.weeks}+${p.days}`], ['Errechneter Termin', due], ['Größe', `ca. ${fmtMM(body.mm)}`], ['Gewicht', `ca. ${fmtG(body.g)}`], ['Schon geschafft', `${Math.max(0, p.elapsed)} Tage`], ['Noch ca.', `${Math.max(0, p.left)} Tage`]] }
+  ] };
+}
+const fruitHue = name => [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+function storySlideHTML(S, i) {
+  const sl = S.slides[i];
+  const art = sl.id === 'size' ? `<div class="st-circle"><div class="st-fruit" style="--fh:${fruitHue(S.fruit)}"><i class="st-leaf"></i></div></div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
+    : sl.id === 'dev' ? `<div class="st-egg" aria-hidden="true">${bi('heart-fill')}</div><p class="st-cap">Woche ${S.week}</p>`
+    : `<dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
+  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
+}
+// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
+function drawStory(S, i) {
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  const bg = v('--bg') || '#fbf4f2', s2 = v('--surface-2') || '#f4e6e3', pri = v('--primary') || '#ae5f6a', strong = v('--primary-strong') || '#8b4752', text = v('--text') || '#3a2c2d', soft = v('--text-soft') || '#6e5a59', fam = (v('--font') || 'sans-serif'), sl = S.slides[i];
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, s2); g.addColorStop(1, bg); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const wrap = (t, mw, size, weight) => { x.font = `${weight} ${size}px ${fam}`; const out = []; let line = ''; for (const w of String(t).split(' ')) { const test = line ? line + ' ' + w : w; if (x.measureText(test).width > mw && line) { out.push(line); line = w; } else line = test; } if (line) out.push(line); return out; };
+  x.textBaseline = 'alphabetic'; x.fillStyle = soft; x.textAlign = 'left'; x.font = `600 44px ${fam}`; x.fillText(`Woche ${S.week} · ${S.range}`, 70, 140);
+  const heart = (cx, cy, s, col) => { x.save(); x.translate(cx, cy); x.scale(s, s); x.beginPath(); x.moveTo(0, 30); x.bezierCurveTo(-90, -30, -50, -90, 0, -40); x.bezierCurveTo(50, -90, 90, -30, 0, 30); x.fillStyle = col; x.fill(); x.restore(); };
+  x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96));
+  if (sl.id === 'size') {
+    x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(W / 2, 1090, 360, 0, 7); x.fill();
+    const hue = fruitHue(S.fruit), gr = x.createRadialGradient(W / 2 - 70, 1030, 20, W / 2, 1090, 250); gr.addColorStop(0, `hsl(${hue} 80% 70%)`); gr.addColorStop(1, `hsl(${hue} 70% 45%)`); x.fillStyle = gr; x.beginPath(); x.arc(W / 2, 1110, 240, 0, 7); x.fill();
+    x.fillStyle = `hsl(${(hue + 110) % 360} 55% 38%)`; x.beginPath(); x.ellipse(W / 2 + 40, 850, 90, 38, -0.5, 0, 7); x.fill(); x.fillRect(W / 2 - 6, 845, 12, 50);
+    x.fillStyle = text; x.font = `700 56px ${fam}`; x.fillText(sl.lines.join(' · '), W / 2, 1560);
+  } else if (sl.id === 'dev') {
+    x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF');
+    x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680);
+  } else {
+    x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = 620 + Math.floor(n / 2) * 280; x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 90); });
+    x.fillStyle = s2; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, 840, 30, 15) : x.rect(120, 1500, 840, 30); x.fill(); x.fillStyle = strong; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30, 15) : x.rect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30); x.fill();
+  }
+  x.textAlign = 'center'; heart(W / 2 - 200, H - 150, 1.1, getComputedStyle(document.documentElement).getPropertyValue('--heart-mama').trim() || pri); heart(W / 2 - 160, H - 150, 1.1, getComputedStyle(document.documentElement).getPropertyValue('--heart-papa').trim() || pri);
+  x.fillStyle = strong; x.font = `700 42px ${fam}`; x.fillText(`${brandName()}  ${brandSub()}`, W / 2 + 40, H - 135);
+  return c;
+}
+const storyFile = async (S, i) => { const blob = await new Promise(r => drawStory(S, i).toBlob(r, 'image/png')); return new File([blob], `${fileSafe(S.kid)}-woche-${S.week}-${S.slides[i].id}.png`, { type: 'image/png' }); };
+function saveFileBlob(f) { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(f), download: f.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+async function shareImages(files, S) {
+  const text = retitleStr(`${S.kid} in Woche ${S.week}: so groß wie ${FRUIT_ART[S.fruit] || 'ein'} ${S.fruit}. ${brandFull()}`);
+  try { if (navigator.canShare && navigator.canShare({ files })) await navigator.share({ files, title: `${S.kid}: Woche ${S.week}`, text }); else { files.forEach(saveFileBlob); toast(files.length > 1 ? 'Bilder gespeichert. Jetzt in jeder App teilbar.' : 'Bild gespeichert. Jetzt in jeder App teilbar.'); } }
+  catch (e) { if (e.name !== 'AbortError') toast('Teilen klappt hier leider nicht'); }
+}
+X.weekstory = () => {
+  const S = storyData(), n = S.slides.length; storyIdx = Math.max(0, Math.min(n - 1, storyIdx));
+  view.innerHTML = `${intro('Wochen-Story', `Die aktuelle Entwicklung von ${esc(S.kid)} als drei schöne Bilder zum Teilen: mit Größenvergleich, Entwicklung und Zusammenfassung.`)}
+    <div class="story-wrap" id="storyWrap"><button type="button" class="st-nav st-prev" id="stPrev" aria-label="Voriges Bild">${bi('chevron-left')}</button><div id="storyBox">${storySlideHTML(S, storyIdx)}</div><button type="button" class="st-nav st-next" id="stNext" aria-label="Nächstes Bild">${bi('chevron-right')}</button></div>
+    <div class="st-dots" role="group" aria-label="Bild wählen">${S.slides.map((s, i) => `<button type="button" class="st-dot ${i === storyIdx ? 'on' : ''}" data-st="${i}" aria-label="Bild ${i + 1} von ${n}" aria-pressed="${i === storyIdx}"></button>`).join('')}</div>
+    <div class="hstack gap-2 flex-wrap mt-3"><button type="button" class="btn btn-solid theme-primary flex-grow-1" id="stShare">${bi('share-fill')} Dieses Bild teilen</button><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="stAll">${bi('images')} Alle drei teilen</button></div>
+    <p class="small soft mt-2">Größe und Gewicht sind Durchschnittswerte (Richtwerte) und ersetzen keine ärztliche Beratung. Auf dem Handy öffnet sich direkt das Teilen-Menü, am Computer werden die Bilder gespeichert.</p>`;
+  const go = i => { storyIdx = (i + n) % n; render(); };
+  $('#stPrev').onclick = () => go(storyIdx - 1); $('#stNext').onclick = () => go(storyIdx + 1);
+  view.querySelectorAll('[data-st]').forEach(b => b.onclick = () => go(+b.dataset.st));
+  $('#stShare').onclick = async () => shareImages([await storyFile(S, storyIdx)], S);
+  $('#stAll').onclick = async () => shareImages(await Promise.all(S.slides.map((_, i) => storyFile(S, i))), S);
+  let x0 = null; const box = $('#storyBox');
+  box.addEventListener('pointerdown', e => { x0 = e.clientX; }); box.addEventListener('pointerup', e => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 50) go(storyIdx + (dx < 0 ? 1 : -1)); });
+  view.onkeydown = e => { if (e.key === 'ArrowLeft') go(storyIdx - 1); if (e.key === 'ArrowRight') go(storyIdx + 1); };
 };

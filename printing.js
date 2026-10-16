@@ -203,6 +203,130 @@ function diaryPrintPage(who) {
 EXTRA_ROUTES.diaryprint = () => diaryPrintPage('mama');
 
 
+/* ==================== Briefe ans Baby: als Erinnerungsbuch exportieren ==================== */
+// Deckblatt, jeder Brief als eigene Seite im Buchstil, optional mit Sprachnachrichten (nur im HTML-Buch abspielbar)
+const LETTERS_DEFAULT = { title: '', from: '', to: '', cover: true, toc: true, names: true, kid: true, week: true, audio: true, newest: false };
+const lettersCfg = () => Object.assign({}, LETTERS_DEFAULT, state.settings.lettersPrint || {});
+const lettersTitle = cfg => cfg.title.trim() || ('Briefe an ' + (state.settings.nick || 'unser Baby'));
+const lettersSelection = cfg => { const l = [...state.letters].filter(x => (!cfg.from || x.date >= cfg.from) && (!cfg.to || x.date <= cfg.to)).sort((a, b) => a.date.localeCompare(b.date)); return cfg.newest ? l.reverse() : l; };
+const letterMeta = (x, cfg) => [cfg.week && weekFor(x.date) !== null ? weekFor(x.date) + '. SSW' : '', x.audioId && cfg.audio ? 'mit Sprachnachricht' : ''].filter(Boolean);
+function lettersDocHTML(cfg, { embed = null } = {}) {
+  const list = lettersSelection(cfg), names = cfg.names ? namesLine() : '', kid = cfg.kid && state.settings.nick ? state.settings.nick : '', title = lettersTitle(cfg);
+  const period = list.length ? `${fmtDate([...list].sort((a, b) => a.date.localeCompare(b.date))[0].date)} bis ${fmtDate([...list].sort((a, b) => b.date.localeCompare(a.date))[0].date)}` : '';
+  const sub = [names && 'von ' + names, kid && 'für ' + kid].filter(Boolean).join(' ');
+  const cover = cfg.cover
+    ? `<section class="pd-cover"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><div class="pd-cover-mid">${printHearts()}<h2>${esc(title)}</h2>
+        <p class="pd-cover-names">${esc(sub)}</p><p class="pd-cover-period">${esc(period)}</p><p class="pd-quote">„Eines Tages wirst du das lesen. Wir haben dich schon jetzt sehr lieb.“</p></div>
+        <p class="pd-cover-foot">${list.length} ${list.length === 1 ? 'Brief' : 'Briefe'} · erstellt am ${esc(fmtLong(iso(today())))}</p></section>`
+    : `<header class="pd-head wd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><h2>${esc(title)}</h2><p class="pd-for">${esc(sub)}${sub && period ? ' · ' : ''}${esc(period)}</p></header>`;
+  const toc = cfg.toc && list.length > 3 ? `<nav class="pd-toc"><h3>Inhalt</h3><ol>${list.map((x, i) => `<li><a href="#l-${i + 1}">Brief ${i + 1}</a><span>${esc(fmtDate(x.date))}</span></li>`).join('')}</ol></nav>` : '';
+  const body = list.length ? list.map((x, i) => { const meta = letterMeta(x, cfg);
+    const aud = x.audioId && cfg.audio ? (embed && embed[x.audioId] ? `<audio controls preload="none" src="${embed[x.audioId]}"></audio>` : '<p class="pd-audio">Dazu gibt es eine Sprachnachricht, die in der App abspielbar ist.</p>') : '';
+    return `<section class="pd-entry pd-letter" id="l-${i + 1}"><div class="pd-date"><b>Brief ${i + 1} · ${esc(fmtLong(x.date))}</b><span>${esc(meta.join(' · '))}</span></div>${x.text ? `<p>${esc(x.text).replace(/\n/g, '<br>')}</p>` : '<p class="pd-audio">(Nur Sprachnachricht)</p>'}${aud}</section>`; }).join('')
+    : '<p class="pd-empty">In diesem Zeitraum gibt es noch keine Briefe.</p>';
+  return `<article class="print-doc diary-doc letters-doc">${cover}${toc}${body}<footer class="pd-foot"><div class="pd-sign">${list.length} ${list.length === 1 ? 'Brief' : 'Briefe'} · ${esc(brandName())} <i>${esc(brandSub())}</i> · ${fmtDate(iso(today()))}</div></footer></article>`;
+}
+function lettersText(cfg) {
+  const list = lettersSelection(cfg), line = '='.repeat(54), out = [lettersTitle(cfg), [cfg.names && namesLine() && 'von ' + namesLine(), cfg.kid && state.settings.nick && 'für ' + state.settings.nick].filter(Boolean).join(' '), `${list.length} Briefe`, brandFull(), line, ''];
+  list.forEach((x, i) => out.push([`Brief ${i + 1}`, fmtLong(x.date), ...letterMeta(x, cfg)].join(' · '), '-'.repeat(54), x.text || '(nur Sprachnachricht)', ''));
+  return out.filter((l, i, a) => !(l === '' && a[i - 1] === '') && (i === 0 || l !== '' || a[i - 1] !== undefined)).join('\n');
+}
+function lettersMarkdown(cfg) {
+  const list = lettersSelection(cfg), sub = [cfg.names && namesLine() && 'von ' + namesLine(), cfg.kid && state.settings.nick && 'für ' + state.settings.nick].filter(Boolean).join(' '), out = [`# ${lettersTitle(cfg)}`, '', sub && `*${sub}*  `, `*${brandFull()}* · ${list.length} Briefe`, ''];
+  list.forEach((x, i) => out.push(`## Brief ${i + 1} · ${fmtLong(x.date)}`, '', `*${letterMeta(x, cfg).join(' · ')}*`, '', x.text || '*(nur Sprachnachricht)*', ''));
+  return out.filter((l, i, a) => l !== false && l !== undefined && !(l === '' && a[i - 1] === '')).join('\n') + '\n';
+}
+const LETTERS_CSS = DIARY_CSS + `.pd-letter p{font-style:italic;font-size:1.08rem}.pd-letter .pd-date{font-style:normal}.pd-audio{font-family:Segoe UI,Arial,sans-serif;font-size:.85rem;color:#6e5a59;font-style:normal!important}audio{width:100%;margin-top:8px}.pd-quote{font-style:italic;color:#8b4752;margin:22px auto 0;max-width:30em}`;
+const lettersFullHTML = (cfg, embed, word = false) => `<!doctype html><html lang="de"${word ? ' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(lettersTitle(cfg))}</title><style>${LETTERS_CSS.replace('__BRAND__', cssStr(brandFull()))}</style></head><body>${lettersDocHTML(cfg, { embed })}</body></html>`;
+EXTRA_ROUTES.lettersprint = () => {
+  const cfg = lettersCfg(), check = (id, label, on) => `<div class="todo"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><label for="${id}" class="keep" style="margin:0;font-weight:400;flex:1">${label}</label></div>`;
+  view.innerHTML = `<div class="no-print">${intro('Briefe als Buch', 'Macht aus euren Briefen ans Baby ein Erinnerungsbuch zum Verschenken, Ausdrucken oder Aufbewahren: mit Deckblatt, Inhalt und Seitenzahlen. Später sieht das richtig toll aus.')}
+    <div class="card">
+      <label for="lp-title">Titel</label><input id="lp-title" value="${esc(cfg.title)}" maxlength="60" placeholder="${esc(lettersTitle({ title: '' }))}">
+      <div class="hstack gap-2"><div class="flex-grow-1"><label for="lp-from">Von</label><input id="lp-from" type="date" value="${cfg.from}"></div><div class="flex-grow-1"><label for="lp-to">Bis</label><input id="lp-to" type="date" value="${cfg.to}"></div></div>
+      ${check('lp-cover', 'Deckblatt', cfg.cover)}${check('lp-toc', 'Inhaltsverzeichnis (ab vier Briefen)', cfg.toc)}${check('lp-week', 'Schwangerschaftswoche anzeigen', cfg.week)}${check('lp-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('lp-kid', 'Namen des Kindes nennen (Kosename)', cfg.kid)}${check('lp-audio', 'Sprachnachrichten berücksichtigen', cfg.audio)}${check('lp-newest', 'Neueste Briefe zuerst', cfg.newest)}
+      <p class="small soft mt-2 mb-0" id="lp-count"></p></div>
+    <h2>Drucken</h2>
+    <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-solid theme-primary" id="lp-print">${bi('printer')} Drucken oder als PDF speichern</button></div>
+    <h2>Exportieren</h2>
+    <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-subtle theme-secondary" id="lp-html">${bi('filetype-html')} Buch (HTML, mit Sprachnachrichten)</button><button class="btn btn-subtle theme-secondary" id="lp-doc">${bi('file-earmark-word')} Word (.doc)</button>
+      <button class="btn btn-subtle theme-secondary" id="lp-md">${bi('markdown')} Markdown</button><button class="btn btn-subtle theme-secondary" id="lp-txt">${bi('file-earmark-text')} Text</button></div>
+    <p class="small soft">Sprachnachrichten lassen sich nur im HTML-Buch abspielen. Gedruckt und in Word steht ein Hinweis. Die Dateien enthalten persönliche Briefe: sicher aufbewahren und nur an vertraute Menschen weitergeben.</p><h2>Vorschau</h2></div>
+    <div class="print-sheet" id="printArea">${lettersDocHTML(cfg)}</div>`;
+  const refresh = () => { $('#printArea').innerHTML = lettersDocHTML(cfg); $('#lp-count').textContent = `${lettersSelection(cfg).length} von ${state.letters.length} Briefen ausgewählt`; state.settings.lettersPrint = { ...cfg }; save(); };
+  const bindT = (id, key) => $(id).addEventListener('input', e => { cfg[key] = e.target.value; refresh(); }), bindC = (id, key) => $(id).onchange = e => { cfg[key] = e.target.checked; refresh(); };
+  bindT('#lp-title', 'title'); bindT('#lp-from', 'from'); bindT('#lp-to', 'to');
+  for (const [id, k] of [['#lp-cover', 'cover'], ['#lp-toc', 'toc'], ['#lp-week', 'week'], ['#lp-names', 'names'], ['#lp-kid', 'kid'], ['#lp-audio', 'audio'], ['#lp-newest', 'newest']]) bindC(id, k);
+  const guard = () => { if (!lettersSelection(cfg).length) { toast('In diesem Zeitraum gibt es keine Briefe'); return false; } return true; }, name = ext => `${fileSafe(lettersTitle(cfg))}-${iso(today())}.${ext}`;
+  const embedAudio = async () => { const m = {}; if (cfg.audio) for (const x of lettersSelection(cfg)) if (x.audioId) { const b = await getImg(x.audioId); if (b) m[x.audioId] = await blobToData(b); } return m; };
+  $('#lp-print').onclick = () => { if (guard()) window.print(); };
+  $('#lp-txt').onclick = () => { if (guard()) { downloadFile(name('txt'), lettersText(cfg), 'text/plain;charset=utf-8'); cheer('save'); } };
+  $('#lp-md').onclick = () => { if (guard()) { downloadFile(name('md'), lettersMarkdown(cfg), 'text/markdown;charset=utf-8'); cheer('save'); } };
+  $('#lp-html').onclick = async () => { if (!guard()) return; downloadFile(name('html'), lettersFullHTML(cfg, await embedAudio()), 'text/html;charset=utf-8'); cheer('save'); };
+  $('#lp-doc').onclick = () => { if (!guard()) return; downloadFile(name('doc'), lettersFullHTML(cfg, null, true), 'application/msword;charset=utf-8'); cheer('save'); };
+  refresh();
+};
+/* ==================== Wunschliste: Vorschau, Druck und Export (ähnlich wie beim Tagebuch) ==================== */
+const WISHLIST_DEFAULT = { title: '', cover: true, links: true, got: true, group: false, names: true, kid: true };
+const wishlistCfg = () => Object.assign({}, WISHLIST_DEFAULT, state.settings.wishlistPrint || {});
+const wishlistTitle = cfg => cfg.title.trim() || 'Unsere Wunschliste';
+const wishlistItems = cfg => state.wishes.filter(w => cfg.got || !w.got);
+function wishlistGroups(cfg) {
+  const list = wishlistItems(cfg); if (!cfg.group) return [{ title: '', items: list }];
+  const open = list.filter(w => !w.got), people = [...new Set(open.map(w => w.assigned).filter(Boolean))], free = open.filter(w => !w.assigned), done = list.filter(w => w.got);
+  return [...(free.length ? [{ title: 'Noch frei', items: free }] : []), ...people.map(p => ({ title: `Bei ${p}`, items: open.filter(w => w.assigned === p) })), ...(done.length ? [{ title: 'Schon erfüllt', items: done }] : [])];
+}
+const wishState = w => [w.assigned ? 'bei ' + w.assigned : '', w.got ? 'erfüllt' : ''].filter(Boolean).join(' · ');
+function wishlistDocHTML(cfg, { plain = false } = {}) {
+  const list = wishlistItems(cfg), open = list.filter(w => !w.got).length, done = list.length - open, names = cfg.names ? namesLine() : '', kid = cfg.kid && state.settings.nick ? state.settings.nick : '', title = wishlistTitle(cfg);
+  const sub = [names && 'von ' + names, kid && 'für ' + kid].filter(Boolean).join(' '), count = `${list.length} ${list.length === 1 ? 'Wunsch' : 'Wünsche'}${done ? ` · ${done} erfüllt` : ''}`;
+  const cover = cfg.cover
+    ? `<section class="pd-cover"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><div class="pd-cover-mid">${printHearts()}<h2>${esc(title)}</h2><p class="pd-cover-names">${esc(sub)}</p><p class="pd-cover-period">${esc(count)}</p><p class="pd-quote">„Sag es lieber vorher, sonst gibt es 14 Mützen in Größe 50.“</p></div>
+        <p class="pd-cover-foot">erstellt am ${esc(fmtLong(iso(today())))}</p></section>`
+    : `<header class="pd-head wd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><div class="wd-hearts">${printHearts()}</div><h2>${esc(title)}</h2><p class="pd-for">${esc(sub)}${sub ? ' · ' : ''}${esc(count)}</p></header>`;
+  let n = 0;
+  const row = w => { n++; return `<li class="${w.got ? 'got' : ''}"><span class="pd-gift" aria-hidden="true">${plain ? (w.got ? 'ok' : n) : bi(w.got ? 'check-lg' : 'gift-fill')}</span><div class="pd-wish"><b>${esc(w.text)}</b>${cfg.links && isUrl(w.link) ? `<span class="pd-link">${esc(w.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span>` : ''}${wishState(w) ? `<span class="pd-state">${esc(wishState(w))}</span>` : ''}</div></li>`; };
+  const body = list.length ? wishlistGroups(cfg).map(g => `${g.title ? `<h3 class="pd-month">${esc(g.title)}</h3>` : ''}<ol class="pd-wishes">${g.items.map(row).join('')}</ol>`).join('') : '<p class="pd-empty">Noch keine Wünsche. Tragt sie auf der Wunschliste ein, dann erscheinen sie hier.</p>';
+  return `<article class="print-doc wish-doc wishlist-doc">${cover}${body}<footer class="pd-foot"><p>Bitte kurz Bescheid geben, welchen Wunsch du erfüllst, damit nichts doppelt im Kinderzimmer landet.</p><div class="pd-sign">${esc(brandName())} <i>${esc(brandSub())}</i> · ${fmtDate(iso(today()))}</div></footer></article>`;
+}
+function wishlistText(cfg) {
+  const out = [wishlistTitle(cfg), [cfg.names && namesLine() && 'von ' + namesLine(), cfg.kid && state.settings.nick && 'für ' + state.settings.nick].filter(Boolean).join(' '), brandFull(), '='.repeat(54), ''];
+  wishlistGroups(cfg).forEach(g => { if (g.title) out.push(g.title.toUpperCase(), ''); g.items.forEach(w => out.push(`[${w.got ? 'x' : ' '}] ${w.text}${cfg.links && isUrl(w.link) ? ' (' + w.link + ')' : ''}${w.assigned ? ' - bei ' + w.assigned : ''}`)); out.push(''); });
+  return out.filter((l, i, a) => !(l === '' && a[i - 1] === '') && (l !== '' || i > 0)).join('\n');
+}
+function wishlistMarkdown(cfg) {
+  const sub = [cfg.names && namesLine() && 'von ' + namesLine(), cfg.kid && state.settings.nick && 'für ' + state.settings.nick].filter(Boolean).join(' '), out = [`# ${wishlistTitle(cfg)}`, '', sub && `*${sub}*  `, `*${brandFull()}*`, ''];
+  wishlistGroups(cfg).forEach(g => { if (g.title) out.push(`## ${g.title}`, ''); g.items.forEach(w => out.push(`- [${w.got ? 'x' : ' '}] ${w.text}${cfg.links && isUrl(w.link) ? ` ([Link](${w.link}))` : ''}${w.assigned ? ` *(bei ${w.assigned})*` : ''}`)); out.push(''); });
+  return out.filter((l, i, a) => l !== false && l !== undefined && !(l === '' && a[i - 1] === '')).join('\n') + '\n';
+}
+const wishlistCSV = cfg => '\uFEFF' + [['Wunsch', 'Link', 'Erfüllt', 'Bei Person'], ...wishlistItems(cfg).map(w => [w.text, cfg.links ? (w.link || '') : '', yn(w.got), w.assigned || ''])].map(r => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
+const WISHLIST_CSS = DIARY_CSS + `.wishlist-doc{counter-reset:w}.pd-wishes{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:12px}.pd-wishes li{counter-increment:w;display:flex;gap:14px;align-items:center;border:1.5px dashed #d9a1a9;border-radius:16px;padding:12px 14px;break-inside:avoid}.pd-wishes li.got{opacity:.65}.pd-gift{flex:none;width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#8b4752;color:#fff;font:700 .9rem Segoe UI,Arial,sans-serif}.pd-wish b{display:block;font-size:1.1rem}.pd-link,.pd-state{display:block;font:.85rem Segoe UI,Arial,sans-serif;color:#6e5a59}.pd-quote{font-style:italic;color:#8b4752;margin:22px auto 0;max-width:30em}`;
+const wishlistFullHTML = (cfg, word = false) => `<!doctype html><html lang="de"${word ? ' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(wishlistTitle(cfg))}</title><style>${WISHLIST_CSS.replace('__BRAND__', cssStr(brandFull()))}</style></head><body>${wishlistDocHTML(cfg, { plain: true })}</body></html>`;
+EXTRA_ROUTES.wishlistprint = () => {
+  const cfg = wishlistCfg(), check = (id, label, on) => `<div class="todo"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><label for="${id}" class="keep" style="margin:0;font-weight:400;flex:1">${label}</label></div>`;
+  view.innerHTML = `<div class="no-print">${intro('Wunschliste als Vorschau und Export', 'Eure ganze Wunschliste als schönes Dokument: mit Deckblatt, Nummern und Hinweisen, wer was übernimmt. Drucken, als PDF speichern oder verschicken. Für den kleinen Zettel an eine Person gibt es den Wunschzettel.')}
+    <div class="card">
+      <label for="wl-title">Titel</label><input id="wl-title" value="${esc(cfg.title)}" maxlength="60" placeholder="Unsere Wunschliste">
+      ${check('wl-cover', 'Deckblatt', cfg.cover)}${check('wl-links', 'Links anzeigen', cfg.links)}${check('wl-got', 'Erfüllte Wünsche anzeigen', cfg.got)}${check('wl-group', 'Nach Personen sortieren (wer übernimmt was)', cfg.group)}${check('wl-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('wl-kid', 'Namen des Kindes nennen (Kosename)', cfg.kid)}
+      <p class="small soft mt-2 mb-0" id="wl-count"></p></div>
+    <h2>Drucken</h2>
+    <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-solid theme-primary" id="wl-print">${bi('printer')} Drucken oder als PDF speichern</button><a class="btn btn-subtle theme-secondary" href="#/wishprint">${bi('gift')} Wunschzettel für eine Person</a></div>
+    <h2>Exportieren</h2>
+    <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-subtle theme-secondary" id="wl-html">${bi('filetype-html')} Seite (HTML)</button><button class="btn btn-subtle theme-secondary" id="wl-doc">${bi('file-earmark-word')} Word (.doc)</button>
+      <button class="btn btn-subtle theme-secondary" id="wl-md">${bi('markdown')} Markdown</button><button class="btn btn-subtle theme-secondary" id="wl-csv">${bi('filetype-csv')} CSV (Excel)</button><button class="btn btn-subtle theme-secondary" id="wl-txt">${bi('file-earmark-text')} Text</button></div><h2>Vorschau</h2></div>
+    <div class="print-sheet" id="printArea">${wishlistDocHTML(cfg)}</div>`;
+  const refresh = () => { $('#printArea').innerHTML = wishlistDocHTML(cfg); const l = wishlistItems(cfg); $('#wl-count').textContent = `${l.length} von ${state.wishes.length} Wünschen angezeigt`; state.settings.wishlistPrint = { ...cfg }; save(); };
+  $('#wl-title').addEventListener('input', e => { cfg.title = e.target.value; refresh(); });
+  for (const [id, k] of [['#wl-cover', 'cover'], ['#wl-links', 'links'], ['#wl-got', 'got'], ['#wl-group', 'group'], ['#wl-names', 'names'], ['#wl-kid', 'kid']]) $(id).onchange = e => { cfg[k] = e.target.checked; refresh(); };
+  const guard = () => { if (!wishlistItems(cfg).length) { toast('Es gibt noch keine Wünsche zum Exportieren'); return false; } return true; }, name = ext => `${fileSafe(wishlistTitle(cfg))}-${iso(today())}.${ext}`;
+  $('#wl-print').onclick = () => { if (guard()) window.print(); };
+  $('#wl-txt').onclick = () => { if (guard()) { downloadFile(name('txt'), wishlistText(cfg), 'text/plain;charset=utf-8'); cheer('save'); } };
+  $('#wl-md').onclick = () => { if (guard()) { downloadFile(name('md'), wishlistMarkdown(cfg), 'text/markdown;charset=utf-8'); cheer('save'); } };
+  $('#wl-csv').onclick = () => { if (guard()) { downloadFile(name('csv'), wishlistCSV(cfg), 'text/csv;charset=utf-8'); cheer('save'); } };
+  $('#wl-html').onclick = () => { if (guard()) { downloadFile(name('html'), wishlistFullHTML(cfg), 'text/html;charset=utf-8'); cheer('save'); } };
+  $('#wl-doc').onclick = () => { if (guard()) { downloadFile(name('doc'), wishlistFullHTML(cfg, true), 'application/msword;charset=utf-8'); cheer('save'); } };
+  refresh();
+};
 /* ==================== Allgemeiner Datenexport (lesbar und portabel) ==================== */
 // Anders als das Backup (zum Wiederherstellen) ist dieser Export zum Lesen, Archivieren und Mitnehmen gedacht: JSON, CSV oder HTML.
 // PIN-Daten werden nie exportiert. Der geheime Name nur auf ausdrücklichen Wunsch.

@@ -243,11 +243,26 @@ const QUOTE_KINDS = {
 };
 const QUOTE_MAX = 500, QUOTE_MIN = 12, QUOTE_LEN = 240, QUOTE_FILE_MAX = 512 * 1024;
 const customQuotes = kind => { state.customQuotes = state.customQuotes || {}; return (state.customQuotes[kind] = state.customQuotes[kind] || []); };
+// Mundart: Hessisch, Bayrisch, Schwäbisch oder bunt gemischt. Die Sprüche mischen sich "ab und zu" (etwa jeder fünfte) oder "oft" (etwa jeder zweite) unter die normalen.
+const dialectKeys = () => { const v = state.settings.dialect; return v === 'alle' ? Object.keys(DIALECTS) : DIALECTS[v] ? [v] : []; };
+const dialectLines = kind => { const who = kind === 'hero' || kind === 'daily' ? 'mama' : kind === 'papa' || kind === 'papaRank' ? 'papa' : null; return who ? dialectKeys().flatMap(k => DIALECT_QUOTES[k][who]) : []; };
+// Alle möglichen Sprüche ohne Doppelte (für Anzeige und Zählung)
+function quotePoolUnique(kind, tri) {
+  const base = QUOTE_KINDS[kind].base(tri), own = (state.customQuotes || {})[kind] || [], only = (state.settings.quoteOnly || {})[kind];
+  return only && own.length ? [...own] : [...new Set([...base, ...dialectLines(kind), ...own])];
+}
+// Auswahl mit Gewichtung: Mundart "ab und zu" bzw. "oft", eigene Sprüche werden bevorzugt (sie stellen etwa die Hälfte aller Tage)
 function quotePool(kind, tri) {
   const base = QUOTE_KINDS[kind].base(tri), own = (state.customQuotes || {})[kind] || [], only = (state.settings.quoteOnly || {})[kind];
-  return only && own.length ? [...own] : [...base, ...own.filter(q => !base.includes(q))];
-}
-const EMOJI_STRIP = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2B55}\u{2B05}-\u{2B07}\u{2194}-\u{2199}\u{21A9}\u{21AA}\u{231A}\u{231B}\u{23E9}-\u{23FA}\u{25B6}\u{25C0}\u{200D}\u{FE0F}\u{20E3}]/gu;
+  if (only && own.length) return [...own];
+  const fresh = own.filter(q => !base.includes(q)), dia = dialectLines(kind).filter(q => !base.includes(q));
+  let mix = [...base];
+  if (dia.length) { const share = state.settings.dialectFreq === 'often' ? .5 : .2, r = Math.max(1, Math.round(share / (1 - share) * base.length / dia.length)); for (let i = 0; i < r; i++) mix.push(...dia); }
+  if (!fresh.length) return mix;
+  const reps = Math.min(40, Math.max(1, Math.ceil(mix.length / fresh.length)));
+  for (let i = 0; i < reps; i++) mix.push(...fresh);
+  return mix;
+}const EMOJI_STRIP = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2B55}\u{2B05}-\u{2B07}\u{2194}-\u{2199}\u{21A9}\u{21AA}\u{231A}\u{231B}\u{23E9}-\u{23FA}\u{25B6}\u{25C0}\u{200D}\u{FE0F}\u{20E3}]/gu;
 // Liest Text (eine Zeile pro Spruch, auch Aufzählung, CSV-artig oder JSON-Liste) und prüft jeden Spruch
 function parseQuotes(raw, kind) {
   const text = String(raw || '').replace(/^\uFEFF/, '').trim(); let lines = null;
@@ -274,9 +289,13 @@ let quoteKind = 'hero';
 EXTRA_ROUTES.quotes = () => {
   const K = QUOTE_KINDS[quoteKind], own = customQuotes(quoteKind), only = !!(state.settings.quoteOnly || {})[quoteKind], base = [1, 2, 3].flatMap(t => K.base(t)).length ? K.base(2) : [];
   view.innerHTML = `${intro('Eigene Sprüche', 'Bring deine Lieblingssprüche mit. Sie mischen sich unter die eingebauten und erscheinen jeden Tag neu.')}
+    <div class="card" id="dialectCard"><b>${bi('chat-heart')} Mundart</b><p class="small soft mb-2">Die App darf auch Spaß machen: Ab und zu kommen die Motivationssprüche auf Hessisch, Bayrisch oder Schwäbisch. Eigene Sprüche werden immer bevorzugt.</p>
+      <div class="seg" role="group" aria-label="Mundart" style="margin:0">${[['off', 'Aus'], ['hessisch', 'Hessisch'], ['bayrisch', 'Bayrisch'], ['schwaebisch', 'Schwäbisch'], ['alle', 'Bunt gemischt']].map(([k, l]) => `<button type="button" data-dia="${k}" class="${(state.settings.dialect || 'off') === k ? 'on' : ''}" aria-pressed="${(state.settings.dialect || 'off') === k}">${l}</button>`).join('')}</div>
+      ${state.settings.dialect ? `<p class="small mt-2 mb-1"><b>Wie oft?</b></p><div class="seg" role="group" aria-label="Wie oft" style="margin:0">${[['sometimes', 'Ab und zu'], ['often', 'Oft']].map(([k, l]) => `<button type="button" data-diafreq="${k}" class="${(state.settings.dialectFreq || 'sometimes') === k ? 'on' : ''}" aria-pressed="${(state.settings.dialectFreq || 'sometimes') === k}">${l}</button>`).join('')}</div>
+      <p class="small soft mt-2 mb-0" id="dialectEx">${esc(pick(dialectKeys().flatMap(k => DIALECT_QUOTES[k].mama)))}</p>` : ''}</div>
     <div class="chip-row">${Object.entries(QUOTE_KINDS).map(([k, v]) => `<button class="chip-btn ${k === quoteKind ? 'on' : ''}" data-qk="${k}">${v.label}</button>`).join('')}</div>
     <div class="card"><b>${esc(K.label)}</b><p class="small soft mb-2">${esc(K.desc)}</p>
-      <div class="hstack gap-2 flex-wrap"><span class="chip">${bi('collection')} Eingebaut: ${base.length}</span><span class="chip">${bi('plus-circle')} Eigene: ${own.length}</span><span class="chip">${bi('shuffle')} Zur Auswahl: ${quotePool(quoteKind, 2).length}</span></div></div>
+      <div class="hstack gap-2 flex-wrap"><span class="chip">${bi('collection')} Eingebaut: ${base.length}</span><span class="chip">${bi('plus-circle')} Eigene: ${own.length}</span><span class="chip">${bi('shuffle')} Zur Auswahl: ${quotePoolUnique(quoteKind, 2).length}</span></div></div>
     <h2>Sprüche importieren</h2>
     <div class="card"><label for="q-text">Sprüche einfügen (ein Spruch pro Zeile)</label>
       <textarea id="q-text" style="min-height:130px" placeholder="Du machst das großartig, Mama.&#10;Jeder Tag bringt euch näher zusammen."></textarea>
@@ -299,7 +318,8 @@ EXTRA_ROUTES.quotes = () => {
     const r = parseQuotes(await file.text(), quoteKind); customQuotes(quoteKind).push(...r.added); finish(r);
   };
   $('#q-add').onclick = () => { const v = $('#q-one').value; const r = parseQuotes(v, quoteKind); if (!v.trim()) return; customQuotes(quoteKind).push(...r.added); finish(r); };
-  $('#q-only').onchange = e => { state.settings.quoteOnly = { ...(state.settings.quoteOnly || {}), [quoteKind]: e.target.checked }; save(); render(); toast(e.target.checked ? 'Es erscheinen nur noch deine eigenen Sprüche.' : 'Eingebaute und eigene Sprüche werden gemischt.'); };
+  view.querySelectorAll('[data-dia]').forEach(b => b.onclick = () => { const k = b.dataset.dia; if (k === 'off') { delete state.settings.dialect; delete state.settings.dialectFreq; } else state.settings.dialect = k; save(); render(); toast(k === 'off' ? 'Mundart ist aus. Hochdeutsch bleibt.' : `Mundart: ${k === 'alle' ? 'bunt gemischt' : DIALECTS[k]}. Ab und zu gibt es jetzt Sprüche auf Mundart!`); });
+  view.querySelectorAll('[data-diafreq]').forEach(b => b.onclick = () => { state.settings.dialectFreq = b.dataset.diafreq; save(); render(); });  $('#q-only').onchange = e => { state.settings.quoteOnly = { ...(state.settings.quoteOnly || {}), [quoteKind]: e.target.checked }; save(); render(); toast(e.target.checked ? 'Es erscheinen nur noch deine eigenen Sprüche.' : 'Eingebaute und eigene Sprüche werden gemischt.'); };
   view.querySelectorAll('[data-qdel]').forEach(b => b.onclick = () => { customQuotes(quoteKind).splice(+b.dataset.qdel, 1); if (!customQuotes(quoteKind).length) { const o = { ...(state.settings.quoteOnly || {}) }; delete o[quoteKind]; state.settings.quoteOnly = o; } save(); render(); });
   const ex = $('#q-export'); if (ex) ex.onclick = () => { downloadFile(`eigene-sprueche-${quoteKind}-${iso(today())}.txt`, own.join('\n') + '\n', 'text/plain;charset=utf-8'); };
   const cl = $('#q-clear'); if (cl) cl.onclick = () => { if (!confirm(`Alle ${own.length} eigenen Sprüche dieser Art löschen?`)) return; state.customQuotes[quoteKind] = []; const o = { ...(state.settings.quoteOnly || {}) }; delete o[quoteKind]; state.settings.quoteOnly = o; save(); render(); };

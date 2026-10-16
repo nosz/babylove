@@ -149,6 +149,10 @@ async function hydrateImages(root = view) {
     if (!urls.has(id)) { const b = await getImg(id); if (b) urls.set(id, URL.createObjectURL(b)); }
     if (urls.has(id)) img.src = urls.get(id);
   }
+  for (const el of root.querySelectorAll('[data-bg]')) {
+    const id = el.dataset.bg; if (!urls.has(id)) { const b = await getImg(id); if (b) urls.set(id, URL.createObjectURL(b)); }
+    if (urls.has(id)) el.style.setProperty('--hero-img', `url("${urls.get(id)}")`);
+  }
 }
 
 /* ---------- Schwangerschaftsberechnung ---------- */
@@ -263,18 +267,17 @@ function hslToHex(h, s, l) {
 // Farben für Herz und Kennzeichnung: Farbwelt oder eigener Wert. Bei eigenen Werten werden Tönung und Schrift so berechnet, dass der Text immer gut lesbar bleibt (mind. 4,8:1).
 function favVars(who, dark) {
   const v = favColor(who);
-  if (!isHex(v)) { const t = themeVars(v, dark); return { heart: t['--primary'], bg: t['--surface-2'], fg: t['--primary-strong'], bd: t['--line'] }; }
+  // Das Herz zeigt immer die Originalfarbe der Person, unabhängig von Farbschema und Hell/Dunkel; nur Fläche und Schrift der Kennzeichnung passen sich an
+  if (!isHex(v)) { const t = themeVars(v, dark); return { heart: THEME_DEFS[v].primary, bg: t['--surface-2'], fg: t['--primary-strong'], bd: t['--line'] }; }
   const [h, s, l0] = hexToHsl(v), sat = s < 8 ? 0 : Math.max(30, Math.min(s, 85));
   if (!dark) {
     const bg = hslToHex(h, Math.min(sat, 60), 95), bd = hslToHex(h, Math.min(sat, 50), 82); let l = 36, fg = hslToHex(h, sat, l);
     while (contrastHex(fg, bg) < 4.8 && l > 4) { l -= 2; fg = hslToHex(h, sat, l); }
-    let heart = v, hl = l0; while (contrastHex(heart, '#FFFFFF') < 2 && hl > 8) { hl -= 3; heart = hslToHex(h, s, hl); }
-    return { heart, bg, fg, bd };
+    return { heart: v.toUpperCase(), bg, fg, bd };
   }
   const bg = hslToHex(h, sat ? 24 : 0, 18), bd = hslToHex(h, sat ? 20 : 0, 32); let l = 78, fg = hslToHex(h, Math.min(sat, 70), l);
   while (contrastHex(fg, bg) < 4.8 && l < 98) { l += 2; fg = hslToHex(h, Math.min(sat, 70), l); }
-  let heart = v, hl = l0; while (contrastHex(heart, bg) < 2.5 && hl < 92) { hl += 3; heart = hslToHex(h, s, hl); }
-  return { heart, bg, fg, bd };
+  return { heart: v.toUpperCase(), bg, fg, bd };
 }
 const heartHex = who => favVars(who, false).heart; // helle Variante, auch für den Druck
 // Schriftgröße in Prozent (85 bis 140); ältere Einstellungen (klein/normal/groß) werden übernommen
@@ -323,27 +326,35 @@ sheet.addEventListener('click', e => { if (e.target === sheet) closeSheet(); });
 /* ---------- Ansichten ---------- */
 const routes = {};
 
+// Der errechnete Termin muss heute oder später liegen (höchstens etwa 42 Wochen voraus)
+const DUE_MAX_DAYS = 300;
+function dueError(v) {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(new Date(v + 'T00:00'))) return 'Bitte den errechneten Geburtstermin angeben.';
+  if (v < iso(today())) return 'Der errechnete Termin muss heute oder in der Zukunft liegen. Euer Baby ist ja noch unterwegs.';
+  if (v > iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))) return 'Das ist zu weit in der Zukunft. Eine Schwangerschaft dauert rund 40 Wochen.';
+  return '';
+}
 routes.onboarding = () => {
   document.body.classList.add('onboarding');
   view.innerHTML = `
-    <div class="center" style="padding-top:24px"><div class="empty-ico" style="width:88px;height:88px;font-size:2.6rem">${bi('heart-fill')}</div>
-      <h1>Willkommen bei BABYLOVE</h1>
-      <p class="brand" style="margin-top:-2px"><span data-brand-by>${esc(brandSub())}</span></p>
-      <p class="soft">Eure kleine Reise, nur für euch. Alles bleibt auf diesem Gerät – kein Konto, keine Cloud, kein Verrat.</p></div>
-    <form class="card" id="ob">
+    <div class="ob-head"><div class="ob-ico">${bi('heart-fill')}</div>
+      <h1>Willkommen bei ${esc(brandName())}</h1>
+      <p class="brand"><span data-brand-by>${esc(brandSub())}</span></p>
+      <p class="soft mb-0">Nur für euch: ohne Konto, alles bleibt auf diesem Gerät.</p></div>
+    <form class="card ob-form" id="ob" novalidate>
       <label for="due">Errechneter Geburtstermin</label>
-      <input id="due" type="date" required>
-      <label for="mama">Dein Name (optional)</label>
-      <input id="mama" autocomplete="given-name" placeholder="z. B. Anna">
-      <label for="partner">Name von Papa / Partner (optional)</label>
-      <input id="partner" placeholder="z. B. Max">
+      <input id="due" type="date" min="${iso(today())}" max="${iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))}" aria-describedby="dueErr">
+      <p class="small ob-err" id="dueErr" role="alert" hidden></p>
+      <div class="ob-grid"><div><label for="mama">Mama (optional)</label><input id="mama" autocomplete="given-name" placeholder="z. B. Anna" maxlength="30"></div>
+        <div><label for="partner">Papa (optional)</label><input id="partner" placeholder="z. B. Max" maxlength="30"></div></div>
       <label for="nick">Kosename fürs Baby</label>
       <input id="nick" value="Krümel" maxlength="24">
-      <p class="small soft" style="margin-top:12px">Den echten Namen kannst du später in den Einstellungen geheim hinterlegen – er wird nur nach Antippen sichtbar.</p>
-      <button class="flex-grow-1" style="width:100%;margin-top:8px">Los geht’s</button>
+      <button class="btn btn-solid theme-primary w-100 ob-go">Los geht’s</button>
+      <p class="small soft center mb-0">Den echten Namen könnt ihr später geheim hinterlegen.</p>
     </form>`;
   $('#ob').onsubmit = e => {
     e.preventDefault();
+    const err = dueError($('#due').value), box = $('#dueErr'); box.hidden = !err; box.textContent = err; $('#due').setAttribute('aria-invalid', !!err); if (err) { $('#due').focus(); return; }
     Object.assign(state.settings, { dueDate: $('#due').value, mama: $('#mama').value.trim(), partner: $('#partner').value.trim(), nick: $('#nick').value.trim() || 'Baby' });
     save(); location.hash = '#/'; render(); setTimeout(maybeGuide, 400);
   };
@@ -354,6 +365,7 @@ routes.onboarding = () => {
 const HOME_MODULES = {
   quick:     { label: 'Schnellzugriff', desc: 'Vier Buttons für das, was du am häufigsten brauchst', icon: 'lightning-charge-fill' },
   pins:      { label: 'Meine Verknüpfungen', desc: 'Seiten, die du mit „Zur Startseite“ hinzugefügt hast', icon: 'pin-angle-fill' },
+  story:     { label: 'Wochen-Story', desc: 'Die aktuelle Entwicklung schön teilen: drei Bilder', icon: 'stars' },
   together:  { label: 'Gemeinsam heute', desc: 'Tägliches Paar-Ritual mit Serie', icon: 'people-fill' },
   daily:     { label: 'Tagesimpuls', desc: 'Ein Spruch für den Tag, dazu einer für den Partner', icon: 'chat-quote' },
   family:    { label: 'Foto von euch', desc: 'Zufällig aus euren Profilfotos', icon: 'image' },
@@ -363,8 +375,8 @@ const HOME_MODULES = {
   tips:      { label: 'Tipps vor Ort', desc: 'Hebammen, Kurse, Beratung, Infoabende (Ort frei wählbar)', icon: 'geo-alt-fill' },
   last:      { label: 'Zuletzt festgehalten', desc: 'Das neueste Foto aus Tagebuch oder Album', icon: 'clock-history' }
 };
-const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'together', 'daily', 'family', 'secret', 'tips'] };
-const HOME_PRESETS = { simple: ['quick', 'pins', 'together', 'daily'], all: Object.keys(HOME_MODULES), default: HOME_DEFAULT.on };
+const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'story', 'together', 'daily', 'family', 'secret', 'tips'] };
+const HOME_PRESETS = { simple: ['quick', 'pins', 'story', 'together', 'daily'], all: Object.keys(HOME_MODULES), default: HOME_DEFAULT.on };
 
 function homeLayout() {
   const c = state.settings.home || {};
@@ -396,10 +408,12 @@ function bindPinBtn() {
 
 const HOME_RENDER = {
   pins: () => { const info = pinInfo(), pins = homePins(); return pins.length ? `<div class="pins"><div class="pin-head small soft">${bi('pin-angle-fill')} Meine Verknüpfungen</div><div class="pin-grid">${pins.map(k => `<a class="pin-tile" href="#/${k}">${bi(info[k][0])}<span>${info[k][1]}</span></a>`).join('')}</div></div>` : ''; },
+  story: () => { const p = pregnancy(), [, fruit] = fruitFor(p.weeks), kid = (state.settings.nick || '').trim() || 'Dein Baby', art = (typeof FRUIT_ART !== 'undefined' && FRUIT_ART[fruit]) || 'ein';
+    return `<a class="card link-card story-tile" href="#/weekstory"><div class="hstack gap-3"><span class="story-mini" aria-hidden="true"><i style="--fh:${fruitHue(fruit)}"></i></span><div class="flex-grow-1"><b>Wochen-Story</b><div class="small soft">${esc(kid)} ist so groß wie ${art} ${esc(fruit)}. Jetzt als Bild teilen.</div></div>${bi('share-fill')}</div></a>`; },
   quick: () => `<div class="quick">${[['diary', 'journal-text', 'Tagebuch'], ['photos', 'images', 'Fotos'], ['water', 'droplet-half', 'Wasser'], ['planner', 'check2-square', 'Aufgaben']]
     .map(([r, i, l]) => `<a class="quick-btn" href="#/${r}">${bi(i)}<span>${l}</span></a>`).join('')}</div>`,
   together: () => togetherCard(),
-  daily: () => `<div class="card daily"><div class="mb-2">${audBadge('mama', 'sm')}</div><p class="quote mb-0">${esc(dailyMsg())}</p>
+  daily: () => `<div class="card daily"><div class="hstack gap-2 mb-2">${audBadge('mama', 'sm')}<span class="flex-grow-1"></span><button class="btn btn-subtle theme-secondary btn-sm" id="newMamaMsg" aria-label="Neuer Spruch für Mama">${bi('arrow-repeat')}</button></div><p class="quote mb-0" id="mamaMsg">${esc(dailyMsg())}</p>
     <div class="hstack gap-2 mt-3 pt-3 daily-sep">${audBadge('papa', 'sm')}<span class="flex-grow-1"></span>
       <button class="btn btn-subtle theme-secondary btn-sm" id="newPartnerMsg" aria-label="Neuer Spruch">${bi('arrow-repeat')}</button></div>
     <p class="mb-0 mt-1" id="partnerMsg">${esc(papaName(partnerMsgToday()))}</p></div>`,
@@ -419,6 +433,25 @@ const HOME_RENDER = {
     return last ? `<div class="card"><div class="small soft mb-2">Zuletzt festgehalten</div><img data-img="${last.photoId}" alt="" style="width:100%;border-radius:14px;display:block"></div>` : ''; }
 };
 
+/* ---------- Banner (Wochenkarte) auf der Startseite: Inhalt und Hintergrund frei einstellbar ---------- */
+const BANNER_DEFAULT = { weeks: true, bar: true, days: true, size: true, quote: true, bg: 'gradient', bgId: '', dim: 50, pos: 'center', compact: false };
+const BANNER_ITEMS = [['weeks', 'Woche und Tage', 'Die große SSW-Anzeige mit Trimester'], ['bar', 'Fortschrittsbalken', 'Wie weit die Schwangerschaft ist'], ['days', 'Satz zum Termin', 'Die Tagesaussage mit den Tagen bis zum Termin'], ['size', 'Größenvergleich', 'Zum Beispiel „so groß wie ein Kürbis“'], ['quote', 'Tagesspruch', 'Der tägliche Spruch mit Erneuern-Knopf']];
+const bannerCfg = () => Object.assign({}, BANNER_DEFAULT, state.settings.banner || {});
+const BANNER_POS = { top: 'center top', center: 'center center', bottom: 'center bottom' };
+function heroHTML(p = pregnancy()) {
+  const c = bannerCfg(), [, name] = fruitFor(p.weeks), photo = c.bg === 'photo' && c.bgId, cls = ['card', 'hero', photo ? 'hero-photo' : '', c.bg === 'solid' ? 'hero-solid' : '', c.compact ? 'hero-compact' : ''].filter(Boolean).join(' ');
+  const style = photo ? ` data-bg="${esc(c.bgId)}" style="--hero-dim:${Math.min(80, Math.max(30, +c.dim || 50)) / 100};--hero-pos:${BANNER_POS[c.pos] || BANNER_POS.center}"` : '';
+  const parts = [
+    c.weeks && `<div class="hero-top"><span class="fruit" aria-hidden="true">${bi('balloon-heart-fill')}</span><div><div class="big">${p.weeks}. SSW</div><div class="hero-sub">+ ${p.days} Tag${p.days === 1 ? '' : 'e'} · ${trimester(p.weeks)}. Trimester</div></div></div>`,
+    c.bar && `<div class="progress my-3" role="progressbar" aria-label="Schwangerschaftsfortschritt" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:${p.pct}%"></div></div>`,
+    c.days && `<p class="hero-days" id="heroDays">${esc(dayLine('mama', p))}</p>`,
+    c.size && `<div class="small">${nick()} ist ungefähr so groß wie: <b>${name}</b></div>`,
+    c.quote && `<div class="hero-quote-row"><p class="hero-quote" id="heroQuote">${esc(dailyPick(quotePool('hero'), 'hero'))}</p><button class="hero-refresh" id="newHeroQuote" aria-label="Neuer Spruch">${bi('arrow-repeat')}</button></div>`
+  ].filter(Boolean);
+  return parts.length ? `<div class="${cls}"${style}>${parts.join('')}</div>` : '';
+}
+async function storeBanner(file) { const id = uid(); await putImg(id, await shrink(file, 1200, 220)); return id; }
+
 routes.home = () => {
   const p = pregnancy(), s = state.settings;
   const [, name] = fruitFor(p.weeks);
@@ -430,17 +463,12 @@ routes.home = () => {
     <div class="greet">${avatarStack()}
       <div class="greet-text"><p class="greet-hello">${greet}</p><p class="today" id="todayLine">${bi('calendar-heart')}Heute ist ${esc(todayLong())}</p></div></div>
     <h1>${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
-    <div class="card hero">
-      <div class="hero-top"><span class="fruit" aria-hidden="true">${bi('balloon-heart-fill')}</span><div><div class="big">${p.weeks}. SSW</div><div class="hero-sub">+ ${p.days} Tag${p.days === 1 ? '' : 'e'} · ${trimester(p.weeks)}. Trimester</div></div></div>
-      <div class="progress my-3" role="progressbar" aria-label="Schwangerschaftsfortschritt" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:${p.pct}%"></div></div>
-      <p class="hero-days" id="heroDays">${esc(dayLine('mama', p))}</p>
-      <div class="small">${nick()} ist ungefähr so groß wie: <b>${name}</b></div>
-      <div class="hero-quote-row"><p class="hero-quote" id="heroQuote">${esc(dailyPick(quotePool('hero'), 'hero'))}</p><button class="hero-refresh" id="newHeroQuote" aria-label="Neuer Spruch">${bi('arrow-repeat')}</button></div>
-    </div>
+    ${heroHTML(p)}
     ${order.filter(id => on.has(id)).map(id => HOME_RENDER[id]()).join('')}
     <a class="home-edit" href="#/homeconfig">${bi('sliders')} Startseite anpassen</a>`;
   bindTogether();
-  $('#newHeroQuote').onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
+  const nhq = $('#newHeroQuote'); if (nhq) nhq.onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
+  const nm = $('#newMamaMsg'); if (nm) nm.onclick = () => { const pool = quotePool('daily'), cur = $('#mamaMsg').textContent; let q, g = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++g < 20); $('#mamaMsg').textContent = q; };
   const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (q === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };
   const r = $('#reveal');
   if (r) r.onclick = () => { $('#secret').classList.add('show'); clearTimeout(r.t); r.t = setTimeout(() => $('#secret')?.classList.remove('show'), 5000); };
@@ -481,7 +509,10 @@ const DIARY_TEXT = {
 };
 // Wer hat den Eintrag geschrieben? mama, partner oder both (gemeinsam). Herz in der Lieblingsfarbe.
 const authorName = by => by === 'mama' ? (state.settings.mama || 'Mama') : by === 'partner' ? (state.settings.partner || 'Papa') : 'Gemeinsam';
-const authorChip = by => by ? `<span class="chip by-chip" data-by="${by}">${by === 'both' ? duoHearts() : `<i class="bi bi-heart-fill" style="color:var(--heart-${by === 'mama' ? 'mama' : 'papa'})"></i>`} ${esc(authorName(by))}</span>` : '';
+// Autor-Kennzeichnung: mit Profilfoto (Rand in der Lieblingsfarbe), sonst Herz in der Lieblingsfarbe
+const authorMark = by => { const who = by === 'mama' ? 'mama' : 'partner', k = by === 'mama' ? 'mama' : 'papa', id = photosOf(who).length ? randomPhoto(who) : null;
+  return id ? `<img class="by-av" data-img="${id}" alt="" style="--ring:var(--heart-${k})">` : `<i class="bi bi-heart-fill" style="color:var(--heart-${k})"></i>`; };
+const authorChip = by => by ? `<span class="chip by-chip" data-by="${by}">${by === 'both' ? duoHearts() : authorMark(by)} ${esc(authorName(by))}</span>` : '';
 const lastDiaryBy = () => state.settings.lastDiaryBy || 'mama';
 function diaryPage(who) {
   const T = DIARY_TEXT[who], list = diaryList(who);
@@ -651,29 +682,58 @@ function bindCityInput(el, after) {
   el.addEventListener('input', () => { const v = cleanText(el.value, 40); if (v) state.settings.tipsCity = v; else delete state.settings.tipsCity; save(); after && after(); });
   el.addEventListener('change', () => { el.value = state.settings.tipsCity || ''; cheer('style'); if (location.hash === '#/tips') render(); });
 }
+// Seite "Tipps vor Ort": alles ist anpassbar. Reihenfolge der Abschnitte, Anlaufstellen verschieben (Pfeile oder Ziehen), eingebaute ausblenden, eigene hinzufügen
+let tipsEdit = false, tipsDragId = null;
+const TIPS_SECTIONS = ['own', 'know', 'places'];
+const tipsLayout = () => { const l = state.settings.tipsLayout || {}, order = (l.order || []).filter(k => TIPS_SECTIONS.includes(k)); TIPS_SECTIONS.forEach(k => { if (!order.includes(k)) order.push(k); }); return { order, places: l.places || [], hidden: l.hidden || [] }; };
+const saveTipsLayout = l => { state.settings.tipsLayout = l; save(); };
+const moveItem = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return arr; const c = [...arr]; [c[i], c[j]] = [c[j], c[i]]; return c; };
+const tipItem = t => { const i = t.indexOf(':'), has = i > 0 && i < 60; return `<li class="tip-item"><span class="tip-ico">${bi('lightbulb-fill')}</span><div>${has ? `<b>${esc(t.slice(0, i))}</b> ` : ''}${esc(has ? t.slice(i + 1).trim() : t)}</div></li>`; };
+const arrowBtns = (attr, id, i, n, label) => `<span class="mv-btns no-print"><button type="button" class="btn btn-text btn-sm" ${attr}-up="${id}" ${i === 0 ? 'disabled' : ''} aria-label="${esc(label)} nach oben">${bi('chevron-up')}</button><button type="button" class="btn btn-text btn-sm" ${attr}-down="${id}" ${i === n - 1 ? 'disabled' : ''} aria-label="${esc(label)} nach unten">${bi('chevron-down')}</button></span>`;
 routes.tips = () => {
-  const city = tipsCity(), own = state.localTips = state.localTips || [], ffm = isFfm();
-  const card = (f, ext = true) => `<${f.url ? `a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="card link-card" ${f.url ? '' : 'style="color:inherit"'}>
-      <div class="hstack gap-3 align-items-start"><i class="bi bi-${f.icon || 'geo-alt'} ico" aria-hidden="true"></i>
-      <div class="flex-grow-1"><b>${esc(f.title)}</b>${f.text ? `<p class="small soft mb-0">${esc(f.text)}</p>` : ''}</div>${f.id ? `<button type="button" class="btn btn-text theme-danger btn-sm" data-ltdel="${f.id}" aria-label="${esc(f.title)} entfernen">${bi('x-lg')}</button>` : ''}${f.url && ext ? '<i class="bi bi-box-arrow-up-right soft small" aria-hidden="true"></i>' : ''}</div></${f.url ? 'a' : 'div'}>`;
-  const ownCard = o => `<div class="card"><div class="hstack gap-3 align-items-start"><i class="bi bi-geo-alt ico" aria-hidden="true"></i><div class="flex-grow-1"><b>${esc(o.title)}</b>${o.text ? `<p class="small soft mb-0">${esc(o.text)}</p>` : ''}${o.url ? `<a class="small" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')} Link öffnen</a>` : ''}</div><button type="button" class="btn btn-text theme-danger btn-sm" data-ltdel="${o.id}" aria-label="${esc(o.title)} entfernen">${bi('x-lg')}</button></div></div>`;  view.innerHTML = `
-    <h1>${esc(city)}</h1><p class="soft">Hilfe und Tipps für Schwangere in ${esc(city)}${ffm ? ' am Main' : ''}.</p>
+  const city = tipsCity(), own = state.localTips = state.localTips || [], ffm = isFfm(), lay = tipsLayout(), edit = tipsEdit;
+  const base = (ffm ? FFM.map((f, i) => ({ ...f, pid: 'p' + i })) : GENERAL_HELP.map((f, i) => ({ ...f, pid: 'g' + i })));
+  const places = [...lay.places.map(id => base.find(x => x.pid === id)).filter(Boolean), ...base.filter(x => !lay.places.includes(x.pid))];
+  const shown = edit ? places : places.filter(x => !lay.hidden.includes(x.pid));
+  const placeCard = (f, i) => `<div class="tips-row ${lay.hidden.includes(f.pid) ? 'is-hidden' : ''}"><a class="card link-card flex-grow-1" href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="hstack gap-3 align-items-start"><i class="bi bi-${f.icon || 'geo-alt'} ico" aria-hidden="true"></i><div class="flex-grow-1"><b>${esc(f.title)}</b>${f.text ? `<p class="small soft mb-0">${esc(f.text)}</p>` : ''}</div><i class="bi bi-box-arrow-up-right soft small" aria-hidden="true"></i></div></a>
+      ${edit ? `<div class="tips-ctl">${arrowBtns('data-pl', f.pid, i, places.length, f.title)}<button type="button" class="btn btn-text btn-sm" data-pl-hide="${f.pid}" aria-pressed="${lay.hidden.includes(f.pid)}" aria-label="${esc(f.title)} ${lay.hidden.includes(f.pid) ? 'einblenden' : 'ausblenden'}">${bi(lay.hidden.includes(f.pid) ? 'eye-slash' : 'eye')}</button></div>` : ''}</div>`;
+  const ownCard = (o, i) => `<div class="tips-row" ${edit ? `draggable="true" data-drag="${o.id}"` : ''}><div class="card flex-grow-1"><div class="hstack gap-3 align-items-start"><i class="bi bi-${edit ? 'grip-vertical' : 'geo-alt'} ico" aria-hidden="true"></i><div class="flex-grow-1"><b>${esc(o.title)}</b>${o.text ? `<p class="small soft mb-0">${esc(o.text)}</p>` : ''}${o.url ? `<a class="small" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')} Link öffnen</a>` : ''}</div><button type="button" class="btn btn-text theme-danger btn-sm" data-ltdel="${o.id}" aria-label="${esc(o.title)} entfernen">${bi('x-lg')}</button></div></div>${edit ? `<div class="tips-ctl">${arrowBtns('data-lt', o.id, i, own.length, o.title)}</div>` : ''}</div>`;
+  const secHead = (k, title, extra = '') => `<h2 class="tips-h">${title}${extra} ${edit ? arrowBtns('data-sec', k, lay.order.indexOf(k), lay.order.length, title) : ''}</h2>`;
+  const know = ffm ? FFM_TIPS : ['Hebamme früh suchen: Fragt direkt nach dem positiven Test an, gute Plätze sind oft schnell vergeben.', 'Geburtsklinik anschauen: Viele Kliniken bieten Infoabende und Kreißsaalführungen an.', 'Kosten klären: Krankenkassen übernehmen Hebammenhilfe und viele Kurse. Fragt bei eurer Krankenkasse nach.'];
+  const SEC = {
+    own: () => `<section data-sec="own">${secHead('own', 'Eigene Anlaufstellen', ` <span class="chip">${own.length}</span>`)}
+      ${own.length ? own.map(ownCard).join('') : '<div class="card center soft">Noch nichts gesammelt. Tragt hier eure Hebamme, Klinik oder einen guten Kurs ein, damit ihr alles an einem Ort habt.</div>'}
+      <details class="card tips-add" ${own.length ? '' : 'open'}><summary>${bi('plus-circle-fill')} Neue Anlaufstelle hinzufügen</summary>
+        <form id="ltForm"><label for="ltTitle">Name der Anlaufstelle</label><input id="ltTitle" maxlength="80" required placeholder="z. B. Hebamme Anna Muster"><label for="ltText">Notiz (optional)</label><input id="ltText" maxlength="160" placeholder="z. B. Telefon, Sprechzeiten, Kosten"><label for="ltUrl">Link (optional)</label><input id="ltUrl" type="url" maxlength="300" placeholder="https://"><button class="btn btn-solid theme-primary w-100 mt-2" type="submit">${bi('plus-lg')} Hinzufügen</button></form></details></section>`,
+    know: () => `<section data-sec="know">${secHead('know', 'Gut zu wissen')}<ul class="tip-list">${know.map(tipItem).join('')}</ul></section>`,
+    places: () => `<section data-sec="places">${secHead('places', ffm ? 'Anlaufstellen' : 'Hilfreich in ganz Deutschland')}${shown.map((f, i) => placeCard(f, edit ? i : places.indexOf(f))).join('')}
+      <p class="small soft">${ffm ? `Quelle: <a href="${FFM_WEGWEISER}" target="_blank" rel="noopener noreferrer">Wegweiser „Frühe Hilfen“ der Stadt Frankfurt</a>. Angaben ohne Gewähr, bitte Termine, Kosten und Öffnungszeiten beim Träger prüfen. Zum Öffnen der Links brauchst du Internet.` : 'Angaben ohne Gewähr. Ärztlicher Bereitschaftsdienst: 116 117, im Notfall 112.'}</p></section>`
+  };
+  view.innerHTML = `
+    <h1>${esc(city)}</h1><p class="soft">Hilfe und Tipps für Schwangere in ${esc(city)}${ffm ? ' am Main' : ''}. Ihr könnt die Seite selbst einrichten.</p>
+    <div class="hstack gap-2 flex-wrap mb-3"><button type="button" class="btn ${edit ? 'btn-solid theme-primary' : 'btn-subtle theme-secondary'}" id="tipsEdit" aria-pressed="${edit}">${bi(edit ? 'check2' : 'sliders')} ${edit ? 'Fertig' : 'Seite anpassen'}</button>${edit ? `<button type="button" class="btn btn-text" id="tipsReset">Anordnung zurücksetzen</button>` : ''}</div>
+    ${edit ? '<p class="small soft">Abschnitte und Anlaufstellen lassen sich mit den Pfeilen verschieben, eigene auch per Ziehen. Eingebaute Anlaufstellen könnt ihr mit dem Auge ausblenden.</p>' : ''}
+    ${lay.order.map(k => SEC[k]()).join('')}
     <div class="card"><label for="tipsCity">Ort für die Tipps</label><input id="tipsCity" maxlength="40" value="${esc(state.settings.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off">
-      <p class="small soft mt-2 mb-0">${ffm ? 'Für Frankfurt zeigen wir ausgewählte Anlaufstellen. ' : ''}Für jeden anderen Ort könnt ihr unten eigene Anlaufstellen sammeln: Hebamme, Klinik, Kurse, Beratung.</p></div>
-    ${ffm ? `<h2>Gut zu wissen</h2>
-    <div class="card"><ul class="mb-0 ps-3">${FFM_TIPS.map(t => `<li class="mb-2">${esc(t)}</li>`).join('')}</ul></div>
-    <h2>Anlaufstellen</h2>${FFM.map(f => card(f)).join('')}
-    <p class="small soft">Quelle: <a href="${FFM_WEGWEISER}" target="_blank" rel="noopener noreferrer">Wegweiser „Frühe Hilfen“ der Stadt Frankfurt</a>. Angaben ohne Gewähr, bitte Termine, Kosten und Öffnungszeiten beim Träger prüfen. Zum Öffnen der Links brauchst du Internet.</p>`
-    : `<h2>Gut zu wissen</h2><div class="card"><ul class="mb-0 ps-3"><li class="mb-2">Hebamme früh suchen: Fragt direkt nach dem positiven Test an, gute Plätze sind oft schnell vergeben.</li><li class="mb-2">Geburtsklinik anschauen: Viele Kliniken bieten Infoabende und Kreißsaalführungen an.</li><li>Kassen übernehmen Hebammenhilfe und viele Kurse. Fragt bei eurer Krankenkasse nach.</li></ul></div>
-    <h2>Hilfreich in ganz Deutschland</h2>${GENERAL_HELP.map(f => card(f)).join('')}
-    <p class="small soft">Angaben ohne Gewähr. Ärztlicher Bereitschaftsdienst: 116 117, im Notfall 112.</p>`}
-    <h2>Eigene Anlaufstellen <span class="chip">${own.length}</span></h2>
-    ${own.length ? own.map(ownCard).join('') : '<div class="card center soft">Noch nichts gesammelt. Tragt hier eure Hebamme, Klinik oder einen guten Kurs ein, damit ihr alles an einem Ort habt.</div>'}
-    <form id="ltForm" class="card"><label for="ltTitle">Name der Anlaufstelle</label><input id="ltTitle" maxlength="80" required placeholder="z. B. Hebamme Anna Muster"><label for="ltText">Notiz (optional)</label><input id="ltText" maxlength="160" placeholder="z. B. Telefon, Sprechzeiten, Kosten"><label for="ltUrl">Link (optional)</label><input id="ltUrl" type="url" maxlength="300" placeholder="https://"><button class="btn btn-solid theme-primary w-100 mt-2" type="submit">${bi('plus-lg')} Hinzufügen</button></form>
+      <p class="small soft mt-2 mb-0">${ffm ? 'Für Frankfurt zeigen wir ausgewählte Anlaufstellen. ' : ''}Für jeden anderen Ort sammelt ihr oben eigene Anlaufstellen: Hebamme, Klinik, Kurse, Beratung.</p></div>
     <p class="small soft">Bei akuten Beschwerden: Frauenarzt oder Hebamme, im Notfall 112.</p>`;
   bindCityInput($('#tipsCity'));
   $('#ltForm').onsubmit = e => { e.preventDefault(); const title = $('#ltTitle').value.trim(); if (!title) return; const url = $('#ltUrl').value.trim(); own.push({ id: uid(), title, text: $('#ltText').value.trim(), url: isUrl(url) ? url : '', icon: 'geo-alt' }); save(); render(); cheer('add'); };
   view.querySelectorAll('[data-ltdel]').forEach(b => b.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); state.localTips = own.filter(x => x.id !== b.dataset.ltdel); save(); render(); });
+  $('#tipsEdit').onclick = () => { tipsEdit = !tipsEdit; render(); };
+  const rs = $('#tipsReset'); if (rs) rs.onclick = () => { delete state.settings.tipsLayout; save(); render(); toast('Anordnung zurückgesetzt'); };
+  view.querySelectorAll('[data-sec-up],[data-sec-down]').forEach(b => b.onclick = () => { const k = b.dataset.secUp || b.dataset.secDown, i = lay.order.indexOf(k); saveTipsLayout({ ...lay, order: moveItem(lay.order, i, b.dataset.secUp ? -1 : 1) }); render(); });
+  view.querySelectorAll('[data-pl-up],[data-pl-down]').forEach(b => b.onclick = () => { const id = b.dataset.plUp || b.dataset.plDown, ids = places.map(x => x.pid); saveTipsLayout({ ...lay, places: moveItem(ids, ids.indexOf(id), b.dataset.plUp ? -1 : 1) }); render(); });
+  view.querySelectorAll('[data-pl-hide]').forEach(b => b.onclick = () => { const id = b.dataset.plHide, h = lay.hidden.includes(id) ? lay.hidden.filter(x => x !== id) : [...lay.hidden, id]; saveTipsLayout({ ...lay, places: places.map(x => x.pid), hidden: h }); render(); });
+  view.querySelectorAll('[data-lt-up],[data-lt-down]').forEach(b => b.onclick = () => { const id = b.dataset.ltUp || b.dataset.ltDown, i = own.findIndex(x => x.id === id); state.localTips = moveItem(own, i, b.dataset.ltUp ? -1 : 1); save(); render(); });
+  // Ziehen und Ablegen (Maus): eigene Anlaufstellen umsortieren
+  view.querySelectorAll('[data-drag]').forEach(el => {
+    el.addEventListener('dragstart', e => { tipsDragId = el.dataset.drag; el.classList.add('dragging'); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', tipsDragId); } catch { /* egal */ } } });
+    el.addEventListener('dragend', () => { el.classList.remove('dragging'); tipsDragId = null; });
+    el.addEventListener('dragover', e => { if (tipsDragId) e.preventDefault(); });
+    el.addEventListener('drop', e => { e.preventDefault(); const from = own.findIndex(x => x.id === tipsDragId), to = own.findIndex(x => x.id === el.dataset.drag); if (from < 0 || to < 0 || from === to) return; const c = [...own]; c.splice(to, 0, c.splice(from, 1)[0]); state.localTips = c; save(); tipsDragId = null; render(); });
+  });
 };
 routes.colors = () => {
   const s = state.settings;
@@ -833,7 +893,7 @@ routes.settings = () => {
     ${personBlock('mama')}
     <h2>${duoHearts()} Gemeinsam</h2>
     <div class="card">
-      <label for="sd">Errechneter Termin</label><input id="sd" type="date" value="${s.dueDate}">
+      <label for="sd">Errechneter Termin</label><input id="sd" type="date" value="${s.dueDate}" min="${iso(today())}" max="${iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))}">
       <label for="sn">Kosename fürs Baby</label><input id="sn" value="${esc(s.nick)}" maxlength="24">
       <label for="ss">Geheimer Name</label><input id="ss" value="${esc(s.secretName)}" maxlength="40" autocomplete="off" placeholder="Nur Mama und Papa wissen’s">
       <p class="small soft" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und auf der Startseite verdeckt angezeigt.</p>
@@ -843,7 +903,7 @@ routes.settings = () => {
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>`;
   bindPerson('mama'); bindName('#sm', 'mama'); bindPerson('kid');
   const bind = (id, key) => $(id).onchange = e => { s[key] = e.target.value.trim(); save(); cheer(); };
-  bind('#sd', 'dueDate'); bind('#sn', 'nick'); bind('#ss', 'secretName');
+  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); bind('#ss', 'secretName');
   // Kosename: Kennzeichnung unter der Überschrift zieht beim Tippen sofort mit
   $('#sn').addEventListener('input', e => { s.nick = e.target.value.trim(); document.querySelectorAll('[data-kid]').forEach(n => { n.textContent = e.target.value.trim() || 'Baby'; }); });
 };
@@ -879,7 +939,7 @@ let settingsOpen = null;
 routes.einstellungen = () => {
   const s = state.settings, last = s.lastBackup;
   const modeLabel = { auto: 'Automatisch', light: 'Hell', dark: 'Dunkel' }[s.mode] || 'Automatisch';
-  const acc = (id, icon, title, sub, body) => `<details class="acc card" data-acc="${id}"${settingsOpen === id ? ' open' : ''}><summary><span class="acc-ico">${bi(icon)}</span><span class="acc-text"><b>${title}</b><span class="small soft" ${id === 'brand' ? 'id="accBrandSub"' : ''}>${sub}</span></span>${bi('chevron-down')}</summary><div class="acc-body">${body}</div></details>`;
+  const acc = (id, icon, title, sub, body) => `<details class="acc card" data-acc="${id}"${settingsOpen === id ? ' open' : ''}><summary><span class="acc-ico">${bi(icon)}</span><span class="acc-text"><b>${title}</b><span class="small soft" data-sub="${id}" ${id === 'brand' ? 'id="accBrandSub"' : ''}>${sub}</span></span>${bi('chevron-down')}</summary><div class="acc-body">${body}</div></details>`;
   const go = (href, label) => `<a class="btn btn-solid theme-primary" href="${href}">${label} ${bi('arrow-right')}</a>`;
   const fontBody = `<b id="ffLabel">Schriftart</b>
       <div class="font-list mt-2" role="radiogroup" aria-labelledby="ffLabel">${Object.entries(FONT_FAMILIES).map(([k, f]) => `<button type="button" class="font-opt ${(s.fontFamily || 'soft') === k ? 'on' : ''}" role="radio" aria-checked="${(s.fontFamily || 'soft') === k}" data-ff="${k}" style="font-family:${esc(f.stack)}"><span class="fo-name">${f.label}</span><span class="fo-sample">Aa · Du schaffst das!</span><span class="fo-note small">${f.note}</span></button>`).join('')}</div>
@@ -890,19 +950,35 @@ routes.einstellungen = () => {
         <button type="button" class="btn btn-subtle theme-secondary" id="fsUp" aria-label="Schrift größer">${bi('plus-lg')}</button></div>
       <div class="hstack justify-content-between mt-1"><span class="small soft"><span id="fsValue">${fontScale()}</span> %</span><button type="button" class="btn btn-text btn-sm" id="fsReset">Zurücksetzen auf ${FONT_SCALE.def} %</button></div>
       <div class="size-preview"><b>So sieht deine Schrift aus</b><p class="mb-0 soft">Noch ${daysLeftText()} bis zum Termin. Du schaffst das, großartig!</p></div>`;
+  const bc = bannerCfg(), bgName = { gradient: 'Farbverlauf', photo: 'Eigenes Foto', solid: 'Einfarbig' };
+  const bannerSub = () => { const c = bannerCfg(); return `${bgName[c.bg === 'photo' && !c.bgId ? 'gradient' : c.bg]} · ${BANNER_ITEMS.filter(([k]) => c[k]).length} von ${BANNER_ITEMS.length} Elementen${c.compact ? ' · kompakt' : ''}`; };
+  const bannerBody = `<p class="small soft">Das ist die große Karte oben auf der Startseite. Ihr entscheidet, was darauf steht und wie sie aussieht.</p>
+    <b>Was soll auf dem Banner stehen?</b>
+    <div class="bn-list mt-1">${BANNER_ITEMS.map(([k, l, dsc]) => `<div class="hm-row bn-row"><label class="keep hm-text" for="bn_${k}"><b>${l}</b><span class="small soft">${dsc}</span></label><input type="checkbox" role="switch" id="bn_${k}" data-bn="${k}" ${bc[k] ? 'checked' : ''} aria-label="${l} anzeigen"></div>`).join('')}</div>
+    <b class="d-block mt-3">Hintergrund</b>
+    <div class="seg mt-2" role="group" aria-label="Hintergrund" style="margin-bottom:8px">${[['gradient', 'Farbverlauf'], ['photo', 'Eigenes Foto'], ['solid', 'Einfarbig']].map(([k, l]) => `<button type="button" data-bnbg="${k}" class="${bc.bg === k ? 'on' : ''}" aria-pressed="${bc.bg === k}">${l}</button>`).join('')}</div>
+    ${bc.bg === 'photo' ? `<div class="bn-photo">${bc.bgId ? `<div class="bn-thumb" data-bg="${esc(bc.bgId)}" aria-hidden="true"></div>` : '<p class="small soft">Noch kein Foto gewählt. Bis dahin zeigt der Banner den Farbverlauf.</p>'}
+      <div class="hstack gap-2 flex-wrap mt-2"><button type="button" class="btn btn-subtle theme-secondary" id="bnPick">${bi('image')} ${bc.bgId ? 'Anderes Foto wählen' : 'Foto wählen'}</button>${bc.bgId ? `<button type="button" class="btn btn-text theme-danger" id="bnRemove">${bi('trash')} Foto entfernen</button>` : ''}</div><input type="file" id="bnFile" accept="image/*" hidden>
+      <label for="bnDim" class="mt-3">Abdunkeln: <span id="bnDimVal">${bc.dim}</span> %</label><input type="range" id="bnDim" min="30" max="80" step="5" value="${bc.dim}" aria-valuetext="${bc.dim} Prozent">
+      <b class="d-block mt-2">Bildausschnitt</b><div class="seg mt-2" role="group" aria-label="Bildausschnitt" style="margin-bottom:0">${[['top', 'Oben'], ['center', 'Mitte'], ['bottom', 'Unten']].map(([k, l]) => `<button type="button" data-bnpos="${k}" class="${bc.pos === k ? 'on' : ''}" aria-pressed="${bc.pos === k}">${l}</button>`).join('')}</div>
+      <p class="small soft mt-2 mb-0">Das Foto wird automatisch verkleinert und abgedunkelt, damit die weiße Schrift gut lesbar bleibt.</p></div>` : ''}
+    <div class="todo mt-3"><input type="checkbox" id="bnCompact" ${bc.compact ? 'checked' : ''}><label for="bnCompact" class="keep" style="margin:0;font-weight:400;flex:1">Kompakt (weniger Höhe)</label></div>
+    <b class="d-block mt-3">Vorschau</b><div id="bannerPrev" class="mt-2">${heroHTML() || '<div class="card center soft">Der Banner ist leer und wird auf der Startseite nicht angezeigt.</div>'}</div>
+    <button type="button" class="btn btn-text mt-2" id="bnReset">Auf Standard zurücksetzen</button>`;
   view.innerHTML = `
     <h1>Einstellungen</h1><p class="soft">Tippe einen Bereich an, dann klappt er auf. Es ist immer nur einer offen, so bleibt alles übersichtlich.</p>
+    ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
     ${acc('brand', 'tag-fill', 'Name der App', esc(brandFull()), brandEditorHTML())}
     ${acc('colors', 'palette2', 'Farben', `${esc(themeDef(s.theme).name)} · eure Farbwelt`, `<p class="small soft">Acht weiche Farbwelten oder eine eigene Kombination, dazu eine Lieblingsfarbe für Mama, Papa und das Baby.</p>${go('#/colors', 'Farben ändern')}`)}
+    ${acc('banner', 'image', 'Banner der Startseite', esc(bannerSub()), bannerBody)}
     ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
     ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
     ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
     ${acc('install', 'download', 'App installieren', isStandalone() ? 'Schon installiert, schön!' : 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} ${isStandalone() ? 'So funktioniert es' : 'Installieren oder Anleitung zeigen'}</button>`)}
-    ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
     ${acc('city', 'geo-alt-fill', 'Ort für Tipps', esc(tipsCity()), `<p class="small soft">In welcher Stadt wohnt ihr? Für Frankfurt gibt es ausgewählte Anlaufstellen, für jeden anderen Ort sammelt ihr eigene.</p><label for="cityInput">Stadt oder Region</label><input id="cityInput" maxlength="40" value="${esc(s.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><div class="hstack gap-2 mt-2">${go('#/tips', 'Zu den Tipps')}</div>`)}
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
-    ${acc('quotes', 'chat-quote', 'Eigene Sprüche', 'Sprüche importieren, die täglich wechseln', go('#/quotes', 'Sprüche verwalten'))}
+    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, Hessisch, Bayrisch oder Schwäbisch wählen', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('export', 'box-arrow-up', 'Datenexport', 'Alles lesbar mitnehmen: JSON, CSV oder HTML', go('#/export', 'Daten exportieren'))}
     ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
@@ -914,6 +990,19 @@ routes.einstellungen = () => {
   }));
   const g = $('#openGuide'); if (g) g.onclick = showGuide;
   const oi = $('#openInstall'); if (oi) oi.onclick = () => showInstall(true);
+  // Banner: Inhalt, Hintergrund, Foto
+  const setBanner = patch => { state.settings.banner = { ...bannerCfg(), ...patch }; save(); };
+  const refreshBanner = () => { const pv = $('#bannerPrev'); if (pv) { pv.innerHTML = heroHTML() || '<div class="card center soft">Der Banner ist leer und wird auf der Startseite nicht angezeigt.</div>'; hydrateImages(pv); } const sub = $('[data-sub="banner"]'); if (sub) sub.textContent = bannerSub(); };
+  view.querySelectorAll('[data-bn]').forEach(i => i.onchange = () => { setBanner({ [i.dataset.bn]: i.checked }); refreshBanner(); });
+  $('#bnCompact').onchange = e => { setBanner({ compact: e.target.checked }); refreshBanner(); };
+  view.querySelectorAll('[data-bnbg]').forEach(b => b.onclick = () => { setBanner({ bg: b.dataset.bnbg }); render(); });
+  view.querySelectorAll('[data-bnpos]').forEach(b => b.onclick = () => { setBanner({ pos: b.dataset.bnpos }); render(); });
+  const pick = $('#bnPick'), file = $('#bnFile');
+  if (pick) pick.onclick = () => file.click();
+  if (file) file.onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const old = bannerCfg().bgId, id = await storeBanner(f); if (old) await delImg(old).catch(() => {}); setBanner({ bgId: id, bg: 'photo' }); render(); toast('Neues Bannerbild gespeichert. Schaut auf der Startseite vorbei!'); } catch { toast('Bild konnte nicht gelesen werden'); } };
+  const rm = $('#bnRemove'); if (rm) rm.onclick = async () => { const old = bannerCfg().bgId; if (old) await delImg(old).catch(() => {}); setBanner({ bgId: '', bg: 'gradient' }); render(); };
+  const dim = $('#bnDim'); if (dim) { dim.addEventListener('input', () => { $('#bnDimVal').textContent = dim.value; dim.setAttribute('aria-valuetext', dim.value + ' Prozent'); state.settings.banner = { ...bannerCfg(), dim: +dim.value }; refreshBanner(); }); dim.addEventListener('change', () => save()); }
+  $('#bnReset').onclick = async () => { const old = bannerCfg().bgId; if (old) await delImg(old).catch(() => {}); delete state.settings.banner; save(); render(); toast('Banner ist wieder im Standard'); };
   bindBrandEditor();
   const ci = $('#cityInput'); if (ci) bindCityInput(ci, () => { const sub = $('details[data-acc="city"] summary .small'); if (sub) sub.textContent = tipsCity(); });
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
@@ -928,7 +1017,7 @@ const daysLeftText = () => { const p = pregnancy(); return p ? `${Math.max(p.lef
 const blobToData = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
 async function exportData() {
   const ids = [...state.diary.map(d => d.photoId), ...state.photos.map(p => p.photoId), ...state.milestones.map(m => m.photoId),
-    ...state.pass.map(p => p.photoId), ...state.letters.map(l => l.audioId), ...photosOf('mama'), ...photosOf('partner'), ...photosOf('kid')].filter(Boolean);
+    ...state.pass.map(p => p.photoId), ...state.letters.map(l => l.audioId), ...photosOf('mama'), ...photosOf('partner'), ...photosOf('kid'), bannerCfg().bgId].filter(Boolean);
   const images = {};
   for (const id of ids) { const b = await getImg(id); if (b) images[id] = await blobToData(b); }
   const file = new Blob([JSON.stringify({ app: 'babylove', v: 1, state, images })], { type: 'application/json' });
@@ -977,7 +1066,7 @@ const WHO = {
 const MAX_PHOTOS = 3;
 const photosOf = who => state.settings[WHO[who].photos] || [];
 const randomPhoto = who => { const p = photosOf(who); return p.length ? pick(p) : null; };
-const avatar = (id, cls = '') => `<span class="avatar ${cls}">${id ? `<img data-img="${id}" alt="">` : bi('person-fill')}</span>`;
+const avatar = (id, cls = '') => `<span class="avatar ${cls}">${id ? `<img data-img="${id}" alt="">` : bi('heart-fill')}</span>`;
 const personAvatar = (who, cls = 'avatar-sm') => { const id = randomPhoto(who); return id ? avatar(id, cls) : ''; };
 // Kleiner Foto-Stapel für Überschriften: je Person ein zufälliges Foto
 const avatarStack = (cls = 'avatar-sm') => { const ids = ['mama', 'partner', 'kid'].map(randomPhoto).filter(Boolean); return ids.length ? `<span class="avatar-stack">${ids.map(i => avatar(i, cls)).join('')}</span>` : ''; };
@@ -1072,12 +1161,12 @@ function bindBrandEditor() {
   $('#brandReset').onclick = () => { delete state.settings.appName; delete state.settings.appSub; n.value = ''; t.value = ''; save(); refresh(); cheer('style'); };
 }const updateNavNames = () => { updateNavName(undefined, 'mama'); updateNavName(undefined, 'partner'); };
 Object.assign(routes, EXTRA_ROUTES);
-const SUBPAGES = new Set(['partner', 'letters', 'names', 'milestones', 'wishes', 'lists', 'planner', 'recipes', 'food', 'move', 'vits', 'water', 'breathing', 'contacts', 'pass', 'baby', 'tips', 'colors', 'backup']);
+const SUBPAGES = new Set(['partner', 'letters', 'names', 'milestones', 'wishes', 'lists', 'planner', 'recipes', 'food', 'move', 'vits', 'water', 'breathing', 'jokes', 'weekstory', 'contacts', 'pass', 'baby', 'tips', 'colors', 'backup']);
 const SETTINGS_PAGES = new Set(['einstellungen', 'colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']); // eigener Bereich, ohne Tab unten
 const SETTINGS_SUB = new Set(['colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']);
 // Unterseiten mit eigener Rücksprung-Adresse und passendem Menüpunkt unten
-const BACK = { diaryprint: ['#/diary', 'Tagebuch'], wishprint: ['#/wishes', 'Wunschliste'] };
-const NAV_FOR = { diaryprint: 'diary', wishprint: 'more', photos: 'diary' };
+const BACK = { diaryprint: ['#/diary', 'Tagebuch'], wishprint: ['#/wishes', 'Wunschliste'], lettersprint: ['#/letters', 'Briefe ans Baby'], wishlistprint: ['#/wishes', 'Wunschliste'] };
+const NAV_FOR = { diaryprint: 'diary', wishprint: 'more', wishlistprint: 'more', lettersprint: 'more', photos: 'diary' };
 let lastKey = null;
 function render() {
   const name = location.hash.replace(/^#\//, '') || 'home';

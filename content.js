@@ -291,7 +291,7 @@ PARTNER_TIPS[3].push(
   'Du wirst nicht perfekt sein, und das ist völlig okay. Da sein, geduldig sein und lieben reicht dem Baby vollkommen.'
 );
 // Druck- und Papa-Seiten
-Object.assign(PAGE_ICON, { wishprint: 'printer', diaryprint: 'printer' });
+Object.assign(PAGE_ICON, { wishprint: 'printer', diaryprint: 'printer', lettersprint: 'book-half', wishlistprint: 'file-earmark-richtext' });
 
 // Täglich wechselnde Rang-Texte für den Papa (je Trimester, stabil pro Tag, nie zweimal derselbe in Folge)
 const PAPA_RANK_TEXTS = {
@@ -330,7 +330,7 @@ const PAPA_RANK_TEXTS = {
 const PAGE_AUDIENCE = {
   home: 'together', photos: 'together', planner: 'together', more: 'together', letters: 'together', names: 'together', milestones: 'together', wishes: 'together', wishprint: 'together',
   lists: 'together', contacts: 'together', baby: 'together', tips: 'together', einstellungen: 'together', colors: 'together', backup: 'together', homeconfig: 'together', applock: 'together',
-  diary: 'together', diaryprint: 'together', settings: 'mama', vits: 'mama', pass: 'mama', water: 'mama', food: 'mama', move: 'mama', recipes: 'mama',
+  diary: 'together', diaryprint: 'together', lettersprint: 'together', wishlistprint: 'together', settings: 'mama', vits: 'mama', pass: 'mama', water: 'mama', food: 'mama', move: 'mama', recipes: 'mama',
   papa: 'papa', partner: 'papa'
 };
 
@@ -564,7 +564,7 @@ const TOGETHER_IDEAS_MORE = [
   ['Sagt euch gegenseitig Danke für etwas Konkretes von heute.', null]
 ];
 // Version der App. Muss mit sw.js und der Meta-Angabe in index.html uebereinstimmen (wird getestet).
-const APP_VERSION = { number: '1.2.0', date: '2026-10-16', name: 'Wunschzettel senden, Tipps vor Ort und mehrere Apps auf einer Domain' };
+const APP_VERSION = { number: '1.3.0', date: '2026-10-16', name: 'Wochen-Story, Babywitze, Mundart und eigener Banner' };
 Object.assign(PAGE_ICON, { privacy: 'shield-check' });
 Object.assign(PAGE_AUDIENCE, { privacy: 'together' });
 
@@ -718,3 +718,82 @@ const BREATH_SAFETY = ['Bequem sitzen oder auf der Seite liegen. Ab der Mitte de
 const BREATH_SOURCES = [['Apotheken Umschau: Übungen, richtig atmen in der Schwangerschaft', 'https://www.apotheken-umschau.de/familie/schwangerschaft/gesunde-schwangerschaft/uebungen-richtig-atmen-in-der-schwangerschaft-795275.html'], ['Techniker Krankenkasse: Atmen gegen Schmerz', 'https://www.tk.de/techniker/magazin/familie/kinderwunsch-und-schwangerschaft/atmen-gegen-schmerz-2048352'], ['Calm: Atemübungen in Schwangerschaft und Geburt (englisch)', 'https://www.calm.com/blog/pregnancy-breathing-exercises']];
 Object.assign(PAGE_AUDIENCE, { breathing: 'together' });
 Object.assign(PAGE_ICON, { breathing: 'wind' });
+
+/* ---------- Mundart-Sprüche (Hessisch, Bayrisch, Schwäbisch): Spaß und Humor, kommen "ab und zu" zwischen die normalen Sprüche ---------- */
+const DIALECTS = { hessisch: 'Hessisch', bayrisch: 'Bayrisch', schwaebisch: 'Schwäbisch' };
+const DIALECT_QUOTES = {
+  hessisch: {
+    mama: ['Ei Gude! Du machst des ganz prima, des Kleine kann sich glücklich schätze.', 'Heut is e guder Dag zum Strahle, Mädsche. Du sorgst für zwei, des is aach net ohne.', 'Immer mit der Ruh: Des Baby kimmt, wenn’s kimmt, un net frieher.', 'Ei, was bist du stark! Des Kleine hat sich die allerbeste Mudder ausgesucht.', 'Net hetze, net hudele: Du bist genau do, wo du sein sollst.', 'Abbelwoi gibt’s später, jetzt gibt’s Wasser. Awwer du machst des gut!', 'Mach dei Pause, Mädsche. Des Baby hat aach Feierabend verdient.', 'Dein Bauch is e Wunderwerk. Un du bist die Chefin vom ganze Laade.', 'Heut wird nix gemuddert, heut wird gestrahlt. Des steht dir gut.', 'Hauptsach gesund un gut gelaunt, alles annere find sich.', 'Du hast des im Griff, des merkt mer. Un wenn net, gibt’s Hilfe vom Babba.', 'Gut gemacht heut! Gönn dir e Stückche Ruh, des hast du dir verdient.', 'Es Baby strampelt schun: Des heißt, es freut sich uff euch.', 'Alles kimmt, wie’s kimmt. Un es kimmt gut.'],
+    papa: ['Babba, du bist net Nebensach, du bist Hauptdarsteller! Mach heut was Nettes für dei Liebste.', 'Du Held vom Alldag: E Tass Tee un e Umarmung wirke Wunder.', 'Net nervös werde, Babba. Des Köfferche is gepackt, des Herz is voll.', 'Sei dabei, hör zu un lach viel. Mehr braucht e werdender Babba net.', 'Heut gibt’s Pluspunkte: Spül ohne gefragt zu werde.', 'Du schaffst des, Babba! Un die Windel wechsele lernste schnell.', 'Dei Aufgab heut: Ruhe bewahre un Schoki bereithalte.', 'E guder Babba frogt: Wie kann ich helfe? Frog heut mal.', 'Handy laut, Tank voll, Herz uff: So werd e Babba.', 'Des Baby kennt dei Stimm schun. Quatsch ruhig e bissi mit ihm.']
+  },
+  bayrisch: {
+    mama: ['Des schaffst du, Madl! Und des Zwergerl freut sich scho auf di.', 'Immer mit der Ruhe: Des Baby kimmt, wenn’s Zeit is, und ned früher.', 'Du bist a Wahnsinn! Zwoa Leit in oam, des is a Leistung.', 'Jetz erst amal hinsetzn, Füaß hoch und durchschnaufn. Des hast di verdient.', 'A bissl Gelassenheit, a bissl Humor, und scho passt’s.', 'Mei, wia schee: Du bist a richtige Kraftlackl, sogar mit Babybauch.', 'Gsund bleibn, lacha und guad drauf sei. Alles passt.', 'Dei Bauch is a Wunderwerk, und du die Chefin vom ganzen Laden.', 'Heid wird ned gjammert, heid wird gstrahlt.', 'Des wird scho! Und wenn ned glei, nacha halt a bissl später.', 'Brezn, Wasser, Füaß hoch: Mehr brauchst heid ned.', 'Du machst des so guad, des Zwergerl hat richtig Glück mit dir.', 'Ruhig bleibn, Madl. Du host des im Griff.', 'Heut gibt’s koan Stress, heut gibt’s a Pause. Basta.'],
+    papa: ['Griaß di, Papa! Du bist ned Nebendarsteller, du bist Hauptperson.', 'Heid mochst deiner Liebsten a Freid: Tee, Decke, Umarmung.', 'Ned nervös wern, Papa. De Tasch is packt, des Herz is voll.', 'Zuahern, lacha, da sei: Mehr brauchts ned zum guadn Papa.', 'Handy laut, Tank voll, Ruhe bewahrn: So wird a Papa.', 'Des Zwergerl kennt dei Stimm scho. Verzähl eam ruhig was.', 'A guader Papa fragt: Wos braucht ihr grod? Frog heid amoi.', 'Windeln wechsln lernt ma schnell. Is alles a Frage vo da Übung.', 'Du host des, Papa! Und wenn ned, hilft a Brezn.', 'Heid gibt’s Pluspunkte: Spülmaschin ausräumen, ohne dass wer fragt.']
+  },
+  schwaebisch: {
+    mama: ['Du schaffsch des! Des Kloine kann sich glücklich schätze.', 'Net hudle, net hetze: Des Baby kommt, wenn’s Zeit isch.', 'Des hosch guet gmacht, des muss mer mol sage.', 'Mach amol Pause, Mädle. Des hosch dir verdient, ond zwar richtig.', 'Gsond bleibe, lache, ausruhe. Mehr brauchsch heut net.', 'Dei Bauch isch a Wunderwerk. Ond du bisch die Chefin vom ganze Laada.', 'Heut wird net gschafft, heut wird gstrahlt.', 'Net schlecht, Herr Specht! Du machsch des richtig gut.', 'Wasser, Füß hoch, durchschnaufe: Des isch heut dei Programm.', 'Des Kloine strampelt scho: Des heißt, es freut sich uff euch.', 'Alles kommt, wie’s kommt, ond es kommt gut.', 'Du bisch stärker, als du denksch. Des sagt au dei Bauch.', 'Kehrwoch? Heut net. Heut wird gschont.', 'Immer mit da Ruh. Des Baby hat koin Termin im Kalender.'],
+    papa: ['Babbe, du bisch net Nebesach, du bisch Hauptdarsteller!', 'E Tasse Tee ond e Umarmung: Des wirkt Wunder bei dera Liabschte.', 'Net nervös werde. Die Tasch isch packt, des Herz isch voll.', 'Zuahöre, lache, do sei: Mehr braucht e guter Babbe net.', 'Handy laut, Tank voll, ruhig bleibe: So wird mer Babbe.', 'Des Baby kennt dei Stimm scho. Schwätz ruhig a bissle mit em.', 'E guter Babbe frogt: Was brauchet ihr grad? Frog heut mol.', 'Windle wechsle lernt mer schnell. Isch alles a Frag vo dr Übung.', 'Heut gibt’s Pluspunkte: Spülmaschine ausräume, ohne dass oiner froge muss.', 'Du hosch des, Babbe! Ond wenn net, helfe Spätzle.']
+  }
+};
+
+/* ---------- Babywitze: humorvoll und mutmachend, mit Niveau ---------- */
+const JOKE_CATS = { schwanger: 'Schwangerschaft', papa: 'Papa', baby: 'Baby', geburt: 'Geburt', mut: 'Mutmacher' };
+const JOKES = [
+  ['schwanger', 'Schwangerschaft ist die einzige Zeit, in der Heißhunger als Ernährungsplan durchgeht.'],
+  ['schwanger', 'Schwangere haben ein eingebautes Radar: Auf 200 Meter erkennen sie jede Toilette.'],
+  ['schwanger', 'Der Bauch wächst, die Vorfreude wächst, nur die Schuhe sind plötzlich unerreichbar. Dafür gibt es Partner.'],
+  ['schwanger', 'Man sagt, Schwangere strahlen. In Wahrheit ist es die Erleichterung, dass endlich jemand den Sitzplatz anbietet.'],
+  ['schwanger', 'Neun Monate Training für den Marathon der nächsten achtzehn Jahre. Du bist schon jetzt auf Platz eins.'],
+  ['schwanger', 'Das Gedächtnis macht Urlaub, der Hunger bleibt. Eine faire Arbeitsteilung des Körpers.'],
+  ['schwanger', 'Gähnen im Sitzen, Tritte im Liegen: Dein Körper ist gerade Weltmeister im Multitasking.'],
+  ['schwanger', 'Schwangerschaft ist ein Vollzeitjob mit Bonusprogramm: Tritte, Schluckauf und jede Menge Vorfreude.'],
+  ['papa', 'Papa-Weisheit Nummer eins: Wer nachts den Weg zum Kühlschrank kennt, wird zum Helden.'],
+  ['papa', 'Der werdende Vater liest vier Ratgeber, baut ein Bett auf und fragt dann doch: Wo ist die Anleitung für das Baby?'],
+  ['papa', 'Ein guter Papa hat zwei Superkräfte: Zuhören und Windelwechseln. Das erste kann man schon heute üben.'],
+  ['papa', 'Wenn sie fragt, ob der Bauch riesig ist, lautet die richtige Antwort: Er sieht aus wie ein kleines Wunder, weil er eins ist.'],
+  ['papa', 'Autositz einbauen: Dauer laut Anleitung fünf Minuten, in der Realität ein Wochenende und ein Volkshochschulkurs.'],
+  ['papa', 'Papa im Kreißsaal: Er hat sich auf alles vorbereitet, nur nicht darauf, dass Händchenhalten die schwerste Aufgabe ist.'],
+  ['papa', 'Ein werdender Papa lernt schnell: Snacks bereithalten ist keine Nebensache, sondern Krisenmanagement.'],
+  ['papa', 'Wenn Papa im Takt mitatmet, hat er die erste Runde Geburtsvorbereitung schon gewonnen.'],
+  ['baby', 'Das Baby hat den Termin längst im Kalender. Es hat ihn nur nicht verraten.'],
+  ['baby', 'Strampler in Größe 50: passt genau drei Wochen, wird aber fünfzehn Mal gekauft.'],
+  ['baby', 'Das Baby kennt schon eure Stimmen. Es weiß also auch, wer von euch am Telefon am lautesten lacht.'],
+  ['baby', 'Babys kommen ohne Gebrauchsanweisung. Dafür mit dem besten Mix aus Charme und Dickkopf.'],
+  ['baby', 'Vor dem Baby: acht Stunden Schlaf. Mit dem Baby: acht Stunden Schlaf, verteilt auf drei Wochen.'],
+  ['baby', 'Das Kinderzimmer ist fertig, die Wickelkommode steht, nur das Baby muss noch seinen Einzug anmelden.'],
+  ['baby', 'Ein Baby braucht nur drei Dinge: Liebe, Milch und Eltern, die lachen können, wenn mal alles schiefgeht.'],
+  ['baby', 'Der erste Tritt gegen die Bauchdecke heißt übersetzt: Ich bin da, und ich bin ein bisschen ungeduldig.'],
+  ['geburt', 'Der Kreißsaal ist der einzige Ort, an dem Atmen Teamarbeit ist.'],
+  ['geburt', 'Die Kliniktasche ist seit Woche 30 gepackt. Der Inhalt: dreimal zu viel von allem und eine Packung Traubenzucker.'],
+  ['geburt', 'Hebammen sind Superheldinnen ohne Umhang. Sie erkennen Wehen am Gesichtsausdruck des Papas.'],
+  ['geburt', 'Geburtsvorbereitung ist wie Kino: Man weiß nicht genau, was kommt, aber man freut sich riesig darauf.'],
+  ['geburt', 'Wenn der große Moment kommt, sind alle Pläne egal. Hauptsache: atmen, Händchen halten, lächeln.'],
+  ['geburt', 'Nach der Geburt verblasst die Mühe erstaunlich schnell. Die Natur versteht eben etwas von Marketing.'],
+  ['mut', 'Du bist stärker als jede To-do-Liste. Und die darf heute auch mal bis morgen warten.'],
+  ['mut', 'Jede Woche ein bisschen mehr Mensch, jede Woche ein bisschen mehr Familie. Das ist ein Zwischenstand, auf den man stolz sein darf.'],
+  ['mut', 'Perfekte Eltern gibt es nicht. Aber es gibt Eltern, die sich Mühe geben, und das ist viel besser.'],
+  ['mut', 'Wenn alles ruhig ist, genieße es. Wenn nicht, atme tief durch. In beiden Fällen: gut gemacht.'],
+  ['mut', 'Ihr müsst nicht alles wissen. Ihr müsst nur gemeinsam losgehen. Den Rest lernt ihr unterwegs.'],
+  ['mut', 'Das Leben wird gleich bunter, lauter und viel schöner. Und ihr seid schon jetzt bereit dafür.']
+];
+Object.assign(PAGE_AUDIENCE, { jokes: 'together' });
+Object.assign(PAGE_ICON, { jokes: 'balloon-heart-fill' });
+
+/* ---------- Wochen-Story: Entwicklung des Babys schön teilen ----------
+   Größe und Gewicht sind grobe Durchschnittswerte (Richtwerte) und ersetzen keine ärztliche Beratung. Zwischen den Stützpunkten wird gerundet berechnet. */
+const FRUIT_ART = { 'Mohnsamen': 'ein', 'Sesamkorn': 'ein', 'Linse': 'eine', 'Heidelbeere': 'eine', 'Himbeere': 'eine', 'Kirsche': 'eine', 'Kumquat': 'eine', 'Feige': 'eine', 'Limette': 'eine', 'Zitrone': 'eine', 'Pfirsich': 'ein', 'Apfel': 'ein', 'Avocado': 'eine', 'Birne': 'eine', 'Paprika': 'eine', 'Mango': 'eine', 'Banane': 'eine', 'Karotte': 'eine', 'Papaya': 'eine', 'Grapefruit': 'eine', 'Maiskolben': 'ein', 'Blumenkohl': 'ein', 'Salatkopf': 'ein', 'Brokkoli': 'ein', 'Aubergine': 'eine', 'Butternusskürbis': 'ein', 'Kohlkopf': 'ein', 'Kokosnuss': 'eine', 'Ananas': 'eine', 'große Ananas': 'eine', 'Honigmelone': 'eine', 'Romanasalat': 'ein', 'Mangold': 'ein', 'Lauchstange': 'eine', 'Mini-Wassermelone': 'eine', 'Wassermelone': 'eine', 'kleiner Kürbis': 'ein' };
+const WEEK_BODY = [[4, 1, 0], [5, 2, 0], [6, 4, 0], [7, 10, 1], [8, 16, 1], [10, 31, 4], [12, 54, 14], [14, 87, 43], [16, 116, 100], [18, 142, 190], [20, 256, 300], [22, 278, 430], [24, 300, 600], [26, 350, 760], [28, 376, 1005], [30, 400, 1300], [32, 424, 1700], [34, 450, 2150], [36, 474, 2600], [38, 495, 3000], [40, 510, 3400], [42, 520, 3600]];
+const WEEK_DEV = {
+  4: 'Die Einnistung ist geschafft. Aus einem winzigen Zellhaufen entsteht jetzt das Fundament für alles.', 5: 'Das Herz beginnt zu schlagen. Auch Gehirn und Rückenmark legen los.', 6: 'Erste Anlagen für Arme und Beine. Das Herz schlägt schon kräftig und regelmäßig.', 7: 'Hände und Füße formen sich, das Gesicht bekommt erste Konturen.',
+  8: 'Finger und Zehen werden sichtbar. Das Baby bewegt sich schon, auch wenn du es noch nicht spürst.', 9: 'Die wichtigsten Organe sind angelegt. Aus dem Embryo wird langsam ein kleiner Mensch.', 10: 'Die Gelenke entwickeln sich, kleine Zähnchen legen sich im Kiefer an.', 11: 'Der Kopf ist noch groß, der Körper holt auf. Das Baby kann schon Fäustchen machen.',
+  12: 'Die Reflexe entwickeln sich. Das Baby kann den Mund öffnen und schließen.', 13: 'Die Stimmbänder entstehen, die Fingerabdrücke bilden sich aus. Ein echtes Unikat.', 14: 'Das Baby kann Grimassen schneiden und am Daumen nuckeln.', 15: 'Die Haut ist noch hauchdünn. Das Baby reagiert vielleicht schon auf Licht.',
+  16: 'Die Muskeln werden kräftiger. Manche Mütter spüren jetzt die ersten sanften Bewegungen.', 17: 'Das Skelett verhärtet sich, das Baby bekommt eine schützende Schicht auf der Haut.', 18: 'Das Gehör entwickelt sich. Dein Baby kann bald deine Stimme hören.', 19: 'Die Sinne werden feiner, die Haut schützt sich mit einer cremigen Schicht.',
+  20: 'Halbzeit! Das Baby schluckt Fruchtwasser und übt für das Leben draußen.', 21: 'Die Bewegungen werden deutlicher. Vielleicht spürst du jetzt Tritte und Drehungen.', 22: 'Die Sinne reifen. Das Baby reagiert auf Berührungen und Geräusche.', 23: 'Das Baby hört Geräusche von draußen. Sprich ruhig mit ihm, es kennt deine Stimme.',
+  24: 'Die Lungen reifen weiter. Das Gesicht ist fast fertig ausgebildet.', 25: 'Das Baby legt an Fett zu. Die Haut wird glatter und praller.', 26: 'Die Augen können sich bald öffnen. Das Baby reagiert auf Licht und Schall.', 27: 'Das Gehirn arbeitet auf Hochtouren. Das Baby hat feste Schlaf- und Wachphasen.',
+  28: 'Das dritte Trimester beginnt. Das Baby öffnet die Augen und träumt vielleicht schon.', 29: 'Die Muskeln werden stärker, die Tritte kräftiger. Das Baby übt Atembewegungen.', 30: 'Das Baby wächst und legt weiter an Gewicht zu. Es wird enger im Bauch.', 31: 'Das Baby dreht sich oft. Die Sinne funktionieren schon sehr gut.',
+  32: 'Die Nägel wachsen, das Baby übt Saugen und Schlucken.', 33: 'Die Knochen härten aus, der Schädel bleibt weich und beweglich für die Geburt.', 34: 'Die Lungen sind fast reif. Viele Babys drehen sich langsam in die Kopflage.', 35: 'Das Baby nimmt kräftig zu. Nieren und Leber arbeiten schon.',
+  36: 'Das Baby rutscht oft tiefer ins Becken. Bald geht es los.', 37: 'Ab jetzt gilt das Baby als reif. Es übt Atmen, Saugen und Greifen.', 38: 'Alle Organe sind bereit. Das Baby sammelt letzte Reserven.', 39: 'Das Baby ist startklar und wartet nur noch auf sein Zeichen.',
+  40: 'Der Termin ist da. Dein Baby bestimmt, wann es losgeht.', 41: 'Noch ein bisschen Geduld: Dein Baby braucht noch einen Moment. Ihr schafft das.', 42: 'Wenn sich das Baby noch Zeit lässt, begleiten euch Hebamme und Frauenarzt eng.'
+};
+Object.assign(PAGE_AUDIENCE, { weekstory: 'together' });
+Object.assign(PAGE_ICON, { weekstory: 'stars' });
