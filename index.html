@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de" data-theme="rose">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#C97B84">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="BABYLOVE">
+  <title>BABYLOVE by Sarah</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header id="topbar">
+    <a href="#/" class="topbrand" aria-label="BABYLOVE by Sarah, zur Startseite"><span class="tb-name">BABYLOVE</span><span class="tb-by">by Sarah</span></a>
+    <div class="topbtns">
+      <button id="topShare" type="button" aria-label="App teilen"><i class="bi bi-share-fill" aria-hidden="true"></i></button>
+      <button id="topMode" type="button" aria-label="Hell oder Dunkel wechseln"><i class="bi bi-moon-stars-fill" id="topModeIcon" aria-hidden="true"></i></button>
+      <a href="#/einstellungen" id="topSettings" aria-label="Einstellungen"><i class="bi bi-gear-fill" aria-hidden="true"></i></a>
+    </div>
+  </header>
+
+  <main id="view" tabindex="-1"></main>
+
+  <nav id="nav" aria-label="Hauptnavigation">
+    <a href="#/" data-route="home"><i class="bi bi-house-heart-fill" aria-hidden="true"></i>Heute</a>
+    <a href="#/diary" data-route="diary"><i class="bi bi-journal-text" aria-hidden="true"></i>Tagebuch</a>
+    <a href="#/photos" data-route="photos"><i class="bi bi-images" aria-hidden="true"></i>Fotos</a>
+    <a href="#/more" data-route="more"><i class="bi bi-grid-fill" aria-hidden="true"></i>Mehr</a>
+    <a href="#/settings" data-route="settings"><i class="bi bi-person-heart" id="navMeIcon" aria-hidden="true"></i><img id="navMeImg" class="avatar avatar-nav" alt="" hidden><span id="navMe">Ich</span></a>
+    <a href="#/papa" data-route="papa"><i class="bi bi-person-fill" id="navPaIcon" aria-hidden="true"></i><img id="navPaImg" class="avatar avatar-nav" alt="" hidden><span id="navPa">Papa</span></a>
+  </nav>
+
+  <dialog id="sheet"></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="content.js"></script>
+  <script src="features.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
