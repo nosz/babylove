@@ -454,7 +454,7 @@ routes.homeconfig = () => {
       return `<div class="hm-row"><span class="hm-ico">${bi(m.icon)}</span><label class="keep hm-text" for="hm_${id}"><b>${m.label}</b><span class="small soft">${m.desc}</span></label>
         <input type="checkbox" role="switch" id="hm_${id}" data-hm="${id}" ${on.has(id) ? 'checked' : ''} aria-label="${m.label} anzeigen">
         <span class="hm-move"><button type="button" class="btn btn-text btn-sm" data-up="${id}" ${i === 0 ? 'disabled' : ''} aria-label="${m.label} nach oben">${bi('chevron-up')}</button>
-        <button type="button" class="btn btn-text btn-sm" data-down="${id}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="${m.label} nach unten">${bi('chevron-down')}</button></span></div>`; }).join('')}</div>
+        <button type="button" class="btn btn-text btn-sm" data-down="${id}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="${m.label} nach unten">${bi('chevron-down')}</button></span>${id === 'tips' ? `<div class="hm-extra"><label for="hmCity">Ort für die Tipps</label><input id="hmCity" maxlength="40" value="${esc(state.settings.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><span class="small soft">Zum Beispiel Frankfurt (mit ausgewählten Anlaufstellen) oder euer eigener Ort.</span></div>` : ''}</div>`; }).join('')}</div>
     <h2>3. Verknüpfungen <span class="chip" id="pinCount">${pins.length} gewählt</span></h2>
     <p class="small soft">Tippe die Seiten an, die als Kachel auf der Startseite stehen sollen. Auf jeder Seite gibt es dafür auch den Knopf „Zur Startseite“.</p>
     <div class="pin-pick">${Object.entries(info).map(([k, [ic, t]]) => `<button type="button" class="pin-opt ${pins.includes(k) ? 'on' : ''}" data-pinopt="${k}" aria-pressed="${pins.includes(k)}">${bi(ic)}<span>${t}</span>${pins.includes(k) ? bi('check-lg') : ''}</button>`).join('')}</div>
@@ -465,6 +465,7 @@ routes.homeconfig = () => {
   view.querySelectorAll('[data-up]').forEach(b => b.onclick = () => move(b.dataset.up, -1));
   view.querySelectorAll('[data-down]').forEach(b => b.onclick = () => move(b.dataset.down, 1));
   view.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { saveHome(order, new Set(HOME_PRESETS[b.dataset.preset])); render(); toast('Startseite angepasst'); });
+  const hc = $('#hmCity'); if (hc) bindCityInput(hc);
   view.querySelectorAll('[data-pinopt]').forEach(b => b.onclick = () => { setHomePin(b.dataset.pinopt, !homePins().includes(b.dataset.pinopt)); render(); });
 };
 // Tagebuch: für Mama (Hauptbereich) und für Papa (geschützter Papa-Bereich), gleiche Bedienung
@@ -1122,5 +1123,5 @@ appStart();
 setTimeout(maybeAskBackup, 800);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAskBackup(); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
 }

@@ -33,15 +33,25 @@ const wishCfg = () => Object.assign({}, WISH_DEFAULT, state.settings.wishPrint |
 const saveWishCfg = c => { state.settings.wishPrint = c; save(); };
 const childLabel = c => c.child === 'secret' && state.settings.secretName ? state.settings.secretName : c.child === 'nick' ? (state.settings.nick || '') : '';
 
+// Nachricht zum Versenden (Text für Teilen, E-Mail, WhatsApp): gleicher Inhalt wie der Zettel, mit Humor und klarer Bitte
+function wishMessage(cfg) {
+  const to = (cfg.to || '').trim(), chosen = cfg.sel.map(id => state.wishes.find(w => w.id === id)).filter(Boolean).slice(0, cfg.count);
+  const lines = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines, intro = lines[(cfg.to.length + chosen.length) % lines.length], from = namesLine(), kid = childLabel(cfg);
+  const list = chosen.map((w, i) => `${i + 1}. ${w.text}${isUrl(w.link) ? `\n   ${w.link}` : ''}`).join('\n');
+  const subject = `${to ? to + ', ' : ''}ein Wunschzettel von ${from || 'uns'}${kid ? ' für ' + kid : ''}`;
+  const text = [`${to ? `Hallo ${to},` : 'Hallo,'}`, '', intro, '', 'Unsere Wünsche an dich:', list, '', cfg.message.trim(), cfg.message.trim() ? '' : null, WISH_FOOT[cfg.tone] || WISH_FOOT.humor, '', `Alles Liebe${from ? ', ' + from : ''}`, brandFull()].filter(x => x !== null).join('\n');
+  return { subject: retitleStr(subject), text: retitleStr(text), count: chosen.length };
+}
+
 function wishSheetHTML(cfg) {
   const to = (cfg.to || '').trim(), chosen = cfg.sel.map(id => state.wishes.find(w => w.id === id)).filter(Boolean).slice(0, cfg.count);
   const lines = (WISH_TONES[cfg.tone] || WISH_TONES.humor).lines, intro = lines[(cfg.to.length + chosen.length) % lines.length];
   const kid = childLabel(cfg), from = namesLine();
   return `<article class="print-doc wish-doc">
-    <header class="pd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><h2>Wunschzettel</h2><p class="pd-for">${to ? `für ${esc(to)}` : 'für dich'}</p></header>
+    <header class="pd-head wd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><div class="wd-hearts">${printHearts()}</div><h2>Wunschzettel</h2><p class="pd-for">${to ? `für ${esc(to)}` : 'für dich'}</p></header>
     <p class="pd-from">${from ? `Von ${esc(from)}` : 'Von uns'}${kid ? `, für unser Baby ${esc(kid)}` : ', für unser Baby'}</p>
     <p class="pd-intro">${to ? `Hallo ${esc(to)}, ` : ''}${esc(intro)}</p>
-    ${chosen.length ? `<ol class="pd-wishes">${chosen.map(w => `<li><span class="pd-box" aria-hidden="true"></span><div class="pd-wish"><b>${esc(w.text)}</b>${isUrl(w.link) ? `<span class="pd-link">${esc(w.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span>` : ''}<span class="pd-done">Erledigt von: <i></i></span></div></li>`).join('')}</ol>`
+    ${chosen.length ? `<ol class="pd-wishes">${chosen.map(w => `<li><span class="pd-gift" aria-hidden="true">${bi('gift-fill')}</span><div class="pd-wish"><b>${esc(w.text)}</b>${isUrl(w.link) ? `<span class="pd-link">${esc(w.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 70))}</span>` : ''}<span class="pd-done">Erledigt von: <i></i></span></div></li>`).join('')}</ol>`
       : '<p class="pd-empty">Wähle oben bis zu drei Wünsche aus, dann erscheinen sie hier.</p>'}
     ${cfg.message.trim() ? `<p class="pd-note">${esc(cfg.message.trim()).replace(/\n/g, '<br>')}</p>` : ''}
     <footer class="pd-foot"><p>${esc(WISH_FOOT[cfg.tone] || WISH_FOOT.humor)}</p><div class="pd-sign">${esc(brandName())} <i>${esc(brandSub())}</i> · ${fmtDate(iso(today()))}</div></footer></article>`;
@@ -67,6 +77,9 @@ EXTRA_ROUTES.wishprint = () => {
     <h2>Wünsche auswählen <span class="chip" id="wp-counter"></span></h2>
     ${open.length ? `<div class="card" id="wp-list">${open.map(w => `<div class="todo"><input type="checkbox" id="wsel_${w.id}" data-ws="${w.id}"><label for="wsel_${w.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(w.text)}</span>${w.assigned ? ` <span class="chip">bei ${esc(w.assigned)}</span>` : ''}</label></div>`).join('')}</div>`
       : `<div class="card center"><p class="mb-0">Noch keine offenen Wünsche. <a href="#/wishes">Zur Wunschliste</a></p></div>`}
+    <h2>Senden</h2>
+    <div class="card wish-send"><p class="small soft mb-2">Schickt den Wunschzettel direkt als Nachricht. Der Text enthält die ausgewählten Wünsche mit Links, eine liebe Bitte und einen Gruß. Gleichzeitig wird alles der Person zugewiesen, damit nichts doppelt gekauft wird.</p>
+      <div class="hstack gap-2 flex-wrap"><button type="button" class="btn btn-solid theme-primary" id="wsShare">${bi('send-fill')} Teilen oder senden</button><a class="btn btn-subtle theme-secondary" id="wsMail" href="#" rel="noopener">${bi('envelope-heart')} E-Mail</a><a class="btn btn-subtle theme-secondary" id="wsWa" href="#" target="_blank" rel="noopener noreferrer">${bi('chat-heart')} WhatsApp</a><button type="button" class="btn btn-subtle theme-secondary" id="wsCopy">${bi('clipboard-heart')} Text kopieren</button></div></div>
     <div class="hstack gap-2 flex-wrap mb-3"><button class="btn btn-solid theme-primary" id="doPrint">${bi('printer')} Drucken oder als PDF speichern</button>
       <button class="btn btn-subtle theme-secondary" id="doAssign">${bi('person-check')} Wünsche der Person zuweisen</button></div>
     <h2>Vorschau</h2></div>
@@ -76,7 +89,7 @@ EXTRA_ROUTES.wishprint = () => {
     cfg.sel = cfg.sel.slice(0, cfg.count);
     view.querySelectorAll('[data-ws]').forEach(i => { i.checked = cfg.sel.includes(i.dataset.ws); i.disabled = !i.checked && cfg.sel.length >= cfg.count; });
     const cnt = $('#wp-counter'); if (cnt) cnt.textContent = `${cfg.sel.length} von ${cfg.count}`;
-    $('#printArea').innerHTML = wishSheetHTML(cfg); saveWishCfg({ ...cfg });
+    $('#printArea').innerHTML = wishSheetHTML(cfg); saveWishCfg({ ...cfg }); if (typeof wsUpdate === 'function') wsUpdate();
   };
   $('#wp-to').addEventListener('input', e => { cfg.to = e.target.value; refresh(); });
   $('#wp-msg').addEventListener('input', e => { cfg.message = e.target.value; refresh(); });
@@ -91,6 +104,11 @@ EXTRA_ROUTES.wishprint = () => {
   };
   $('#doAssign').onclick = () => { if (assign()) { toast(`${cfg.sel.length} Wünsche sind jetzt bei ${cfg.to.trim()}. Nichts wird doppelt gekauft.`); render(); } };
   $('#doPrint').onclick = () => { if (!cfg.sel.length) return toast('Bitte mindestens einen Wunsch auswählen'); if (cfg.to.trim()) assign(); window.print(); };
+  const wsReady = () => { if (!cfg.sel.length) { toast('Bitte erst mindestens einen Wunsch auswählen'); return false; } if (cfg.to.trim()) assign(); return true; };
+  const wsUpdate = () => { const m = wishMessage(cfg), q = encodeURIComponent; const mail = $('#wsMail'), wa = $('#wsWa'); if (mail) mail.href = `mailto:?subject=${q(m.subject)}&body=${q(m.text)}`; if (wa) wa.href = `https://wa.me/?text=${q(m.text)}`; [$('#wsShare'), mail, wa, $('#wsCopy')].forEach(e => e && e.setAttribute('aria-disabled', !cfg.sel.length)); };
+  $('#wsShare').onclick = async () => { if (!wsReady()) return; const m = wishMessage(cfg); await shareThing({ title: m.subject, text: m.text }); render(); };
+  $('#wsCopy').onclick = async () => { if (!wsReady()) return; try { await navigator.clipboard.writeText(wishMessage(cfg).text); toast('Wunschzettel-Text kopiert. Jetzt nur noch einfügen und abschicken.'); } catch { toast('Kopieren klappt hier leider nicht'); } };
+  [$('#wsMail'), $('#wsWa')].forEach(a => a.addEventListener('click', e => { if (!wsReady()) e.preventDefault(); }));
   refresh();
 };
 
@@ -116,7 +134,7 @@ function diaryDocHTML(cfg, { embed = null } = {}) {
     ? `<section class="pd-cover"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><div class="pd-cover-mid">${printHearts()}<h2>${esc(cfg.title || 'Tagebuch')}</h2>
         <p class="pd-cover-names">${esc(names)}${names && kid ? ' · ' : ''}${kid ? 'für ' + esc(kid) : ''}</p><p class="pd-cover-period">${esc(period)}</p></div>
         <p class="pd-cover-foot">${list.length} ${list.length === 1 ? 'Eintrag' : 'Einträge'} · erstellt am ${esc(fmtLong(iso(today())))}</p></section>`
-    : `<header class="pd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><h2>${esc(cfg.title || 'Tagebuch')}</h2><p class="pd-for">${esc(names)}${names && kid ? ' · ' : ''}${kid ? 'für ' + esc(kid) : ''}${(names || kid) && period ? ' · ' : ''}${esc(period)}</p></header>`;
+    : `<header class="pd-head wd-head"><div class="pd-brand">${esc(brandName())} <i>${esc(brandSub())}</i></div><h2>${esc(cfg.title || 'Tagebuch')}</h2><p class="pd-for">${esc(names)}${names && kid ? ' · ' : ''}${kid ? 'für ' + esc(kid) : ''}${(names || kid) && period ? ' · ' : ''}${esc(period)}</p></header>`;
   const toc = cfg.toc && months.length > 1 ? `<nav class="pd-toc"><h3>Inhalt</h3><ol>${months.map(m => `<li><a href="#m-${m}">${esc(monthLabel(m))}</a><span>${list.filter(d => monthKey(d) === m).length} Einträge</span></li>`).join('')}</ol></nav>` : '';
   let last = '';
   const body = list.length ? list.map(d => { const head = monthKey(d) !== last ? `<h3 class="pd-month" id="m-${monthKey(d)}">${esc(monthLabel(monthKey(d)))}</h3>` : ''; last = monthKey(d); const meta = entryMeta(d, cfg);

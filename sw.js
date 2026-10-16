@@ -1,6 +1,9 @@
 // BABYLOVE by Sarah: Service Worker. Version muss zu APP_VERSION in content.js passen.
 const VERSION = '1.1.0';
-const CACHE = 'babylove-' + VERSION;
+const PREFIX = 'babylove-';
+const CACHE = PREFIX + VERSION;
+// Mehrere Apps teilen sich die Domain (z. B. nosz.github.io/app1, /app2, /babylove): Dieser Service Worker fasst nur eigene Caches und nur Adressen unter seinem eigenen Pfad an
+const SCOPE_PATH = new URL(self.registration.scope).pathname;
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './content.js', './features.js', './extras.js', './printing.js',
   './vendor/bootstrap/bootstrap.min.css', './vendor/bootstrap/bootstrap.bundle.min.js',
@@ -16,14 +19,15 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
 // Sofort aus dem Speicher antworten (offline bereit) und im Hintergrund aktualisieren, damit Neuerungen beim nächsten Öffnen da sind
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(SCOPE_PATH)) return;
   e.respondWith(caches.open(CACHE).then(cache => cache.match(e.request).then(hit => {
     const refresh = fetch(e.request).then(res => { if (res && res.ok) cache.put(e.request, res.clone()); return res; }).catch(() => hit || cache.match('./index.html'));
     return hit || refresh;
