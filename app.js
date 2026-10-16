@@ -970,7 +970,7 @@ routes.einstellungen = () => {
     ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
     ${acc('brand', 'tag-fill', 'Name der App', esc(brandFull()), brandEditorHTML())}
     ${acc('colors', 'palette2', 'Farben', `${esc(themeDef(s.theme).name)} · eure Farbwelt`, `<p class="small soft">Acht weiche Farbwelten oder eine eigene Kombination, dazu eine Lieblingsfarbe für Mama, Papa und das Baby.</p>${go('#/colors', 'Farben ändern')}`)}
-    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, Hessisch, Bayrisch oder Schwäbisch wählen', go('#/quotes', 'Sprüche und Mundart'))}
+    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, fünf Mundarten wählen (auch Sächsisch und Ostfriesisch)', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('banner', 'image', 'Banner der Startseite', esc(bannerSub()), bannerBody)}
     ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
     ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
@@ -982,7 +982,8 @@ routes.einstellungen = () => {
     ${acc('export', 'box-arrow-up', 'Datenexport', 'Alles lesbar mitnehmen: JSON, CSV oder HTML', go('#/export', 'Daten exportieren'))}
     ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
-    <p class="version" id="appVersion">${esc(versionLine())}</p>`;
+    <p class="version" id="appVersion">${esc(versionLine())}</p>
+    <p class="version" id="appThanks">Viel Spaß und Freude wünscht euch Norbert Szpak</p>`;
   const panels = [...view.querySelectorAll('details.acc')];
   panels.forEach(d => d.addEventListener('toggle', () => {
     if (d.open) { settingsOpen = d.dataset.acc; panels.forEach(o => { if (o !== d && o.open) o.open = false; }); }

@@ -513,6 +513,23 @@ X.jokes = () => {
 
 /* ---------- Wochen-Story: die aktuelle Entwicklung des Babys schön teilen (drei Bilder im Hochformat) ---------- */
 let storyIdx = 0;
+// Eigene Messwerte (z. B. vom Ultraschall oder aus dem Mutterpass): ersetzen in der Wochen-Story die Durchschnittswerte der jeweiligen Woche
+const fetalList = () => (state.fetal = state.fetal || []);
+const fetalFor = week => fetalList().filter(e => weekFor(e.date) === week).sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+function bodyFor(p) { const w = Math.max(4, Math.min(42, p.weeks)), avg = weekBody(w), e = fetalFor(p.weeks); return { mm: e && e.mm ? e.mm : avg.mm, g: e && e.g ? e.g : avg.g, mmM: !!(e && e.mm), gM: !!(e && e.g), date: e ? e.date : '' }; }
+const parseNum = v => parseFloat(String(v || '').trim().replace(',', '.'));
+// Prüft eine Eingabe: liefert { err } oder { mm, g }
+function fetalCheck(date, sizeCm, weightG) {
+  const mm = sizeCm === '' ? 0 : Math.round(parseNum(sizeCm) * 10), g = weightG === '' ? 0 : Math.round(parseNum(weightG));
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { err: 'Bitte ein Datum wählen.' };
+  if (date > iso(today())) return { err: 'Das Datum darf nicht in der Zukunft liegen.' };
+  const wk = weekFor(date); if (wk === null || wk > 42) return { err: 'Das Datum passt nicht zur Schwangerschaft.' };
+  if (!mm && !g) return { err: 'Bitte Größe oder Gewicht eintragen.' };
+  if (sizeCm !== '' && !(mm >= 10 && mm <= 700)) return { err: 'Die Größe muss zwischen 1 und 70 cm liegen.' };
+  if (weightG !== '' && !(g >= 1 && g <= 6000)) return { err: 'Das Gewicht muss zwischen 1 und 6000 g liegen.' };
+  const avg = weekBody(Math.max(4, Math.min(42, wk))), far = (mm && (mm > avg.mm * 1.6 || mm < avg.mm / 1.6)) || (g && avg.g > 20 && (g > avg.g * 2 || g < avg.g / 2));
+  return { mm, g, week: wk, far: !!far };
+}
 const weekBody = w => {
   w = Math.max(4, Math.min(42, w)); let lo = WEEK_BODY[0], hi = WEEK_BODY[WEEK_BODY.length - 1];
   for (let i = 0; i < WEEK_BODY.length - 1; i++) if (w >= WEEK_BODY[i][0] && w <= WEEK_BODY[i + 1][0]) { lo = WEEK_BODY[i]; hi = WEEK_BODY[i + 1]; break; }
@@ -528,12 +545,15 @@ function weekRange(p) {
   return s.getMonth() === e.getMonth() ? `${s.getDate()}.–${e.getDate()}. ${mon(e)}` : `${short(s)}–${short(e)}`;
 }
 function storyData() {
-  const p = pregnancy(), s = state.settings, kid = (s.nick || '').trim() || 'Dein Baby', w = Math.max(4, Math.min(42, p.weeks)), [, fruit] = fruitFor(p.weeks), body = weekBody(w), art = FRUIT_ART[fruit] || 'ein';
+  const p = pregnancy(), s = state.settings, kid = (s.nick || '').trim() || 'Dein Baby', w = Math.max(4, Math.min(42, p.weeks)), [, fruit] = fruitFor(p.weeks), body = bodyFor(p), art = FRUIT_ART[fruit] || 'ein';
+  // Ist eine Mundart eingestellt, steht die Überschrift in Mundart (bei "bunt gemischt" wechselt sie täglich)
+  const dk = dialectKeys(), dia = dk.length ? dk[Math.floor(today() / DAY) % dk.length] : null, tpl = dia ? dailyPick(STORY_DIALECT[dia], 'story-' + dia) : null;
+  const sizeTitle = tpl ? tpl.replace('{kid}', kid).replace(/\{a\}/g, DIA_ART[dia] || 'a').replace('{fruit}', fruit) : `${kid} ist so groß wie ${art} ${fruit}`;
   const due = new Date(s.dueDate + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
   return { p, week: p.weeks, range: weekRange(p), fruit, kid, body, slides: [
-    { id: 'size', title: `${kid} ist so groß wie ${art} ${fruit}`, lines: [`ca. ${fmtMM(body.mm)}`, `ca. ${fmtG(body.g)}`] },
+    { id: 'size', title: sizeTitle, dia, lines: [`${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`, `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`, ...(body.date ? [`gemessen am ${fmtDate(body.date)}`] : [])] },
     { id: 'dev', title: WEEK_DEV[w] },
-    { id: 'sum', title: 'Unsere Zusammenfassung', rows: [['SSW', `${p.weeks}+${p.days}`], ['Errechneter Termin', due], ['Größe', `ca. ${fmtMM(body.mm)}`], ['Gewicht', `ca. ${fmtG(body.g)}`], ['Schon geschafft', `${Math.max(0, p.elapsed)} Tage`], ['Noch ca.', `${Math.max(0, p.left)} Tage`]] }
+    { id: 'sum', title: 'Unsere Zusammenfassung', rows: [['SSW', `${p.weeks}+${p.days}`], ['Errechneter Termin', due], [body.mmM ? 'Größe (gemessen)' : 'Größe (Richtwert)', `${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`], [body.gM ? 'Gewicht (gemessen)' : 'Gewicht (Richtwert)', `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`], ['Schon geschafft', `${Math.max(0, p.elapsed)} Tage`], ['Noch ca.', `${Math.max(0, p.left)} Tage`]] }
   ] };
 }
 const fruitHue = name => [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
@@ -543,7 +563,7 @@ function storySlideHTML(S, i) {
   const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
     : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong)}</div><p class="st-cap">Woche ${S.week}</p>`
     : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
-  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
+  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${sl.dia ? `<span class="st-dia">auf ${esc(DIALECTS[sl.dia])}</span>` : ''}${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
 }// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
 function drawStory(S, i, imgs = {}) {
   const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
@@ -552,7 +572,7 @@ function drawStory(S, i, imgs = {}) {
   const wrap = (t, mw, size, weight) => { x.font = `${weight} ${size}px ${fam}`; const out = []; let line = ''; for (const w of String(t).split(' ')) { const test = line ? line + ' ' + w : w; if (x.measureText(test).width > mw && line) { out.push(line); line = w; } else line = test; } if (line) out.push(line); return out; };
   x.textBaseline = 'alphabetic'; x.fillStyle = soft; x.textAlign = 'left'; x.font = `600 44px ${fam}`; x.fillText(`Woche ${S.week} · ${S.range}`, 70, 140);
   const heart = (cx, cy, s, col) => { x.save(); x.translate(cx, cy); x.scale(s, s); x.beginPath(); x.moveTo(0, 30); x.bezierCurveTo(-90, -30, -50, -90, 0, -40); x.bezierCurveTo(50, -90, 90, -30, 0, 30); x.fillStyle = col; x.fill(); x.restore(); };
-  x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96));
+  x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96)); if (sl.dia) { x.fillStyle = soft; x.font = `italic 600 40px ${fam}`; x.fillText('auf ' + DIALECTS[sl.dia], W / 2, 380 + tl.length * 96 + 10); x.fillStyle = text; }
   if (sl.id === 'size') {
     x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(W / 2, 1090, 360, 0, 7); x.fill();
     if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 250, 840, 500, 500); else {
@@ -560,10 +580,10 @@ function drawStory(S, i, imgs = {}) {
     x.fillStyle = `hsl(${(hue + 110) % 360} 55% 38%)`; x.beginPath(); x.ellipse(W / 2 + 40, 850, 90, 38, -0.5, 0, 7); x.fill(); x.fillRect(W / 2 - 6, 845, 12, 50); }
     x.fillStyle = text; x.font = `700 56px ${fam}`; x.fillText(sl.lines.join(' · '), W / 2, 1560);
   } else if (sl.id === 'dev') {
-    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 330, 760, 660, 792); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
+    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 330, 800, 660, 660); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
     x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680);
   } else {
-    if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 190, 0, 7); x.fill(); x.drawImage(im, cx - 150, 490, 300, im === imgs.baby ? 360 : 300); }); }
+    if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 190, 0, 7); x.fill(); x.drawImage(im, cx - 150, 490, 300, 300); }); }
     x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = (imgs.baby ? 960 : 620) + Math.floor(n / 2) * (imgs.baby ? 190 : 280); x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 80); });
     x.fillStyle = s2; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, 840, 30, 15) : x.rect(120, 1500, 840, 30); x.fill(); x.fillStyle = strong; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30, 15) : x.rect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30); x.fill();
   }
@@ -581,18 +601,39 @@ async function shareImages(files, S) {
   try { if (navigator.canShare && navigator.canShare({ files })) await navigator.share({ files, title: `${S.kid}: Woche ${S.week}`, text }); else { files.forEach(saveFileBlob); toast(files.length > 1 ? 'Bilder gespeichert. Jetzt in jeder App teilbar.' : 'Bild gespeichert. Jetzt in jeder App teilbar.'); } }
   catch (e) { if (e.name !== 'AbortError') toast('Teilen klappt hier leider nicht'); }
 }
+let fetalOpen = false;
+function fetalCard(S) {
+  const list = [...fetalList()].sort((a, b) => b.date.localeCompare(a.date)), lmp = new Date(state.settings.dueDate + 'T00:00'); lmp.setDate(lmp.getDate() - 280);
+  const row = e => `<li class="fetal-row"><div class="flex-grow-1"><b>${esc(fmtDate(e.date))}</b> <span class="chip">${weekFor(e.date)}. SSW</span><div class="small soft">${[e.mm ? `Größe ${fmtMM(e.mm)}` : '', e.g ? `Gewicht ${fmtG(e.g)}` : '', e.note ? esc(e.note) : ''].filter(Boolean).join(' · ')}</div></div><button type="button" class="btn btn-text theme-danger btn-sm" data-fdel="${e.id}" aria-label="Messwert vom ${esc(fmtDate(e.date))} löschen">${bi('trash')}</button></li>`;
+  return `<details class="card fetal-card mt-3" id="fetalCard" ${fetalOpen ? 'open' : ''}><summary>${bi('rulers')} Eigene Messwerte eintragen <span class="chip">${list.length}</span></summary>
+    <p class="small soft mt-2">Habt ihr beim Ultraschall oder im Mutterpass Größe und Gewicht notiert? Dann erscheinen sie in der Story der jeweiligen Woche statt der Durchschnittswerte.</p>
+    <form id="fetalForm" novalidate><label for="fdate">Datum der Messung</label><input id="fdate" type="date" value="${iso(today())}" max="${iso(today())}" min="${iso(lmp)}">
+      <div class="hstack gap-2"><div class="flex-grow-1"><label for="fsize">Größe in cm</label><input id="fsize" inputmode="decimal" autocomplete="off" placeholder="z. B. 37,6"></div><div class="flex-grow-1"><label for="fweight">Gewicht in g</label><input id="fweight" inputmode="numeric" autocomplete="off" placeholder="z. B. 1100"></div></div>
+      <label for="fnote">Notiz (optional)</label><input id="fnote" maxlength="80" autocomplete="off" placeholder="z. B. Ultraschall bei Dr. Muster">
+      <p class="small ob-err" id="fetalErr" role="alert" hidden></p><button class="btn btn-solid theme-primary w-100 mt-2" type="submit">${bi('plus-lg')} Messwert speichern</button></form>
+    ${list.length ? `<h3 class="small mt-3 mb-1">Gespeicherte Messwerte</h3><ul class="fetal-list">${list.map(row).join('')}</ul>` : ''}</details>`;
+}
 X.weekstory = () => {
   const S = storyData(), n = S.slides.length; storyIdx = Math.max(0, Math.min(n - 1, storyIdx));
   view.innerHTML = `${intro('Wochen-Story', `Die aktuelle Entwicklung von ${esc(S.kid)} als drei schöne Bilder zum Teilen: mit Größenvergleich, Entwicklung und Zusammenfassung.`)}
     <div class="story-wrap" id="storyWrap"><button type="button" class="st-nav st-prev" id="stPrev" aria-label="Voriges Bild">${bi('chevron-left')}</button><div id="storyBox">${storySlideHTML(S, storyIdx)}</div><button type="button" class="st-nav st-next" id="stNext" aria-label="Nächstes Bild">${bi('chevron-right')}</button></div>
     <div class="st-dots" role="group" aria-label="Bild wählen">${S.slides.map((s, i) => `<button type="button" class="st-dot ${i === storyIdx ? 'on' : ''}" data-st="${i}" aria-label="Bild ${i + 1} von ${n}" aria-pressed="${i === storyIdx}"></button>`).join('')}</div>
     <div class="hstack gap-2 flex-wrap mt-3"><button type="button" class="btn btn-solid theme-primary flex-grow-1" id="stShare">${bi('share-fill')} Dieses Bild teilen</button><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="stAll">${bi('images')} Alle drei teilen</button></div>
-    <p class="small soft mt-2">Größe und Gewicht sind Durchschnittswerte (Richtwerte) und ersetzen keine ärztliche Beratung. Auf dem Handy öffnet sich direkt das Teilen-Menü, am Computer werden die Bilder gespeichert.</p>`;
+    ${fetalCard(S)}
+    <p class="small soft mt-2" id="stNote">${S.body.mmM || S.body.gM ? `Größe und Gewicht dieser Woche sind eure eigenen Messwerte vom ${esc(fmtDate(S.body.date))}. Fehlende Werte sind Durchschnittswerte (Richtwerte).` : 'Größe und Gewicht sind Durchschnittswerte (Richtwerte). Eigene Messwerte könnt ihr oben eintragen.'} Beides ersetzt keine ärztliche Beratung. Auf dem Handy öffnet sich direkt das Teilen-Menü, am Computer werden die Bilder gespeichert.</p>`;
   const go = i => { storyIdx = (i + n) % n; render(); };
   $('#stPrev').onclick = () => go(storyIdx - 1); $('#stNext').onclick = () => go(storyIdx + 1);
   view.querySelectorAll('[data-st]').forEach(b => b.onclick = () => go(+b.dataset.st));
   $('#stShare').onclick = async () => shareImages([await storyFile(S, storyIdx)], S);
   $('#stAll').onclick = async () => shareImages(await Promise.all(S.slides.map((_, i) => storyFile(S, i))), S);
+  const fc = $('#fetalCard'); fc.addEventListener('toggle', () => { fetalOpen = fc.open; });
+  $('#fetalForm').onsubmit = e => {
+    e.preventDefault(); const r = fetalCheck($('#fdate').value, $('#fsize').value.trim(), $('#fweight').value.trim()), box = $('#fetalErr');
+    box.hidden = !r.err; box.textContent = r.err || ''; if (r.err) return;
+    fetalList().push({ id: uid(), date: $('#fdate').value, mm: r.mm || 0, g: r.g || 0, note: $('#fnote').value.trim() }); save(); fetalOpen = true; render();
+    toast(r.far ? `Gespeichert. Der Wert liegt weit vom Durchschnitt, bitte kurz noch einmal prüfen.` : `Gespeichert. ${S.kid} wächst und gedeiht!`);
+  };
+  view.querySelectorAll('[data-fdel]').forEach(b => b.onclick = () => { if (!confirm('Diesen Messwert löschen?')) return; state.fetal = fetalList().filter(x => x.id !== b.dataset.fdel); save(); fetalOpen = true; render(); });
   let x0 = null; const box = $('#storyBox');
   box.addEventListener('pointerdown', e => { x0 = e.clientX; }); box.addEventListener('pointerup', e => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 50) go(storyIdx + (dx < 0 ? 1 : -1)); });
   view.onkeydown = e => { if (e.key === 'ArrowLeft') go(storyIdx - 1); if (e.key === 'ArrowRight') go(storyIdx + 1); };

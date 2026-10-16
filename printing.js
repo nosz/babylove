@@ -330,7 +330,7 @@ EXTRA_ROUTES.wishlistprint = () => {
 /* ==================== Allgemeiner Datenexport (lesbar und portabel) ==================== */
 // Anders als das Backup (zum Wiederherstellen) ist dieser Export zum Lesen, Archivieren und Mitnehmen gedacht: JSON, CSV oder HTML.
 // PIN-Daten werden nie exportiert. Der geheime Name nur auf ausdrücklichen Wunsch.
-const EXPORT_AREAS = [['profil', 'Profil und Namen'], ['diary', 'Tagebuch'], ['photos', 'Fotoalbum'], ['letters', 'Briefe ans Baby'], ['pass', 'Mutterpass'],
+const EXPORT_AREAS = [['profil', 'Profil und Namen'], ['diary', 'Tagebuch'], ['photos', 'Fotoalbum'], ['letters', 'Briefe ans Baby'], ['pass', 'Mutterpass'], ['fetal', 'Messwerte des Babys'],
   ['water', 'Wasser'], ['baby', 'Baby-Tracker'], ['wishes', 'Wunschliste'], ['lists', 'Checklisten und To-dos'], ['appts', 'Termine'], ['names', 'Namensfinder'], ['milestones', 'Meilensteine'], ['contacts', 'Kontakte'], ['vits', 'Vitamine']];
 const EXPORT_DEFAULT = { areas: EXPORT_AREAS.map(a => a[0]), media: false, secret: false };
 const byDate = list => [...list].sort((a, b) => String(a.date || a.ts).localeCompare(String(b.date || b.ts)));
@@ -343,6 +343,7 @@ function exportTable(area, opt = {}) {
     case 'diary': { const l = byDate(state.diary); return { head: ['Datum', 'SSW', 'Stimmung', 'Von', 'Text'], rows: l.map(d => [d.date, ssw(d.date), MOOD_LABEL[d.mood] || '', d.by ? authorName(d.by) : '', d.text || '']), imgs: l.map(d => d.photoId || null) }; }
     case 'photos': { const l = byDate(state.photos); return { head: ['Datum', 'SSW', 'Beschriftung'], rows: l.map(p => [p.date, ssw(p.date), p.caption || '']), imgs: l.map(p => p.photoId || null) }; }
     case 'letters': return { head: ['Datum', 'Text', 'Sprachnachricht'], rows: byDate(state.letters).map(l => [l.date, l.text || '', yn(l.audioId)]) };
+    case 'fetal': return { head: ['Datum', 'SSW', 'Größe (cm)', 'Gewicht (g)', 'Notiz'], rows: byDate(state.fetal || []).map(e => [e.date, ssw(e.date), e.mm ? (e.mm / 10).toFixed(1).replace('.', ',') : '', e.g || '', e.note || '']) };
     case 'pass': return { head: ['Datum', 'SSW', 'Gewicht (kg)', 'Blutdruck', 'Hb', 'Notiz'], rows: byDate(state.pass).map(p => [p.date, ssw(p.date), p.weight || '', p.sys ? `${p.sys}/${p.dia || ''}` : '', p.hb || '', p.note || '']) };
     case 'water': return { head: ['Datum', 'Gläser (250 ml)'], rows: Object.entries(state.water || {}).sort(([a], [b]) => a.localeCompare(b)).map(([d, n]) => [d, n]) };
     case 'baby': return { head: ['Zeitpunkt', 'Art', 'Detail', 'Dauer (Minuten)'], rows: byDate(state.baby).map(e => [new Date(e.ts).toLocaleString('de-DE'), { feed: 'Stillen/Trinken', diaper: 'Windel', sleep: 'Schlaf' }[e.type] || e.type, e.detail || '', e.end ? Math.round((e.end - e.ts) / 60000) : '']) };

@@ -768,3 +768,9 @@ h1, h2 { overflow-wrap: anywhere; }
 .st-baby { width: 70%; margin-top: auto; } .st-baby svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .18)); }
 .st-pair { display: flex; gap: 12px; justify-content: center; margin-top: auto; width: 100%; } .st-bub { width: 40%; aspect-ratio: 1; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; overflow: hidden; } .st-bub-w { background: #fff; } .st-bub svg { width: 78%; height: 78%; }
 .story-sum .st-grid { margin-top: 12px; }
+
+/* Eigene Messwerte in der Wochen-Story */
+.fetal-card > summary { cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; min-height: 40px; color: var(--primary-strong); list-style: none; } .fetal-card > summary::-webkit-details-marker { display: none; }
+.fetal-list { list-style: none; padding: 0; margin: 0; } .fetal-row { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); } .fetal-row:last-child { border-bottom: 0; }
+.st-baby { width: 74%; } .st-baby svg { width: 100%; height: auto; } .st-bub { background: var(--surface-2); }
+.st-dia { display: inline-block; margin: -2px 0 8px; padding: 2px 12px; border-radius: 99px; background: var(--surface-2); color: var(--primary-strong); font-size: .78rem; font-weight: 700; font-style: italic; }
