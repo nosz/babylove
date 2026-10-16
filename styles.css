@@ -644,7 +644,7 @@ img[data-img][style*="width:100%"] { max-height: 72vh; object-fit: contain; back
 .confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
 .confetti i { position: absolute; top: -16px; display: block; border-radius: 2px; opacity: 0; animation: confetti-fall var(--d, 3s) cubic-bezier(.25, .6, .4, 1) var(--delay, 0s) forwards; }
 @keyframes confetti-fall { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 1; } 85% { opacity: 1; } 100% { transform: translate3d(var(--x, 0), 108vh, 0) rotate(var(--r, 360deg)); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .confetti { display: none; } .goal-win { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .goal-win { animation: none; } }
 
 /* Menü unten: Profilfotos größer, mit Ring in der Lieblingsfarbe */
 #nav a img.avatar-nav { width: 32px; height: 32px; border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
@@ -800,10 +800,102 @@ h1, h2 { overflow-wrap: anywhere; }
 .update-banner{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:1080;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:16px;background:var(--surface,#fff);color:var(--text,#222);border:2px solid var(--primary);box-shadow:0 10px 30px rgba(0,0,0,.2);max-width:560px;margin:0 auto}.update-banner>i{font-size:1.5rem;color:var(--primary)}.update-banner>div{flex:1 1 160px;display:flex;flex-direction:column;line-height:1.25}.update-banner span{font-size:.85rem;opacity:.8}
 
 /* Klare Rückwege auf Unterseiten */
-.back-row{padding:4px 0 8px}
+.back-row{position:sticky;top:calc(var(--topbar-h,60px) - 6px);z-index:11;margin:0 -16px 10px;padding:6px 16px 8px;background:color-mix(in srgb,var(--bg) 94%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .back-row .back{background:var(--primary);color:#fff;padding:9px 16px 9px 12px;font-size:.95rem;gap:8px;box-shadow:0 3px 10px color-mix(in srgb,var(--primary) 30%,transparent)}
 .back-row .back .bi{font-size:1.15rem}
 .back-row .back:active{transform:scale(.97)}
 .back-foot{margin:22px 0 6px;text-align:center}
 .back-bottom{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:99px;border:2px solid var(--primary);color:var(--primary-strong);font-weight:700;text-decoration:none;background:var(--surface,#fff)}
 .back-bottom:active{transform:scale(.97)}
+
+/* Bannerfarbe */
+.hero.hero-tint{background:linear-gradient(145deg,var(--hero-c),color-mix(in srgb,var(--hero-c) 68%,#000))}
+.hero.hero-solid.hero-tint{background:var(--hero-c);background-image:none}
+.bn-colors{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 10px}
+.bn-sw{width:40px;height:40px;border-radius:50%;border:3px solid var(--surface,#fff);box-shadow:0 0 0 1px var(--line);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;padding:0;background:linear-gradient(145deg,var(--primary),var(--primary-strong))}
+.bn-sw.on{box-shadow:0 0 0 3px var(--primary-strong)}
+
+.sheet-x{position:sticky;top:0;float:right;z-index:5;width:48px;height:48px;margin:-6px -6px 0 8px;border-radius:50%;border:0;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--surface-2);color:var(--primary-strong);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.sheet-x:active{transform:scale(.94)}
+
+/* Wochen-Story-Kachel: gezeichnete Frucht mit Funkeln */
+.story-mini{position:relative;width:60px;height:60px;border:2px solid var(--primary);box-shadow:0 3px 10px color-mix(in srgb,var(--primary) 25%,transparent)}
+.story-mini svg{width:84%;height:84%;display:block}
+.story-mini i.sm-badge{position:absolute;right:-6px;top:-6px;width:24px;height:24px;aspect-ratio:auto;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:.8rem}
+
+/* Yoga */
+.yoga-card{padding:0;margin-top:10px}.yoga-card>summary{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;list-style:none}.yoga-card>summary::-webkit-details-marker{display:none}.yoga-card .acc-text{display:flex;flex-direction:column;min-width:0}.yoga-body{padding:0 16px 14px}
+
+/* Mehr: Gruppen und Empfehlungen */
+.hub-group{font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--soft,#6b5a5a);margin:20px 0 8px}
+.hub-ext{border-style:dashed}
+.hub-ext-note{display:block;margin-top:4px}
+.hub-ext-sw{margin:0 0 10px;align-items:center}
+
+.hub-ext{padding:18px 20px!important;overflow-wrap:anywhere}
+.hub-ext b{font-size:1.05rem}
+.fuel-heart{position:relative;display:inline-block;align-self:flex-start;font-size:1.6rem;line-height:1;color:var(--primary-strong);margin-bottom:4px}
+.fuel-heart .bi-heart-fill{position:absolute;left:52%;top:18%;font-size:.55em;color:#fff;margin:0}
+
+.pin-btn{font-size:.74rem;font-weight:600;padding:4px 10px;gap:5px}.pin-btn .bi{font-size:.9rem}
+
+#extGrid{grid-template-columns:1fr!important}
+.hub-ext{display:grid;grid-template-columns:auto 1fr;column-gap:14px;align-items:start}
+.hub-ext>.bi,.hub-ext>.fuel-heart{grid-row:1 / span 3;font-size:1.8rem}
+.hub-ext>b,.hub-ext>.small{grid-column:2}
+
+.hub-ext .fuel-heart{font-size:2.4rem}.hub-ext .fuel-heart .bi-heart-fill{left:24%;top:16%;font-size:.5em;color:#fff}
+
+.hub-ext .fuel-heart{font-size:inherit;line-height:0;margin-bottom:6px}.hub-ext .fuel-heart svg{display:block}
+#nav[data-count='5'] a{font-size:10px}#nav[data-count='5'] a i{padding:3px 10px}
+.nav-pick{margin-top:6px}
+
+/* Seitentitel bleibt beim Scrollen oben stehen (Hauptseiten ohne Zurück-Zeile) */
+body:not(.onboarding) #view > h1:first-child{position:sticky;top:calc(var(--topbar-h,60px) - 6px);z-index:10;margin-left:-16px;margin-right:-16px;padding:8px 16px;background:color-mix(in srgb,var(--bg) 94%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+
+.set-group{font-size:.85rem;text-transform:uppercase;letter-spacing:.07em;color:var(--soft,#6b5a5a);margin:22px 2px 8px}
+.set-group:first-of-type{margin-top:14px}
+
+/* Haus-Knopf ganz links in der Kopfleiste */
+.topleft{display:flex;align-items:center;gap:8px;min-width:0}
+#topHome{width:42px;height:42px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--primary-strong);text-decoration:none;font-size:1.15rem}
+#topHome:active{transform:scale(.94)}
+#topHome.active{background:var(--primary);color:var(--on-primary);box-shadow:0 4px 10px color-mix(in srgb,var(--primary) 35%,transparent)}
+
+.story-slide .st-hearts{display:inline-flex;vertical-align:middle;margin-right:4px;font-size:1.05em}
+
+.ss-wrap{display:flex;gap:8px;align-items:stretch}.ss-wrap input{flex:1;min-width:0}.ss-wrap .btn{flex:none;width:48px}
+
+.aud-names{display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+
+/* Tagesimpuls: beide Sprüche gleich gesetzt */
+#partnerMsg{font-size:1.05rem;font-weight:600;line-height:1.45;font-style:normal}
+
+.quick[data-count='2']{grid-template-columns:repeat(2,1fr)}.quick[data-count='3']{grid-template-columns:repeat(3,1fr)}
+
+/* Story: Text unter dem Bild etwas größer, bleibt aber im Rahmen */
+.story-slide .st-cap{font-size:1.02rem;line-height:1.4;margin:8px 4px 10px;overflow-wrap:anywhere;hyphens:auto;max-width:100%}
+.story-slide .st-grid dt{font-size:.76rem}.story-slide .st-grid dd{font-size:1rem}
+.story-slide .st-foot{font-size:.86rem}
+
+/* Super-Lob beim Tagesziel: mehr Konfetti aus drei Richtungen und eine große Lob-Karte */
+.confetti i.b { top: auto; bottom: -14px; animation-name: confetti-burst; }
+@keyframes confetti-burst { 0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 1; } 45% { transform: translate3d(var(--bx, 0), var(--by, -300px), 0) rotate(calc(var(--r, 360deg) * .6)); opacity: 1; } 100% { transform: translate3d(calc(var(--bx, 0) * 1.25), 40vh, 0) rotate(var(--r, 360deg)); opacity: 0; } }
+.praise-pop { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--primary-strong) 28%, transparent); backdrop-filter: blur(3px); animation: pp-fade .3s ease both; }
+.praise-pop.out { opacity: 0; transition: opacity .3s; }
+.pp-card { position: relative; max-width: 420px; width: 100%; text-align: center; padding: 28px 22px 22px; border-radius: 28px; background: var(--surface); border: 3px solid var(--primary); box-shadow: 0 24px 60px rgba(0, 0, 0, .28); animation: goal-pop .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+.pp-card .pp-ico { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; font-size: 3rem; color: #fff; background: linear-gradient(145deg, #ffd45a, #f0a31c); box-shadow: 0 8px 22px rgba(240, 163, 28, .45); animation: pp-wiggle 1.6s ease-in-out infinite; }
+.pp-card b { display: block; margin: 14px 0 6px; font-size: 1.7rem; line-height: 1.15; color: var(--primary-strong); }
+.pp-card p { margin: 0 0 12px; font-size: 1.12rem; font-weight: 600; color: var(--text); }
+.pp-card .pp-stars { display: block; font-size: 1.4rem; color: #f0a31c; letter-spacing: 6px; margin-bottom: 12px; }
+@keyframes pp-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pp-wiggle { 0%, 100% { transform: rotate(-6deg) scale(1); } 50% { transform: rotate(6deg) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .pp-card, .pp-card .pp-ico { animation: none; } }
+
+.confetti{z-index:80}
+
+.goal-win{flex-direction:column;justify-content:center;text-align:center;gap:6px}.goal-win>div{text-align:center}
+.pp-card .pp-name{display:block;margin:0 0 8px;font-size:1.35rem;font-weight:800;color:var(--text)}
+
+.confetti.still i{top:auto;opacity:0;animation:confetti-still 3.6s ease var(--delay,0s) forwards}
+@keyframes confetti-still{0%{opacity:0}20%{opacity:1}75%{opacity:1}100%{opacity:0}}

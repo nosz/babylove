@@ -75,7 +75,10 @@ function startRetitle() {
   });
   rtObs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: RT_ATTRS });
 }
+// Bestätigungen lassen sich abschalten (Einstellungen). Probleme und Fehler melden sich immer.
+const TOAST_ALWAYS = /fehlgeschlagen|konnte|nicht |ungültig|höchstens|mindestens|bitte|fehler|voll|kein /i;
 function toast(msg) {
+  if (state.settings.toasts !== true && !TOAST_ALWAYS.test(String(msg))) return;
   const t = $('#toast');
   t.textContent = personalize(msg); t.classList.add('show');
   clearTimeout(toast.id); toast.id = setTimeout(() => t.classList.remove('show'), 2800);
@@ -209,7 +212,7 @@ const nick = () => esc(state.settings.nick || 'Baby');
 // Namen von Mama, Papa und Kind unter jeder Überschrift; ziehen beim Tippen der Namen sofort mit (data-name, data-kid)
 const nmHeart = k => `<i class="bi bi-heart-fill nm-heart" style="color:var(--heart-${k})" aria-hidden="true"></i>`;
 const namesTag = () => { const s = state.settings;
-  return `<span class="aud-names"><span class="nm">${nmHeart('mama')}<span data-name="mama" data-fallback="Mama">${esc(s.mama || 'Mama')}</span></span> &amp; <span class="nm">${nmHeart('papa')}<span data-name="partner" data-fallback="Papa">${esc(s.partner || 'Papa')}</span></span> &amp; <span class="nm">${nmHeart('kid')}<span data-kid>${esc(s.nick || 'Baby')}</span></span></span>`; };
+  return `<span class="aud-names"><span class="nm">${nmHeart('mama')}<span data-name="mama" data-fallback="Mama">${esc(s.mama || 'Mama')}</span></span> <span class="nm">${nmHeart('papa')}<span data-name="partner" data-fallback="Papa">${esc(s.partner || 'Papa')}</span></span> <span class="nm">${nmHeart('kid')}<span data-kid>${esc(s.nick || 'Baby')}</span></span></span>`; };
 
 /* ---------- Theme ---------- */
 const hexToHsl = hex => {
@@ -314,7 +317,8 @@ function enhance(root) {
   root.querySelectorAll('label:not(.keep)').forEach(l => l.classList.add('form-label'));
 }
 function openSheet(html, onMount) {
-  sheet.innerHTML = html;
+  sheet.innerHTML = '<button type="button" class="sheet-x" id="sheetX" aria-label="Schließen">' + bi('x-lg') + '</button>' + html;
+  $('#sheetX', sheet).onclick = closeSheet;
   enhance(sheet);
   if (!sheet.open) sheet.showModal();
   onMount && onMount(sheet);
@@ -364,10 +368,10 @@ routes.onboarding = () => {
    Fest: Begrüßung, Countdown, Wochenkarte. Alles andere sind Bausteine, die man in den Einstellungen ein-/ausschalten und sortieren kann. */
 const HOME_MODULES = {
   quick:     { label: 'Schnellzugriff', desc: 'Vier Buttons für das, was du am häufigsten brauchst', icon: 'lightning-charge-fill' },
-  pins:      { label: 'Meine Verknüpfungen', desc: 'Seiten, die du mit „Zur Startseite“ hinzugefügt hast', icon: 'pin-angle-fill' },
-  story:     { label: 'Wochen-Story', desc: 'Die aktuelle Entwicklung schön teilen: drei Bilder', icon: 'stars' },
   together:  { label: 'Gemeinsam heute', desc: 'Tägliches Paar-Ritual mit Serie', icon: 'people-fill' },
   daily:     { label: 'Tagesimpuls', desc: 'Ein Spruch für den Tag, dazu einer für den Partner', icon: 'chat-quote' },
+  story:     { label: 'Wochen-Story', desc: 'Die aktuelle Entwicklung schön teilen: drei Bilder', icon: 'stars' },
+  pins:      { label: 'Meine Favoriten', desc: 'Seiten, die du mit „Zur Startseite“ hinzugefügt hast', icon: 'pin-angle-fill' },
   family:    { label: 'Foto von euch', desc: 'Zufällig aus euren Profilfotos', icon: 'image' },
   secret:    { label: 'Der geheime Name', desc: 'Verdeckt, nur auf Antippen sichtbar', icon: 'lock-fill' },
   milestone: { label: 'Meilenstein der Woche', desc: 'Ein Hinweis, sobald eine Etappe erreicht ist', icon: 'stars' },
@@ -375,8 +379,10 @@ const HOME_MODULES = {
   tips:      { label: 'Tipps vor Ort', desc: 'Hebammen, Kurse, Beratung, Infoabende (Ort frei wählbar)', icon: 'geo-alt-fill' },
   last:      { label: 'Zuletzt festgehalten', desc: 'Das neueste Foto aus Tagebuch oder Album', icon: 'clock-history' }
 };
-const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'story', 'together', 'daily', 'family', 'secret', 'tips'] };
-const HOME_PRESETS = { simple: ['quick', 'pins', 'story', 'together', 'daily'], all: Object.keys(HOME_MODULES), default: HOME_DEFAULT.on };
+// Einfach: Schnellzugriff, Gemeinsam heute, Wochen-Story. Standard: dazu der Tagesimpuls. Die Reihenfolge der Vorlage gilt auch für die Liste der Bausteine.
+const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'together', 'daily', 'story'] };
+const HOME_PRESETS = { simple: ['quick', 'together', 'story'], default: HOME_DEFAULT.on, all: Object.keys(HOME_MODULES) };
+const presetOrder = ids => [...ids, ...HOME_DEFAULT.order.filter(k => !ids.includes(k))];
 
 function homeLayout() {
   const c = state.settings.home || {};
@@ -387,7 +393,7 @@ function homeLayout() {
 const saveHome = (order, on) => { state.settings.home = { ...(state.settings.home || {}), order, on: [...on] }; save(); };
 
 /* ---------- Zur Startseite hinzufügen: jede Seite lässt sich als Kachel auf die Startseite legen ---------- */
-// Seiten, die als Verknüpfung möglich sind: Tagebuch, Fotos und alle Funktionen aus "Mehr" (ohne Einstellungen)
+// Seiten, die als Favorit möglich sind: Tagebuch, Fotos und alle Funktionen aus "Mehr" (ohne Einstellungen)
 const pinInfo = () => { const m = { diary: ['journal-text', 'Tagebuch'], photos: ['images', 'Fotos'] }; HUB.forEach(([k, i, t]) => { if (k !== 'einstellungen' && k !== 'more') m[k] = [i, labelOf(t)]; }); return m; };
 const homePins = () => { const info = pinInfo(); return ((state.settings.home || {}).pins || []).filter(k => info[k]); };
 function setHomePin(key, wanted) {
@@ -396,22 +402,25 @@ function setHomePin(key, wanted) {
   if (wanted) { pins.push(key); on.add('pins'); }
   state.settings.home = { ...(state.settings.home || {}), order, on: [...on], pins }; save(); return wanted;
 }
-const pinBtnHTML = key => { const p = homePins().includes(key); return `<button type="button" class="pin-btn no-print ${p ? 'on' : ''}" id="pinBtn" data-pin="${key}" aria-pressed="${p}">${bi(p ? 'pin-angle-fill' : 'pin-angle')}<span>${p ? 'Auf der Startseite' : 'Zur Startseite'}</span></button>`; };
+const pinBtnHTML = key => { const p = homePins().includes(key); return `<button type="button" class="pin-btn no-print ${p ? 'on' : ''}" id="pinBtn" data-pin="${key}" aria-pressed="${p}" title="Legt diese Seite als Favorit auf die Startseite. Zum Lösen noch einmal tippen." aria-label="${p ? 'Auf der Startseite angepinnt, zum Lösen tippen' : 'Zur Startseite anpinnen: legt diese Seite als Favorit auf die Startseite'}">${bi(p ? 'pin-angle-fill' : 'pin-angle')}<span>${p ? 'Auf der Startseite angepinnt' : 'Zur Startseite anpinnen'}</span></button>`; };
 function bindPinBtn() {
   const b = $('#pinBtn'); if (!b) return;
   b.onclick = () => {
     const key = b.dataset.pin, now = !homePins().includes(key), label = pinInfo()[key][1]; setHomePin(key, now);
-    b.classList.toggle('on', now); b.setAttribute('aria-pressed', now); b.innerHTML = `${bi(now ? 'pin-angle-fill' : 'pin-angle')}<span>${now ? 'Auf der Startseite' : 'Zur Startseite'}</span>`;
+    b.classList.toggle('on', now); b.setAttribute('aria-pressed', now); b.innerHTML = `${bi(now ? 'pin-angle-fill' : 'pin-angle')}<span>${now ? 'Auf der Startseite angepinnt' : 'Zur Startseite anpinnen'}</span>`; b.setAttribute('aria-label', now ? 'Auf der Startseite angepinnt, zum Lösen tippen' : 'Zur Startseite anpinnen: legt diese Seite als Favorit auf die Startseite');
     toast(now ? `${label} sitzt jetzt auf eurer Startseite. Ein Klick, und ihr seid da.` : `${label} ist wieder von der Startseite verschwunden.`);
   };
 }
 
+// Schnellzugriff: Standard sind Tagebuch, Fotos, Wasser und Aufgaben, frei wählbar (2 bis 4, in beliebiger Reihenfolge)
+const QUICK_DEFAULT = ['diary', 'photos', 'water', 'planner'], QUICK_MAX = 4, QUICK_MIN = 2, QUICK_NAMES = { planner: 'Aufgaben' };
+const quickInfo = k => { const i = pinInfo()[k] || ['grid', k]; return [i[0], QUICK_NAMES[k] || i[1]]; };
+const quickKeys = () => { const l = state.settings.quickItems, ok = Array.isArray(l) ? [...new Set(l)].filter(k => pinInfo()[k]) : []; return ok.length >= QUICK_MIN && ok.length <= QUICK_MAX ? ok : [...QUICK_DEFAULT]; };
 const HOME_RENDER = {
-  pins: () => { const info = pinInfo(), pins = homePins(); return pins.length ? `<div class="pins"><div class="pin-head small soft">${bi('pin-angle-fill')} Meine Verknüpfungen</div><div class="pin-grid">${pins.map(k => `<a class="pin-tile" href="#/${k}">${bi(info[k][0])}<span>${info[k][1]}</span></a>`).join('')}</div></div>` : ''; },
+  pins: () => { const info = pinInfo(), pins = homePins(); return pins.length ? `<div class="pins"><div class="pin-head small soft">${bi('pin-angle-fill')} Meine Favoriten</div><div class="pin-grid">${pins.map(k => `<a class="pin-tile" href="#/${k}">${bi(info[k][0])}<span>${info[k][1]}</span></a>`).join('')}</div></div>` : ''; },
   story: () => { const p = pregnancy(), [, fruit] = fruitFor(p.weeks), kid = (state.settings.nick || '').trim() || 'Dein Baby', art = (typeof FRUIT_ART !== 'undefined' && FRUIT_ART[fruit]) || 'ein';
-    return `<a class="card link-card story-tile" href="#/weekstory"><div class="hstack gap-3"><span class="story-mini" aria-hidden="true"><i style="--fh:${fruitHue(fruit)}"></i></span><div class="flex-grow-1"><b>Wochen-Story</b><div class="small soft">${esc(kid)} ist so groß wie ${art} ${esc(fruit)}. Jetzt als Bild teilen.</div></div>${bi('share-fill')}</div></a>`; },
-  quick: () => `<div class="quick">${[['diary', 'journal-text', 'Tagebuch'], ['photos', 'images', 'Fotos'], ['water', 'droplet-half', 'Wasser'], ['planner', 'check2-square', 'Aufgaben']]
-    .map(([r, i, l]) => `<a class="quick-btn" href="#/${r}">${bi(i)}<span>${l}</span></a>`).join('')}</div>`,
+    return `<a class="card link-card story-tile" href="#/weekstory"><div class="hstack gap-3"><span class="story-mini" aria-hidden="true">${fruitSVG(fruit)}<i class="bi bi-stars sm-badge"></i></span><div class="flex-grow-1"><b>Wochen-Story</b><div class="small soft">${esc(kid)} ist so groß wie ${art} ${esc(fruit)}. Jetzt als Bild teilen.</div></div>${bi('share-fill')}</div></a>`; },
+  quick: () => `<div class="quick" data-count="${quickKeys().length}">${quickKeys().map(r => `<a class="quick-btn" href="#/${r}">${bi(quickInfo(r)[0])}<span>${quickInfo(r)[1]}</span></a>`).join('')}</div>`,
   together: () => togetherCard(),
   daily: () => `<div class="card daily"><div class="hstack gap-2 mb-2">${audBadge('mama', 'sm')}<span class="flex-grow-1"></span><button class="btn btn-subtle theme-secondary btn-sm" id="newMamaMsg" aria-label="Neuer Spruch für Mama">${bi('arrow-repeat')}</button></div><p class="quote mb-0" id="mamaMsg">${esc(dailyMsg())}</p>
     <div class="hstack gap-2 mt-3 pt-3 daily-sep">${audBadge('papa', 'sm')}<span class="flex-grow-1"></span>
@@ -434,13 +443,14 @@ const HOME_RENDER = {
 };
 
 /* ---------- Banner (Wochenkarte) auf der Startseite: Inhalt und Hintergrund frei einstellbar ---------- */
-const BANNER_DEFAULT = { weeks: true, bar: true, days: true, size: true, quote: true, bg: 'gradient', bgId: '', dim: 50, pos: 'center', compact: false };
+const BANNER_DEFAULT = { weeks: true, bar: true, days: true, size: true, quote: true, bg: 'gradient', color: '', bgId: '', dim: 50, pos: 'center', compact: false };
 const BANNER_ITEMS = [['weeks', 'Woche und Tage', 'Die große SSW-Anzeige mit Trimester'], ['bar', 'Fortschrittsbalken', 'Wie weit die Schwangerschaft ist'], ['days', 'Satz zum Termin', 'Die Tagesaussage mit den Tagen bis zum Termin'], ['size', 'Größenvergleich', 'Zum Beispiel „so groß wie ein Kürbis“'], ['quote', 'Tagesspruch', 'Der tägliche Spruch mit Erneuern-Knopf']];
 const bannerCfg = () => Object.assign({}, BANNER_DEFAULT, state.settings.banner || {});
 const BANNER_POS = { top: 'center top', center: 'center center', bottom: 'center bottom' };
+const BANNER_COLORS = [['', 'Passend zum Farbschema'], ['#A0537A', 'Malve'], ['#C4566A', 'Rosenrot'], ['#D2693E', 'Terrakotta'], ['#8A6D1E', 'Senfgold'], ['#3F7D5C', 'Salbeigrün'], ['#2F7F86', 'Petrol'], ['#3E6CB0', 'Himmelblau'], ['#6B4FA3', 'Lila'], ['#4A4458', 'Schiefer']];
 function heroHTML(p = pregnancy()) {
-  const c = bannerCfg(), [, name] = fruitFor(p.weeks), photo = c.bg === 'photo' && c.bgId, cls = ['card', 'hero', photo ? 'hero-photo' : '', c.bg === 'solid' ? 'hero-solid' : '', c.compact ? 'hero-compact' : ''].filter(Boolean).join(' ');
-  const style = photo ? ` data-bg="${esc(c.bgId)}" style="--hero-dim:${Math.min(80, Math.max(30, +c.dim || 50)) / 100};--hero-pos:${BANNER_POS[c.pos] || BANNER_POS.center}"` : '';
+  const c = bannerCfg(), [, name] = fruitFor(p.weeks), photo = c.bg === 'photo' && c.bgId, cls = ['card', 'hero', photo ? 'hero-photo' : '', c.bg === 'solid' ? 'hero-solid' : '', !photo && isHex(c.color) ? 'hero-tint' : '', c.compact ? 'hero-compact' : ''].filter(Boolean).join(' ');
+  const style = photo ? ` data-bg="${esc(c.bgId)}" style="--hero-dim:${Math.min(80, Math.max(30, +c.dim || 50)) / 100};--hero-pos:${BANNER_POS[c.pos] || BANNER_POS.center}"` : isHex(c.color) ? ` style="--hero-c:${c.color}"` : '';
   const parts = [
     c.weeks && `<div class="hero-top"><span class="fruit" aria-hidden="true">${bi('balloon-heart-fill')}</span><div><div class="big">${p.weeks}. SSW</div><div class="hero-sub">+ ${p.days} Tag${p.days === 1 ? '' : 'e'} · ${trimester(p.weeks)}. Trimester</div></div></div>`,
     c.bar && `<div class="progress my-3" role="progressbar" aria-label="Schwangerschaftsfortschritt" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:${p.pct}%"></div></div>`,
@@ -456,12 +466,13 @@ routes.home = () => {
   const p = pregnancy(), s = state.settings;
   const [, name] = fruitFor(p.weeks);
   const names = [s.mama, s.partner].filter(Boolean).map(esc).join(' &amp; ');
-  const gname = (v, k) => `<span class="gn">${nmHeart(k)}${esc(v)}</span>`, gl = [s.mama && gname(s.mama, 'mama'), s.partner && gname(s.partner, 'papa')].filter(Boolean).join(' &amp; ');
-  const tg = todGreeting(), greet = gl ? `${tg} ${gl}` : `${tg}, ihr Superhelden`;
+  // Ohne Anrede: bei zwei Namen verschmelzen die beiden Herzen in der Mitte (statt "&"), bei einem Namen steht sein Herz davor
+  const gname = (v, k) => `<span class="gn">${esc(v)}</span>`, gl = s.mama && s.partner ? `${gname(s.mama, 'mama')} <span class="gn-duo">${duoHearts()}</span> ${gname(s.partner, 'papa')}` : s.mama ? `<span class="gn">${nmHeart('mama')}${esc(s.mama)}</span>` : s.partner ? `<span class="gn">${nmHeart('papa')}${esc(s.partner)}</span>` : '';
+  const greet = gl || 'Ihr Superhelden';
   const { order, on } = homeLayout();
   view.innerHTML = `
     <div class="greet">${avatarStack()}
-      <div class="greet-text"><p class="greet-hello">${greet}</p><p class="today" id="todayLine">${bi('calendar-heart')}Heute ist ${esc(todayLong())}</p></div></div>
+      <div class="greet-text"><p class="greet-hello">${greet}</p><p class="today" id="todayLine">${bi('calendar-heart')}${esc(todayLong())}</p></div></div>
     <h1>${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
     ${heroHTML(p)}
     ${order.filter(id => on.has(id)).map(id => HOME_RENDER[id]()).join('')}
@@ -469,12 +480,12 @@ routes.home = () => {
   bindTogether();
   const nhq = $('#newHeroQuote'); if (nhq) nhq.onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
   const nm = $('#newMamaMsg'); if (nm) nm.onclick = () => { const pool = quotePool('daily'), cur = $('#mamaMsg').textContent; let q, g = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++g < 20); $('#mamaMsg').textContent = q; };
-  const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (q === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };
+  const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (papaName(q) === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };
   const r = $('#reveal');
   if (r) r.onclick = () => { $('#secret').classList.add('show'); clearTimeout(r.t); r.t = setTimeout(() => $('#secret')?.classList.remove('show'), 5000); };
 };
 
-// Einstellungen: Startseite einrichten (Vorlage, Bausteine ein/aus, Reihenfolge, Verknüpfungen)
+// Einstellungen: Startseite einrichten (Vorlage, Bausteine ein/aus, Reihenfolge, Favoriten)
 routes.homeconfig = () => {
   const { order, on } = homeLayout(), pins = homePins(), info = pinInfo();
   const preset = Object.entries(HOME_PRESETS).find(([, v]) => v.length === on.size && v.every(x => on.has(x)))?.[0];
@@ -488,16 +499,28 @@ routes.homeconfig = () => {
         <input type="checkbox" role="switch" id="hm_${id}" data-hm="${id}" ${on.has(id) ? 'checked' : ''} aria-label="${m.label} anzeigen">
         <span class="hm-move"><button type="button" class="btn btn-text btn-sm" data-up="${id}" ${i === 0 ? 'disabled' : ''} aria-label="${m.label} nach oben">${bi('chevron-up')}</button>
         <button type="button" class="btn btn-text btn-sm" data-down="${id}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="${m.label} nach unten">${bi('chevron-down')}</button></span>${id === 'tips' ? `<div class="hm-extra"><label for="hmCity">Ort für die Tipps</label><input id="hmCity" maxlength="40" value="${esc(state.settings.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><span class="small soft">Zum Beispiel Frankfurt (mit ausgewählten Anlaufstellen) oder euer eigener Ort.</span></div>` : ''}</div>`; }).join('')}</div>
-    <h2>3. Verknüpfungen <span class="chip" id="pinCount">${pins.length} gewählt</span></h2>
+    <h2>3. Favoriten <span class="chip" id="pinCount">${pins.length} gewählt</span></h2>
     <p class="small soft">Tippe die Seiten an, die als Kachel auf der Startseite stehen sollen. Auf jeder Seite gibt es dafür auch den Knopf „Zur Startseite“.</p>
     <div class="pin-pick">${Object.entries(info).map(([k, [ic, t]]) => `<button type="button" class="pin-opt ${pins.includes(k) ? 'on' : ''}" data-pinopt="${k}" aria-pressed="${pins.includes(k)}">${bi(ic)}<span>${t}</span>${pins.includes(k) ? bi('check-lg') : ''}</button>`).join('')}</div>
+    <h2>4. Schnellzugriff <span class="chip" id="quickCount">${quickKeys().length} von ${QUICK_MAX}</span></h2>
+    <p class="small soft">Wähle 2 bis 4 Knöpfe und bringe sie mit den Pfeilen in die Reihenfolge, die du magst. Standard: Tagebuch, Fotos, Wasser, Aufgaben.</p>
+    <div class="card hm-list">${(() => { const cur = quickKeys(), all = [...cur, ...Object.keys(pinInfo()).filter(k => !cur.includes(k))]; return all.map(k => { const i = cur.indexOf(k), on = i >= 0; return `<div class="hm-row"><span class="hm-ico">${bi(quickInfo(k)[0])}</span><label class="keep hm-text" for="qs_${k}"><b>${esc(quickInfo(k)[1])}</b>${on ? `<span class="small soft">Platz ${i + 1} von ${cur.length}</span>` : ''}</label>${on ? `<button type="button" class="btn btn-text btn-sm" data-qup="${k}" ${i === 0 ? 'disabled' : ''} aria-label="${esc(quickInfo(k)[1])} nach vorn">${bi('chevron-up')}</button><button type="button" class="btn btn-text btn-sm" data-qdown="${k}" ${i === cur.length - 1 ? 'disabled' : ''} aria-label="${esc(quickInfo(k)[1])} nach hinten">${bi('chevron-down')}</button>` : ''}<input type="checkbox" role="switch" id="qs_${k}" data-qs="${k}" ${on ? 'checked' : ''} aria-label="${esc(quickInfo(k)[1])} im Schnellzugriff"></div>`; }).join(''); })()}</div>
+    <button type="button" class="btn btn-subtle theme-secondary mt-2" id="quickReset">${bi('arrow-counterclockwise')} Standard wiederherstellen</button>
     <a class="btn btn-solid theme-primary w-100 mt-3" href="#/">Fertig, zur Startseite</a>`;
+  view.querySelectorAll('[data-qs]').forEach(cb => cb.onchange = () => { const k0 = cb.dataset.qs, base = quickKeys(), picked = cb.checked ? [...base.filter(k => k !== k0), k0] : base.filter(k => k !== k0);
+    if (picked.length > QUICK_MAX) { cb.checked = false; toast(`Höchstens ${QUICK_MAX} Knöpfe passen in den Schnellzugriff.`); return; }
+    if (picked.length < QUICK_MIN) { cb.checked = true; toast(`Mindestens ${QUICK_MIN} Knöpfe bleiben im Schnellzugriff.`); return; }
+    state.settings.quickItems = picked; save(); render(); });
+  const moveQuick = (k, d) => { const l = quickKeys(), i = l.indexOf(k), j = i + d; if (i < 0 || j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; state.settings.quickItems = l; save(); render(); };
+  view.querySelectorAll('[data-qup]').forEach(b => b.onclick = () => moveQuick(b.dataset.qup, -1));
+  view.querySelectorAll('[data-qdown]').forEach(b => b.onclick = () => moveQuick(b.dataset.qdown, 1));
+  $('#quickReset').onclick = () => { delete state.settings.quickItems; save(); render(); toast('Schnellzugriff ist wieder im Standard'); };
   view.querySelectorAll('[data-hm]').forEach(c => c.onchange = () => { c.checked ? on.add(c.dataset.hm) : on.delete(c.dataset.hm); saveHome(order, on); markPreset(); $('#hmCount').textContent = `${on.size} von ${order.length} sichtbar`; });
   const markPreset = () => { const cur = Object.entries(HOME_PRESETS).find(([, v]) => v.length === on.size && v.every(x => on.has(x)))?.[0]; view.querySelectorAll('[data-preset]').forEach(b => { const p = b.dataset.preset === cur; b.classList.toggle('on', p); b.setAttribute('aria-pressed', p); }); };
   const move = (id, d) => { const i = order.indexOf(id), j = i + d; if (j < 0 || j >= order.length) return; [order[i], order[j]] = [order[j], order[i]]; saveHome(order, on); render(); };
   view.querySelectorAll('[data-up]').forEach(b => b.onclick = () => move(b.dataset.up, -1));
   view.querySelectorAll('[data-down]').forEach(b => b.onclick = () => move(b.dataset.down, 1));
-  view.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { saveHome(order, new Set(HOME_PRESETS[b.dataset.preset])); render(); toast('Startseite angepasst'); });
+  view.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { saveHome(presetOrder(HOME_PRESETS[b.dataset.preset]), new Set(HOME_PRESETS[b.dataset.preset])); render(); toast('Startseite angepasst'); });
   const hc = $('#hmCity'); if (hc) bindCityInput(hc);
   view.querySelectorAll('[data-pinopt]').forEach(b => b.onclick = () => { setHomePin(b.dataset.pinopt, !homePins().includes(b.dataset.pinopt)); render(); });
 };
@@ -895,7 +918,7 @@ routes.settings = () => {
     <div class="card">
       <label for="sd">Errechneter Termin</label><input id="sd" type="date" value="${s.dueDate}" min="${iso(today())}" max="${iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))}">
       <label for="sn">Kosename fürs Baby</label><input id="sn" value="${esc(s.nick)}" maxlength="24">
-      <label for="ss">Geheimer Name</label><input id="ss" value="${esc(s.secretName)}" maxlength="40" autocomplete="off" placeholder="Nur Mama und Papa wissen’s">
+      <label for="ss">Geheimer Name</label><div class="ss-wrap"><input id="ss" type="password" value="${esc(s.secretName)}" maxlength="40" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="Nur Mama und Papa wissen’s"><button type="button" class="btn btn-subtle" id="ssEye" aria-label="Geheimen Namen kurz anzeigen" aria-pressed="false">${bi('eye')}</button></div>
       <p class="small soft" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und auf der Startseite verdeckt angezeigt.</p>
       ${favPicker('kid', s.nick || 'das Baby', 'Lieblingsfarbe vom Baby', 'Die Farbe vom Herz deines Babys, sichtbar bei den Namen unter jeder Überschrift.')}
       ${kidPhotoBlock()}
@@ -903,7 +926,7 @@ routes.settings = () => {
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>`;
   bindPerson('mama'); bindName('#sm', 'mama'); bindPerson('kid');
   const bind = (id, key) => $(id).onchange = e => { s[key] = e.target.value.trim(); save(); cheer(); };
-  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); bind('#ss', 'secretName');
+  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); bind('#ss', 'secretName'); const eye = $('#ssEye'); if (eye) eye.onclick = () => { const f = $('#ss'), show = f.type === 'password'; f.type = show ? 'text' : 'password'; eye.setAttribute('aria-pressed', show); eye.innerHTML = bi(show ? 'eye-slash' : 'eye'); };
   // Kosename: Kennzeichnung unter der Überschrift zieht beim Tippen sofort mit
   $('#sn').addEventListener('input', e => { s.nick = e.target.value.trim(); document.querySelectorAll('[data-kid]').forEach(n => { n.textContent = e.target.value.trim() || 'Baby'; }); });
 };
@@ -957,6 +980,7 @@ routes.einstellungen = () => {
     <div class="bn-list mt-1">${BANNER_ITEMS.map(([k, l, dsc]) => `<div class="hm-row bn-row"><label class="keep hm-text" for="bn_${k}"><b>${l}</b><span class="small soft">${dsc}</span></label><input type="checkbox" role="switch" id="bn_${k}" data-bn="${k}" ${bc[k] ? 'checked' : ''} aria-label="${l} anzeigen"></div>`).join('')}</div>
     <b class="d-block mt-3">Hintergrund</b>
     <div class="seg mt-2" role="group" aria-label="Hintergrund" style="margin-bottom:8px">${[['gradient', 'Farbverlauf'], ['photo', 'Eigenes Foto'], ['solid', 'Einfarbig']].map(([k, l]) => `<button type="button" data-bnbg="${k}" class="${bc.bg === k ? 'on' : ''}" aria-pressed="${bc.bg === k}">${l}</button>`).join('')}</div>
+    ${bc.bg !== 'photo' ? `<b class="d-block mt-2">Farbe</b><div class="bn-colors" role="group" aria-label="Bannerfarbe">${BANNER_COLORS.map(([hex, nm]) => `<button type="button" class="bn-sw${(bc.color || '') === hex ? ' on' : ''}" data-bncolor="${hex}" aria-label="${nm}" aria-pressed="${(bc.color || '') === hex}" title="${nm}" style="${hex ? `background:${hex}` : ''}">${hex ? '' : bi('magic')}</button>`).join('')}</div>` : ''}
     ${bc.bg === 'photo' ? `<div class="bn-photo">${bc.bgId ? `<div class="bn-thumb" data-bg="${esc(bc.bgId)}" aria-hidden="true"></div>` : '<p class="small soft">Noch kein Foto gewählt. Bis dahin zeigt der Banner den Farbverlauf.</p>'}
       <div class="hstack gap-2 flex-wrap mt-2"><button type="button" class="btn btn-subtle theme-secondary" id="bnPick">${bi('image')} ${bc.bgId ? 'Anderes Foto wählen' : 'Foto wählen'}</button>${bc.bgId ? `<button type="button" class="btn btn-text theme-danger" id="bnRemove">${bi('trash')} Foto entfernen</button>` : ''}</div><input type="file" id="bnFile" accept="image/*" hidden>
       <label for="bnDim" class="mt-3">Abdunkeln: <span id="bnDimVal">${bc.dim}</span> %</label><input type="range" id="bnDim" min="30" max="80" step="5" value="${bc.dim}" aria-valuetext="${bc.dim} Prozent">
@@ -967,23 +991,29 @@ routes.einstellungen = () => {
     <button type="button" class="btn btn-text mt-2" id="bnReset">Auf Standard zurücksetzen</button>`;
   view.innerHTML = `
     <h1>Einstellungen</h1><p class="soft">Tippe einen Bereich an, dann klappt er auf. Es ist immer nur einer offen, so bleibt alles übersichtlich.</p>
-    ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
+    <h2 class="set-group">Eure App</h2>
     ${acc('brand', 'tag-fill', 'Name der App', esc(brandFull()), brandEditorHTML())}
+    ${isStandalone() ? '' : acc('install', 'download', 'App installieren?', 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet. Diese Frage erscheint nur, solange die App noch nicht installiert ist.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} Installieren oder Anleitung zeigen</button>`)}
+    ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
+    ${acc('nav', 'layout-three-columns', 'Menü unten', s.navIcon === 'photo' ? 'Profilfoto statt Herz' : 'Herz in der Lieblingsfarbe', `<p class="small soft">Was soll unten bei Mama und Papa stehen?</p><div class="seg" role="group" aria-label="Symbol im Menü" style="margin:0">${[['heart', 'Herz in der Lieblingsfarbe'], ['photo', 'Profilfoto']].map(([k, l]) => `<button type="button" data-navicon="${k}" class="${(s.navIcon || 'heart') === k ? 'on' : ''}" aria-pressed="${(s.navIcon || 'heart') === k}">${l}</button>`).join('')}</div>${s.navIcon === 'photo' && !photosOf('mama').length && !photosOf('partner').length ? '<p class="small soft mt-2 mb-0">Noch kein Profilfoto vorhanden. Bis dahin zeigt das Menü das Herz. Fotos lädst du bei Mama und Papa hoch.</p>' : '<p class="small soft mt-2 mb-0">Standard ist das Herz in der Lieblingsfarbe.</p>'}<b class="d-block mt-3">Welche Symbole stehen unten?</b><p class="small soft">Wähle 2 bis 5 Symbole. Standard: Heute, Tagebuch, ${esc(navLabel('mama'))} und ${esc(navLabel('papa'))}.</p><div class="nav-pick">${(() => { const cur = navKeys(), all = [...cur, ...Object.keys(NAV_ITEMS).filter(k => !cur.includes(k))]; return all.map(k => { const i = cur.indexOf(k), on = i >= 0; return `<div class="hm-row"><label class="keep hm-text" for="np_${k}"><b>${esc(navLabel(k))}</b>${on ? `<span class="small soft">Platz ${i + 1} von ${cur.length}</span>` : ''}</label>${on ? `<button type="button" class="btn btn-subtle btn-sm" data-nup="${k}" aria-label="${esc(navLabel(k))} nach links" ${i === 0 ? 'disabled' : ''}>${bi('arrow-left')}</button><button type="button" class="btn btn-subtle btn-sm" data-ndown="${k}" aria-label="${esc(navLabel(k))} nach rechts" ${i === cur.length - 1 ? 'disabled' : ''}>${bi('arrow-right')}</button>` : ''}<input type="checkbox" role="switch" id="np_${k}" data-np="${k}" ${on ? 'checked' : ''} aria-label="${esc(navLabel(k))} im Menü"></div>`; }).join(''); })()}</div><button type="button" class="btn btn-subtle theme-secondary mt-2" id="navReset">${bi('arrow-counterclockwise')} Standard wiederherstellen</button>`)}
+    <h2 class="set-group">Aussehen</h2>
     ${acc('colors', 'palette2', 'Farben', `${esc(themeDef(s.theme).name)} · eure Farbwelt`, `<p class="small soft">Acht weiche Farbwelten oder eine eigene Kombination, dazu eine Lieblingsfarbe für Mama, Papa und das Baby.</p>${go('#/colors', 'Farben ändern')}`)}
-    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, fünf Mundarten wählen (auch Sächsisch und Ostfriesisch)', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('banner', 'image', 'Banner der Startseite', esc(bannerSub()), bannerBody)}
     ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
-    ${acc('nav', 'layout-three-columns', 'Menü unten', s.navIcon === 'photo' ? 'Profilfoto statt Herz' : 'Herz in der Lieblingsfarbe', `<p class="small soft">Was soll unten bei Mama und Papa stehen?</p><div class="seg" role="group" aria-label="Symbol im Menü" style="margin:0">${[['heart', 'Herz in der Lieblingsfarbe'], ['photo', 'Profilfoto']].map(([k, l]) => `<button type="button" data-navicon="${k}" class="${(s.navIcon || 'heart') === k ? 'on' : ''}" aria-pressed="${(s.navIcon || 'heart') === k}">${l}</button>`).join('')}</div>${s.navIcon === 'photo' && !photosOf('mama').length && !photosOf('partner').length ? '<p class="small soft mt-2 mb-0">Noch kein Profilfoto vorhanden. Bis dahin zeigt das Menü das Herz. Fotos lädst du bei Mama und Papa hoch.</p>' : '<p class="small soft mt-2 mb-0">Standard ist das Herz in der Lieblingsfarbe.</p>'}`)}
     ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
-    ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
-    ${acc('install', 'download', 'App installieren', isStandalone() ? 'Schon installiert, schön!' : 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} ${isStandalone() ? 'So funktioniert es' : 'Installieren oder Anleitung zeigen'}</button>`)}
-    ${acc('update', 'arrow-repeat', 'Version und Updates', `Version ${APP_VERSION.number}`, `<p class="small soft">Neue Versionen werden automatisch gesucht. Sobald eine bereitsteht, erscheint der Hinweis „Neue Version verfügbar“. Eure Daten bleiben dabei erhalten.</p><button type="button" class="btn btn-solid theme-primary" id="checkUpdate">${bi('arrow-repeat')} Nach Updates suchen</button>`)}
+    ${acc('hints', 'chat-dots', 'Hinweise nach dem Speichern', s.toasts === true ? 'An, kurze Bestätigung unten' : 'Aus, nur Probleme melden sich', `<p class="small soft">Nach dem Speichern kann unten kurz eine Bestätigung erscheinen. Standard ist aus, damit nichts nervt. Hinweise zu Problemen und Fehlern bleiben immer sichtbar.</p><div class="hm-row" style="border:0;padding:0"><label class="keep hm-text" for="toastSw"><b>Bestätigungen anzeigen</b></label><input type="checkbox" role="switch" id="toastSw" ${s.toasts === true ? 'checked' : ''} aria-label="Bestätigungen anzeigen"></div>`)}
+    <h2 class="set-group">Inhalte</h2>
+    ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, fünf Mundarten wählen (auch Sächsisch und Ostfriesisch)', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('city', 'geo-alt-fill', 'Ort für Tipps', esc(tipsCity()), `<p class="small soft">In welcher Stadt wohnt ihr? Für Frankfurt gibt es ausgewählte Anlaufstellen, für jeden anderen Ort sammelt ihr eigene.</p><label for="cityInput">Stadt oder Region</label><input id="cityInput" maxlength="40" value="${esc(s.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><div class="hstack gap-2 mt-2">${go('#/tips', 'Zu den Tipps')}</div>`)}
+    <h2 class="set-group">Sicherheit und Daten</h2>
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
     ${acc('storage', 'hdd', 'Speicherplatz', 'Wie viel Platz Texte und Bilder auf diesem Gerät brauchen', `<div class="storage-box" id="storageBox" aria-live="polite"><p class="small soft">Wird berechnet …</p></div><p class="small soft">Alles liegt nur auf diesem Gerät. Wer nicht mehr gebrauchte Fotos löscht, schafft wieder Platz.</p>`)}
     ${acc('export', 'box-arrow-up', 'Datenexport', 'Alles lesbar mitnehmen: JSON, CSV oder HTML', go('#/export', 'Daten exportieren'))}
     ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
+    <h2 class="set-group">Hilfe und Updates</h2>
+    ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
+    ${acc('update', 'arrow-repeat', 'Version und Updates', `Version ${APP_VERSION.number}`, `<p class="small soft">Neue Versionen werden automatisch gesucht. Sobald eine bereitsteht, erscheint der Hinweis „Neue Version verfügbar“. Eure Daten bleiben dabei erhalten.</p><button type="button" class="btn btn-solid theme-primary" id="checkUpdate">${bi('arrow-repeat')} Nach Updates suchen</button>`)}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
     <p class="version" id="appVersion">${esc(versionLine())}</p>
     <p class="version" id="appThanks">Viel Spaß und Freude wünscht euch Norbert Szpak</p>
@@ -1000,7 +1030,8 @@ routes.einstellungen = () => {
   const refreshBanner = () => { const pv = $('#bannerPrev'); if (pv) { pv.innerHTML = heroHTML() || '<div class="card center soft">Der Banner ist leer und wird auf der Startseite nicht angezeigt.</div>'; hydrateImages(pv); } const sub = $('[data-sub="banner"]'); if (sub) sub.textContent = bannerSub(); };
   view.querySelectorAll('[data-bn]').forEach(i => i.onchange = () => { setBanner({ [i.dataset.bn]: i.checked }); refreshBanner(); });
   $('#bnCompact').onchange = e => { setBanner({ compact: e.target.checked }); refreshBanner(); };
-  view.querySelectorAll('[data-bnbg]').forEach(b => b.onclick = () => { setBanner({ bg: b.dataset.bnbg }); render(); });
+  view.querySelectorAll('[data-bnbg]').forEach(b => b.onclick = () => { setBanner({ bg: b.dataset.bnbg }); render(); toast('Hintergrund: ' + bgName[b.dataset.bnbg]); });
+  view.querySelectorAll('[data-bncolor]').forEach(b => b.onclick = () => { setBanner({ color: b.dataset.bncolor }); render(); toast('Bannerfarbe geändert'); });
   view.querySelectorAll('[data-bnpos]').forEach(b => b.onclick = () => { setBanner({ pos: b.dataset.bnpos }); render(); });
   const pick = $('#bnPick'), file = $('#bnFile');
   if (pick) pick.onclick = () => file.click();
@@ -1010,6 +1041,17 @@ routes.einstellungen = () => {
   $('#bnReset').onclick = async () => { const old = bannerCfg().bgId; if (old) await delImg(old).catch(() => {}); delete state.settings.banner; save(); render(); toast('Banner ist wieder im Standard'); };
   bindBrandEditor();
   const ci = $('#cityInput'); if (ci) bindCityInput(ci, () => { const sub = $('details[data-acc="city"] summary .small'); if (sub) sub.textContent = tipsCity(); });
+  view.querySelectorAll('[data-np]').forEach(cb => cb.onchange = () => {
+    const k0 = cb.dataset.np, base = navKeys(), picked = cb.checked ? [...base.filter(k => k !== k0), k0] : base.filter(k => k !== k0);
+    if (picked.length > NAV_MAX) { cb.checked = false; toast(`Höchstens ${NAV_MAX} Symbole passen unten ins Menü.`); return; }
+    if (picked.length < NAV_MIN) { cb.checked = true; toast(`Mindestens ${NAV_MIN} Symbole bleiben im Menü.`); return; }
+    s.navItems = picked; save(); buildNav(); render();
+  });
+  const moveNav = (k, d) => { const l = navKeys(), i = l.indexOf(k), j = i + d; if (i < 0 || j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; s.navItems = l; save(); buildNav(); render(); };
+  view.querySelectorAll('[data-nup]').forEach(b => b.onclick = () => moveNav(b.dataset.nup, -1));
+  view.querySelectorAll('[data-ndown]').forEach(b => b.onclick = () => moveNav(b.dataset.ndown, 1));
+  const tsw = $('#toastSw'); if (tsw) tsw.onchange = () => { if (tsw.checked) s.toasts = true; else delete s.toasts; save(); const sub = $('[data-sub="hints"]'); if (sub) sub.textContent = tsw.checked ? 'An, kurze Bestätigung unten' : 'Aus, nur Probleme melden sich'; };
+  const nr = $('#navReset'); if (nr) nr.onclick = () => { delete s.navItems; save(); buildNav(); render(); toast('Menü unten ist wieder im Standard'); };
   view.querySelectorAll('[data-navicon]').forEach(b => b.onclick = () => { if (b.dataset.navicon === 'photo') s.navIcon = 'photo'; else delete s.navIcon; save(); updateNavAvatar(); render(); toast(s.navIcon === 'photo' ? 'Im Menü stehen jetzt die Profilfotos.' : 'Im Menü stehen wieder die Herzen.'); });
   fillStorage(); const cu = $('#checkUpdate'); if (cu) cu.onclick = async () => { cu.disabled = true; const r = await checkForUpdate(); cu.disabled = false; toast(r === 'new' ? 'Neue Version gefunden. Sie wird gleich angeboten.' : r === 'current' ? 'Ihr habt schon die neueste Version.' : r === 'none' ? 'Updates werden in der installierten oder online geöffneten App geprüft.' : 'Updates konnten gerade nicht geprüft werden. Bitte später noch einmal versuchen.'); };
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
@@ -1071,6 +1113,38 @@ const WHO = {
   kid: { photos: 'kidPhotos', name: 'nick', fallback: 'Baby' }
 };
 const MAX_PHOTOS = 3;
+// Menü unten: frei wählbar, 2 bis 5 Symbole. Standard: Heute, Tagebuch, Name Frau, Name Mann
+const NAV_ITEMS = {
+  home: { route: 'home', href: '#/', icon: 'house-heart-fill', label: 'Heute' },
+  diary: { route: 'diary', href: '#/diary', icon: 'journal-text', label: 'Tagebuch' },
+  mama: { route: 'settings', href: '#/settings', who: 'mama' },
+  papa: { route: 'papa', href: '#/papa', who: 'partner' },
+  photos: { route: 'photos', href: '#/photos', icon: 'images', label: 'Fotos' },
+  more: { route: 'more', href: '#/more', icon: 'grid-fill', label: 'Mehr' },
+  planner: { route: 'planner', href: '#/planner', icon: 'check2-square', label: 'Planer' },
+  water: { route: 'water', href: '#/water', icon: 'droplet-half', label: 'Wasser' },
+  yoga: { route: 'yoga', href: '#/yoga', icon: 'flower2', label: 'Yoga' },
+  breathing: { route: 'breathing', href: '#/breathing', icon: 'wind', label: 'Atmen' },
+  weekstory: { route: 'weekstory', href: '#/weekstory', icon: 'stars', label: 'Story' },
+  wishes: { route: 'wishes', href: '#/wishes', icon: 'gift', label: 'Wünsche' },
+  lists: { route: 'lists', href: '#/lists', icon: 'bag-heart', label: 'Listen' },
+  letters: { route: 'letters', href: '#/letters', icon: 'envelope-heart', label: 'Briefe' },
+  jokes: { route: 'jokes', href: '#/jokes', icon: 'balloon-heart-fill', label: 'Witze' }
+};
+const NAV_DEFAULT = ['home', 'diary', 'mama', 'papa'], NAV_MAX = 5, NAV_MIN = 2;
+const navKeys = () => { const l = state.settings.navItems; const ok = Array.isArray(l) ? [...new Set(l)].filter(k => NAV_ITEMS[k]) : []; return ok.length >= NAV_MIN && ok.length <= NAV_MAX ? ok : [...NAV_DEFAULT]; };
+const navLabel = k => { const it = NAV_ITEMS[k]; return it.who ? ((state.settings[WHO[it.who].name] || '').trim().slice(0, 10) || WHO[it.who].fallback) : it.label; };
+function buildNav() {
+  const nav = $('#nav'); if (!nav) return;
+  const keys = navKeys();
+  nav.innerHTML = keys.map(k => {
+    const it = NAV_ITEMS[k];
+    if (it.who) { const w = WHO[it.who], col = it.who === 'mama' ? 'mama' : 'papa'; return `<a href="${it.href}" data-route="${it.route}"><i class="bi bi-heart-fill" id="${w.navIcon}" style="color:var(--heart-${col})" aria-hidden="true"></i><img id="${w.navImg}" class="avatar avatar-nav" alt="" hidden><span id="${w.nav}">${esc(navLabel(k))}</span></a>`; }
+    return `<a href="${it.href}" data-route="${it.route}"><i class="bi bi-${it.icon}" aria-hidden="true"></i>${it.label}</a>`;
+  }).join('');
+  nav.dataset.count = keys.length;
+  updateNavNames(); updateNavAvatar();
+}
 const photosOf = who => state.settings[WHO[who].photos] || [];
 const randomPhoto = who => { const p = photosOf(who); return p.length ? pick(p) : null; };
 const avatar = (id, cls = '') => `<span class="avatar ${cls}">${id ? `<img data-img="${id}" alt="">` : bi('heart-fill')}</span>`;
@@ -1115,17 +1189,27 @@ function updateNavName(name, who = 'mama') {
 // Marke überall aktuell halten: Titel, App-Name, Kopfleiste, alle Marken-Stellen, Seitenzahl-Zeile im Druck und Name der installierten App
 let brandManifestUrl = null;
 // Text unter dem App-Namen: beginnt er mit "by", bekommt jeder Name ein Herz in der Lieblingsfarbe (ein Name: Mama, zwei: Mama und Papa, drei: dazu das Kind)
+// Ein Herz steht nur vor Namen, die wirklich zu Mama, Papa oder Kind gehören (in deren Farbe). Freier Text bekommt kein Herz.
+// Frühere Schreibweise "by A & B & C" ohne passende Namen behält die Herzen der Reihe nach (Mama, Papa, Kind).
 function fillBrandBy(el, text) {
-  const m = /^by\s+/i.exec(text), parts = m ? text.slice(m[0].length).split(/\s+&\s+/) : [];
-  const keys = parts.length === 1 ? ['mama'] : parts.length === 2 ? ['mama', 'papa'] : parts.length === 3 ? ['mama', 'papa', 'kid'] : [];
-  el.textContent = '';
-  if (!keys.length) { el.append(text); return; }
+  const m = /^by\s+/i.exec(text); el.textContent = '';
+  if (!m) { el.append(text); return; }
+  const rest = text.slice(m[0].length), s = state.settings;
+  const known = [['mama', s.mama], ['papa', s.partner], ['kid', s.nick]].map(([k, n]) => [k, String(n || '').trim()]).filter(([, n]) => n).sort((a, b) => b[1].length - a[1].length);
+  const heart = key => { const h = document.createElement('i'); h.className = 'bi bi-heart-fill bh'; h.setAttribute('aria-hidden', 'true'); h.style.color = `var(--heart-${key})`; return h; };
   el.append(m[0]);
-  parts.forEach((p, i) => {
-    if (i) el.append(' & ');
-    const h = document.createElement('i'); h.className = 'bi bi-heart-fill bh'; h.setAttribute('aria-hidden', 'true'); h.style.color = `var(--heart-${keys[i]})`;
-    el.append(h, p);
-  });
+  const parts = rest.split(/\s+&\s+/), isKnown = p => known.some(([, n]) => n.toLowerCase() === p.trim().toLowerCase());
+  // "by A & B (& C)" mit freien Namen: Herzen der Reihe nach, solange nicht alle Teile echte Namen aus den Einstellungen sind
+  if (parts.length >= 2 && parts.length <= 3 && !parts.every(isKnown)) { parts.forEach((p, i) => { if (i) el.append(' & '); el.append(heart(['mama', 'papa', 'kid'][i]), p); }); return; }
+  if (known.length) {
+    const re = new RegExp('(?<![\\p{L}\\p{N}])(' + known.map(([, n]) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+    rest.split(re).forEach((part, i) => {
+      if (i % 2) { const hit = known.find(([, n]) => n.toLowerCase() === part.toLowerCase()); if (hit) el.append(heart(hit[0])); }
+      el.append(part);
+    });
+    return;
+  }
+  el.append(rest);
 }
 function applyBrand() {
   const name = brandName(), sub = brandSub(), full = brandFull();
@@ -1168,21 +1252,25 @@ function bindBrandEditor() {
   $('#brandReset').onclick = () => { delete state.settings.appName; delete state.settings.appSub; n.value = ''; t.value = ''; save(); refresh(); cheer('style'); };
 }const updateNavNames = () => { updateNavName(undefined, 'mama'); updateNavName(undefined, 'partner'); };
 Object.assign(routes, EXTRA_ROUTES);
-const SUBPAGES = new Set(['partner', 'letters', 'names', 'milestones', 'wishes', 'lists', 'planner', 'recipes', 'food', 'move', 'vits', 'water', 'breathing', 'jokes', 'weekstory', 'contacts', 'pass', 'baby', 'tips', 'colors', 'backup']);
+const SUBPAGES = new Set(['partner', 'letters', 'names', 'milestones', 'wishes', 'lists', 'planner', 'recipes', 'food', 'move', 'vits', 'water', 'breathing', 'yoga', 'jokes', 'weekstory', 'contacts', 'pass', 'baby', 'tips', 'colors', 'backup']);
 const SETTINGS_PAGES = new Set(['einstellungen', 'colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']); // eigener Bereich, ohne Tab unten
 const SETTINGS_SUB = new Set(['colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']);
 // Unterseiten mit eigener Rücksprung-Adresse und passendem Menüpunkt unten
 const BACK = { diaryprint: ['#/diary', 'Tagebuch'], wishprint: ['#/wishes', 'Wunschliste'], lettersprint: ['#/letters', 'Briefe ans Baby'], wishlistprint: ['#/wishes', 'Wunschliste'] };
 const NAV_FOR = { diaryprint: 'diary', wishprint: 'more', wishlistprint: 'more', lettersprint: 'more', photos: 'diary' };
-let lastKey = null;
+// Wer eine Seite von der Startseite aus öffnet (Favorit, Schnellzugriff), landet mit Zurück auch wieder dort und nicht unter Mehr
+let lastKey = null, cameFromHome = false;
 function render() {
   const name = location.hash.replace(/^#\//, '') || 'home';
   const needsSetup = !state.settings.dueDate;
   const key = needsSetup ? 'onboarding' : (routes[name] ? name : 'home');
-  const navKey = NAV_FOR[key] || (SETTINGS_PAGES.has(key) ? null : SUBPAGES.has(key) ? 'more' : key);
+  if (key !== lastKey) cameFromHome = lastKey === 'home' && SUBPAGES.has(key);
+  const navKey = NAV_FOR[key] || (SETTINGS_PAGES.has(key) ? null : SUBPAGES.has(key) ? (cameFromHome ? 'home' : 'more') : key);
   document.body.classList.toggle('onboarding', needsSetup);
-  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.route === navKey));
+  const inNav = [...document.querySelectorAll('#nav a')].map(a => a.dataset.route), navOn = inNav.includes(key) ? key : navKey;
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.route === navOn));
   // Mehr und Einstellungen stehen oben rechts: dort zeigt sich, wo man gerade ist
+  const topHome = $('#topHome'); if (topHome) topHome.classList.toggle('active', key === 'home');
   const topMore = $('#topMore'), topSet = $('#topSettings');
   if (topMore) topMore.classList.toggle('active', navKey === 'more' && key !== 'einstellungen');
   if (topSet) topSet.classList.toggle('active', SETTINGS_PAGES.has(key));
@@ -1203,7 +1291,7 @@ function render() {
   if (h1 && au) h1.insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
   if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) h1.insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
   // Immer gleiche Orientierung: Häuschen mit Herz (Startseite) und ein Schritt zurück in den Bereich
-  const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? ['#/more', 'Mehr'] : null;
+  const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? (cameFromHome ? ['#/', 'Startseite'] : ['#/more', 'Mehr']) : null;
   if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite" title="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back" aria-label="Zurück zu ${backTo[1]}">${bi('arrow-left-circle-fill')} Zurück zu ${backTo[1]}</a></div>`);
   if (backTo) view.insertAdjacentHTML('beforeend', `<div class="back-foot no-print"><a href="${backTo[0]}" class="back-bottom">${bi('arrow-left')} Zurück zu ${backTo[1]}</a></div>`);
   view.insertAdjacentHTML('beforeend', `<div class="brand-foot"><span data-brand-name>${esc(brandName())}</span> <i data-brand-by>${esc(brandSub())}</i></div>`);
@@ -1220,8 +1308,12 @@ migrateDiaries();
 $('#topShare').onclick = shareApp;
 // Klick auf den App-Namen oben links: immer zur Startseite und ganz nach oben (auch wenn man schon dort ist)
 $('.topbrand').addEventListener('click', e => { e.preventDefault(); const onHome = ['', '#', '#/'].includes(location.hash); if (!onHome) location.hash = '#/'; else render(); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); });
+const syncTopbar = () => { const t = $('#topbar'); if (t && t.offsetHeight) document.documentElement.style.setProperty('--topbar-h', t.offsetHeight + 'px'); };
+syncTopbar(); window.addEventListener('resize', syncTopbar);
+buildNav();
 applyTheme();
 render();
+syncTopbar();
 appStart();
 setTimeout(maybeAskBackup, 800);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAskBackup(); });

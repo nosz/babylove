@@ -229,7 +229,7 @@ function showSplash() {
 }
 
 function appStart() {
-  const go = () => { showSplash(); setTimeout(maybeGuide, 500); setTimeout(maybeInstall, 4500); };
+  const go = () => { showSplash(); setTimeout(maybeGuide, 500); };
   if (lockOn() && cryptoOk()) showLock(go); else go();
 }
 document.addEventListener('visibilitychange', () => {
@@ -407,7 +407,7 @@ function reloadApp() { location.reload(); }
 const GUIDE_STEPS = [
   ['house-heart-fill', 'Unten wohnt das Wichtigste', 'Heute ist euer Überblick, dazu das gemeinsame Tagebuch und das Fotoalbum. Daneben hat jede und jeder ein eigenes Plätzchen mit Namen und Foto.'],
   ['grid-fill', 'Oben rechts wartet alles Weitere', 'Teilen, Mehr mit allen Funktionen und die Einstellungen, dort auch Farben, Schrift und Hell oder Dunkel. Und wenn ihr euch mal verlauft: Das Häuschen mit Herz bringt euch immer nach Hause.'],
-  ['people-fill', 'Jeder weiß, was für ihn ist', 'Jede Seite trägt ein kleines Schild: Für Mama, Für Papa oder Gemeinsam. Gemeinsam erkennt ihr an den zwei Herzen in euren Lieblingsfarben.'],
+  ['people-fill', 'Jeder weiß, was für ihn ist', 'Jede Seite trägt ein kleines Schild: Mama, Papa oder Gemeinsam. Gemeinsam erkennt ihr an den zwei Herzen in euren Lieblingsfarben.'],
   ['shield-check', 'Alles bleibt bei euch', 'Eure Erinnerungen liegen nur auf diesem Gerät. Mit der PIN schützt ihr sie, mit dem Backup sichert ihr sie.'],
   ['stars', 'Jeden Tag ein Lächeln', 'Täglich neue Sprüche, Ideen und kleine Aufgaben machen Mut. Schaut gemeinsam rein: Zu zweit macht es doppelt Freude.']
 ];
@@ -420,5 +420,5 @@ function showGuide() {
     <button class="btn btn-solid theme-primary w-100 mt-2" id="guideOk" type="button">Los geht’s, wir freuen uns!</button>`, el => {
     $('#guideOk', el).onclick = () => { state.settings.guideSeen = true; save(); closeSheet(); cheer('save'); };
   });
-  sheet.addEventListener('close', () => { if (!state.settings.guideSeen) { state.settings.guideSeen = true; save(); } setTimeout(maybeInstall, 1500); }, { once: true });
+  sheet.addEventListener('close', () => { if (!state.settings.guideSeen) { state.settings.guideSeen = true; save(); } }, { once: true });
 }function maybeGuide() { if (state.settings.dueDate && !state.settings.guideSeen && !appLocked && !$('#splash') && !sheet.open) showGuide(); }

@@ -11,7 +11,7 @@ const duoHearts = () => '<span class="duo" aria-hidden="true"><i class="bi bi-he
 // (ohne Foto: Herz in der Lieblingsfarbe der Person)
 const heartOf = k => `<i class="bi bi-heart-fill" style="color:var(--heart-${k})" aria-hidden="true"></i>`;
 const audIcon = (who, k) => { const id = typeof randomPhoto === 'function' ? randomPhoto(who) : null; return id ? `<img class="aud-av" data-img="${id}" alt="">` : heartOf(k); };
-const AUD = { mama: { label: 'Für Mama', icon: () => audIcon('mama', 'mama') }, papa: { label: 'Für Papa', icon: () => audIcon('partner', 'papa') }, together: { label: 'Gemeinsam', icon: duoHearts } };
+const AUD = { mama: { label: 'Mama', icon: () => audIcon('mama', 'mama') }, papa: { label: 'Papa', icon: () => audIcon('partner', 'papa') }, together: { label: 'Gemeinsam', icon: duoHearts } };
 const audBadge = (kind, size = '') => { const a = AUD[kind] || AUD.together; return `<span class="aud aud-${kind} ${size ? 'aud-' + size : ''}" data-aud="${kind}">${a.icon()}<span>${a.label}</span></span>`; };
 const hm = ts => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const isUrl = u => /^https?:\/\//i.test(u || '');
@@ -43,28 +43,46 @@ const HUB = [
   ['diary', 'journal-text', 'Tagebuch', 'Euer gemeinsames Tagebuch'],
   ['photos', 'images', 'Fotoalbum', 'Bilder mit Woche und Beschriftung'],
   ['letters', 'envelope-heart', 'Briefe ans Baby', 'Text oder Sprachnachricht für später'],
-  ['names', 'tags', 'Namensfinder', 'Favoriten, gemeinsam abstimmen'],
   ['milestones', 'stars', 'Meilensteine', 'Mit Foto, zum Teilen'],
-  ['wishes', 'gift', 'Wunschliste', 'Damit Oma nicht dreimal Söckchen schenkt'],
-  ['lists', 'bag-heart', 'Checklisten', 'Kliniktasche, Erstausstattung, Behörden'],
+  ['move', 'bicycle', 'Bewegung', 'Pro Trimester, Beckenboden, Yoga'],
+  ['yoga', 'flower2', 'Yoga für Schwangere', 'Sanfte Übungen für Rücken und Becken'],
+  ['breathing', 'wind', 'Atemübungen', 'Ruhig atmen, Kraft sammeln'],
   ['food', 'egg-fried', 'Ernährung', 'Erlaubt, verboten, Hinweise'],
   ['recipes', 'cookie', 'Kochrezepte', 'Gesund, lecker, mit Einkaufsliste'],
-  ['move', 'bicycle', 'Bewegung', 'Pro Trimester, Beckenboden, Yoga'],
-  ['breathing', 'wind', 'Atemübungen', 'Ruhig atmen, Kraft sammeln'],
-  ['weekstory', 'stars', 'Wochen-Story', 'Die Entwicklung deines Babys schön teilen'],
-  ['jokes', 'balloon-heart-fill', 'Babywitze', 'Zum Schmunzeln und Mutmachen'],
   ['vits', 'capsule', 'Vitamine', 'Tägliche Erinnerung'],
   ['water', 'droplet-half', 'Wasser-Tracker', 'Gläser pro Tag'],
+  ['lists', 'bag-heart', 'Checklisten', 'Kliniktasche, Erstausstattung, Behörden'],
+  ['wishes', 'gift', 'Wunschliste', 'Damit Oma nicht dreimal Söckchen schenkt'],
+  ['names', 'tags', 'Namensfinder', 'Favoriten, gemeinsam abstimmen'],
+  ['planner', 'check2-square', 'Planer', 'To-dos und Termine'],
   ['contacts', 'telephone-fill', 'Kontakte & Notfall', 'Hebamme, Arzt, wichtige Nummern'],
   ['pass', 'journal-medical', 'Mutterpass digital', 'Werte und Fotos'],
-  ['baby', 'moon-stars', 'Baby-Tracker', 'Für danach: Stillen, Windeln, Schlaf'],
   ['tips', 'geo-alt-fill', () => tipsCity(), 'Anlaufstellen und Tipps vor Ort'],
-  ['planner', 'check2-square', 'Planer', 'To-dos und Termine'],
+  ['weekstory', 'stars', 'Wochen-Story', 'Die Entwicklung deines Babys schön teilen'],
+  ['jokes', 'balloon-heart-fill', 'Babywitze', 'Zum Schmunzeln und Mutmachen'],
+  ['baby', 'moon-stars', 'Baby-Tracker', 'Für danach: Stillen, Windeln, Schlaf'],
   ['einstellungen', 'gear-fill', 'Einstellungen', 'Farben, Schrift, Datensicherung']
 ];
+// Themen, die zusammengehören, stehen untereinander: Überschrift erscheint vor der ersten Kachel der Gruppe
+const HUB_GROUPS = { partner: 'Gemeinsam erinnern', move: 'Körper und Wohlbefinden', lists: 'Vorbereiten und organisieren', weekstory: 'Teilen, lachen, später', einstellungen: 'App' };
+// Empfehlungen außerhalb der App (öffnen im Browser, brauchen Internet). Ein Schalter blendet sie aus.
+const HUB_EXTERNAL = [
+  ['https://nosz.github.io/energietankstelle/', 'fuel-heart', 'Energietankstelle', 'Kleine Klick-App zum Auftanken zwischendurch, mit euren eigenen Bildern und Texten.'],
+  ['https://nosz.github.io/challenge-app/', 'trophy-fill', 'Challenge-App', 'Kleine Challenges für zwischendurch, passend zur Energietankstelle.'],
+  ['https://www.mutige-kinderherzen.de/', 'shield-fill-check', 'Mutige Kinderherzen', 'Selbstbehauptungstraining für Kinder: Kurse, Ratgeber und App.']
+];
 X.more = () => {
+  const showExt = state.settings.hideExt !== true;
+  const tile = ([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${labelOf(t)}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`;
+  const out = []; let open = false;
+  HUB.forEach(h => { if (HUB_GROUPS[h[0]]) { if (open) out.push('</div>'); out.push(`<h2 class="hub-group">${HUB_GROUPS[h[0]]}</h2><div class="grid">`); open = true; } out.push(tile(h)); });
+  if (open) out.push('</div>');
   view.innerHTML = `${intro('Mehr', 'Alles, was eine Schwangerschaft so braucht. Und ein bisschen mehr.')}
-    <div class="grid">${HUB.map(([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${labelOf(t)}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`).join('')}</div>`;
+    ${out.join('')}
+    <h2 class="hub-group">Empfehlungen</h2>
+    <div class="card hub-ext-sw"><div class="hm-row" style="border:0;padding:0"><label class="keep hm-text" for="extSw"><b>Empfehlungen anzeigen</b><span class="small soft">Weitere Angebote, die in einem neuen Tab im Browser öffnen</span></label><input type="checkbox" role="switch" id="extSw" ${showExt ? 'checked' : ''} aria-label="Empfehlungen anzeigen"></div></div>
+    ${showExt ? `<div class="grid" id="extGrid">${HUB_EXTERNAL.map(([u, i, t, d]) => `<a class="card link-card hub hub-ext" href="${u}" target="_blank" rel="noopener noreferrer">${i === 'fuel-heart' ? `<span class="fuel-heart" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" focusable="false"><rect x="6" y="40" width="28" height="4" rx="2" fill="currentColor"/><rect x="8" y="5" width="24" height="36" rx="5" fill="currentColor"/><rect x="12" y="10" width="16" height="14" rx="3" fill="#fff"/><path d="M20 21.6C14.6 18.2 14.2 14.6 16.6 13.4c1.7-.8 2.9 0 3.4 1 .5-1 1.7-1.8 3.4-1 2.4 1.2 2 4.8-3.4 8.2z" fill="var(--heart-mama,#c4566a)"/><rect x="12" y="29" width="16" height="3" rx="1.5" fill="#fff" opacity=".55"/><path d="M32 15h3.5a3 3 0 0 1 3 3v15a2.5 2.5 0 0 0 5 0V20l-3-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : bi(i)}<b>${t}</b><span class="small soft">${d}</span><span class="small soft hub-ext-note">${bi('box-arrow-up-right')} Öffnet im Browser, Internet nötig</span></a>`).join('')}</div>` : ''}`;
+  $('#extSw').onchange = e => { state.settings.hideExt = !e.target.checked; save(); render(); };
 };
 
 /* ---------- Partner-Modus ---------- */
@@ -278,20 +296,38 @@ X.vits = () => {
 
 /* ---------- Konfetti und Erfolgsmeldung, wenn ein Tagesziel erreicht ist ---------- */
 // Konfetti regnet kurz über den Bildschirm (nicht bei "Bewegung reduzieren"), liefert die Zahl der Teilchen zurück
-function confetti(n = 70) {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+function confetti(n = 220) {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches; // Bei "Bewegung reduzieren" bleibt das Konfetti stehen und blendet nur sanft ein und aus
   document.querySelectorAll('.confetti').forEach(c => c.remove());
-  const root = getComputedStyle(document.documentElement), cols = ['--primary', '--accent', '--heart-mama', '--heart-papa', '--heart-kid', '--ok'].map(v => root.getPropertyValue(v).trim()).filter(Boolean);
-  const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+  const root = getComputedStyle(document.documentElement), cols = ['--primary', '--accent', '--heart-mama', '--heart-papa', '--heart-kid', '--ok'].map(v => root.getPropertyValue(v).trim()).filter(Boolean).concat(['#ffd45a', '#ff8fb1', '#7ed6df']);
+  const box = document.createElement('div'); box.className = 'confetti' + (still ? ' still' : ''); box.setAttribute('aria-hidden', 'true');
+  const rain = Math.round(n * .55);
   for (let i = 0; i < n; i++) {
-    const p = document.createElement('i'), r = Math.random;
-    p.style.cssText = `left:${(r() * 100).toFixed(1)}%;background:${cols[i % cols.length]};--x:${Math.round((r() - .5) * 160)}px;--r:${Math.round(r() * 900 - 450)}deg;--d:${(2.4 + r() * 1.6).toFixed(2)}s;--delay:${(r() * .6).toFixed(2)}s;width:${6 + Math.round(r() * 5)}px;height:${9 + Math.round(r() * 7)}px`;
-    if (i % 4 === 0) p.style.borderRadius = '50%';
+    const p = document.createElement('i'), r = Math.random, size = 7 + Math.round(r() * 8), cannon = i >= rain, left = cannon && i % 2 === 0;
+    p.style.cssText = cannon
+      ? `left:${left ? 2 : 98}%;background:${cols[i % cols.length]};--bx:${(left ? 1 : -1) * Math.round(80 + r() * 260)}px;--by:${-Math.round(260 + r() * 360)}px;--r:${Math.round(r() * 1080 - 540)}deg;--d:${(2.6 + r() * 1.8).toFixed(2)}s;--delay:${(r() * .5).toFixed(2)}s;width:${size}px;height:${size + 5}px`
+      : `left:${(r() * 100).toFixed(1)}%;background:${cols[i % cols.length]};--x:${Math.round((r() - .5) * 200)}px;--r:${Math.round(r() * 1080 - 540)}deg;--d:${(2.8 + r() * 2.2).toFixed(2)}s;--delay:${(r() * 1.4).toFixed(2)}s;width:${size}px;height:${size + 5}px`;
+    if (still) { p.style.cssText = `left:${(4 + r() * 92).toFixed(1)}%;top:${(4 + r() * 86).toFixed(1)}%;background:${cols[i % cols.length]};--delay:${(r() * .8).toFixed(2)}s;width:${size}px;height:${size + 5}px;transform:rotate(${Math.round(r() * 360)}deg)`; }
+    else if (cannon) p.className = 'b';
+    if (i % 4 === 0) p.style.borderRadius = '50%'; else if (i % 7 === 0) p.style.clipPath = 'polygon(50% 0, 100% 100%, 0 100%)';
     box.appendChild(p);
   }
-  document.body.appendChild(box); setTimeout(() => box.remove(), 4600); return n;
+  document.body.appendChild(box); setTimeout(() => box.remove(), 6200); return n;
 }
-const goalBanner = (text, title = 'Tagesziel erreicht!') => `<div class="goal-win" role="status">${bi('trophy-fill')}<div><b>${esc(title)}</b><span>${esc(text)}</span></div></div>`;
+// Super-Lob: große Karte in der Mitte mit Pokal, Lob und Konfetti, schließt sich von selbst oder per Tipp
+const PRAISE = ['Das hast du richtig stark gemacht!', 'Wahnsinn! Das Baby klatscht innerlich mit.', 'Du bist eine Wucht, wirklich!', 'Applaus, Applaus! Heute hast du alles gegeben.', 'Besser geht’s nicht. Gold für dich!', 'Du rockst das, und das Baby ist mächtig stolz.', 'Spitze! So sieht eine Heldin des Alltags aus.', 'Ein Hoch auf dich: konsequent, liebevoll, großartig.'];
+const PRAISE_TOGETHER = ['Ihr zwei seid ein Traumteam!', 'Zusammen seid ihr unschlagbar. Das Baby hat die besten Eltern der Welt!', 'Applaus für euch beide, das war richtig schön!', 'Mehr Liebe pro Tag geht kaum. Bravo, ihr zwei!'];
+function celebrate(kind = 'water') {
+  confetti(220);
+  const st = state.settings, who = kind === 'together' ? [st.mama, st.partner].map(v => String(v || '').trim()).filter(Boolean).join(' und ') : String(st.mama || '').trim();
+  const old = document.getElementById('praisePop'); if (old) old.remove();
+  const el = document.createElement('div'); el.id = 'praisePop'; el.className = 'praise-pop'; el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="pp-card"><span class="pp-ico">${bi('trophy-fill')}</span><b>Tagesziel erreicht!</b>${who ? `<span class="pp-name">Bravo, ${esc(who)}!</span>` : ''}<p>${esc(pick(kind === 'together' ? PRAISE_TOGETHER : PRAISE))}</p><span class="pp-stars" aria-hidden="true">${bi('stars')}</span><button type="button" class="btn btn-solid theme-primary">Danke, das tut gut!</button></div>`;
+  document.body.appendChild(el);
+  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
+  el.onclick = close; setTimeout(() => { if (el.isConnected) close(); }, 6500);
+  return el;
+}const goalBanner = (text, title = 'Tagesziel erreicht!') => `<div class="goal-win" role="status">${bi('trophy-fill')}<div><b>${esc(title)}</b><span>${esc(personalize(text))}</span></div></div>`;
 /* ---------- Wasser ---------- */
 X.water = () => {
   const d = iso(today()), n = state.water[d] || 0, goal = state.waterGoal || 8;
@@ -302,7 +338,7 @@ X.water = () => {
       ${n >= goal ? `<p class="soft mb-2">${n * 250} ml</p>${goalBanner('Du bist ein Wasserfall der Motivation.')}` : `<p class="soft">${n * 250} ml · ${msgs}</p>`}
       <div class="hstack gap-2 justify-content-center"><button class="btn btn-subtle theme-secondary" id="minus" aria-label="Ein Glas weniger">${bi('dash-lg')}</button><button class="btn btn-solid theme-primary" id="plus" style="min-width:140px">${bi('droplet-fill')} Glas getrunken</button></div></div>
     <div class="card"><label for="goal" class="form-label">Tagesziel (Gläser à 250 ml)</label><input id="goal" type="number" min="1" max="20" value="${goal}"><p class="small soft mt-2 mb-0">Wie viel für dich passt, klärst du mit Arzt oder Hebamme.</p></div>`;
-  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); confetti(); toast('Tagesziel erreicht! Du bist ein Wasserfall der Motivation.'); } else cheer('water'); };
+  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); celebrate('water'); toast('Tagesziel erreicht! Du bist ein Wasserfall der Motivation.'); } else cheer('water'); };
   $('#minus').onclick = () => { state.water[d] = Math.max(0, n - 1); save(); render(); };
   $('#goal').onchange = e => { state.waterGoal = Math.min(20, Math.max(1, +e.target.value || 8)); save(); render(); };
 };
@@ -437,7 +473,7 @@ function bindTogether() {
     const day = iso(today()); state.together = state.together || {};
     const t = state.together[day] = state.together[day] || {}, who = b.dataset.tg, was = togetherDone(day);
     t[who] = !t[who]; save(); render();
-    if (!was && togetherDone(day)) { confetti(); toast(pick(TOGETHER_DONE)); }
+    if (!was && togetherDone(day)) { celebrate('together'); toast(pick(TOGETHER_DONE)); }
   });
 }
 
@@ -490,6 +526,20 @@ X.breathing = () => {
   view.querySelectorAll('[data-bex]').forEach(b => b.onclick = () => { breathSel = b.dataset.bex; render(); });
 };
 
+/* ---------- Yoga für Schwangere ---------- */
+let yogaTri = 'alle', yogaOpen = null;
+X.yoga = () => {
+  const list = YOGA_POSES.filter(p => yogaTri === 'alle' || p.tri.includes(+yogaTri));
+  const whoLbl = { mama: 'Mama', together: 'Gemeinsam' };
+  view.innerHTML = `${intro('Yoga für Schwangere', 'Sanfte Übungen für Rücken, Becken und gute Laune. Langsam, im Atemtakt und ohne Leistungsdruck.')}
+    <div class="chip-row" role="group" aria-label="Trimester">${[['alle', 'Alle'], ...Object.entries(YOGA_TRI)].map(([k, l]) => `<button type="button" class="chip-btn ${yogaTri === String(k) ? 'on' : ''}" data-ytri="${k}" aria-pressed="${yogaTri === String(k)}">${l}</button>`).join('')}</div>
+    <div class="card"><b>${bi('shield-check')} Vorher kurz lesen</b><ul class="small mt-2 mb-0">${YOGA_SAFETY.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
+    ${list.map(p => `<details class="card yoga-card" data-yoga="${p.id}" ${yogaOpen === p.id ? 'open' : ''}><summary><span class="acc-ico">${bi(p.icon)}</span><span class="acc-text"><b>${esc(p.name)}</b><span class="small soft">${esc(p.area)} · ${p.breaths} Atemzüge · ${p.tri.map(t => t + '.').join(' ')} Trimester</span></span></summary>
+      <div class="yoga-body"><p class="soft">${esc(p.intro)}</p><ol class="mb-2">${p.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol><p class="small soft mb-1">${bi('lightbulb')} ${esc(p.tip)}</p><span class="chip">${whoLbl[p.who]}</span></div></details>`).join('') || '<div class="card center soft">Für dieses Trimester ist gerade nichts dabei.</div>'}
+    <p class="small soft">Die Übungen sind allgemeine, vorsichtige Anregungen und selbst formuliert. Sie ersetzen keinen Yogakurs für Schwangere und keine Beratung durch Hebamme oder Frauenarzt. Am besten probiert ihr sie zuerst unter Anleitung aus.</p>`;
+  view.querySelectorAll('[data-ytri]').forEach(b => b.onclick = () => { yogaTri = b.dataset.ytri; render(); });
+  view.querySelectorAll('details[data-yoga]').forEach(d => d.addEventListener('toggle', () => { if (d.open) yogaOpen = d.dataset.yoga; else if (yogaOpen === d.dataset.yoga) yogaOpen = null; }));
+};
 /* ---------- Babywitze ---------- */
 let jokeCat = 'alle';
 const jokeFavs = () => (state.jokeFav = state.jokeFav || []);
@@ -561,39 +611,49 @@ const storyColors = () => { const cs = getComputedStyle(document.documentElement
 function storySlideHTML(S, i) {
   const sl = S.slides[i], col = storyColors();
   const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
-    : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong)}</div><p class="st-cap ${sl.quote ? 'st-quote' : ''}">${esc(sl.quote || 'Woche ' + S.week)}</p>`
-    : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
-  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
+    : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong, S.week, S.fruit)}</div><p class="st-cap ${sl.quote ? 'st-quote' : ''}">${esc(sl.quote || 'Woche ' + S.week)}</p>`
+    : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong, S.week, S.fruit)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
+  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot"><span class="st-hearts">${duoHearts()}</span> ${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
 }// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
 function drawStory(S, i, imgs = {}) {
   const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
   const bg = v('--bg') || '#fbf4f2', s2 = v('--surface-2') || '#f4e6e3', pri = v('--primary') || '#ae5f6a', strong = v('--primary-strong') || '#8b4752', text = v('--text') || '#3a2c2d', soft = v('--text-soft') || '#6e5a59', fam = (v('--font') || 'sans-serif'), sl = S.slides[i];
+  const hm = v('--heart-mama') || pri, hp = v('--heart-papa') || strong;
   const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, s2); g.addColorStop(1, bg); x.fillStyle = g; x.fillRect(0, 0, W, H);
   const wrap = (t, mw, size, weight) => { x.font = `${weight} ${size}px ${fam}`; const out = []; let line = ''; for (const w of String(t).split(' ')) { const test = line ? line + ' ' + w : w; if (x.measureText(test).width > mw && line) { out.push(line); line = w; } else line = test; } if (line) out.push(line); return out; };
-  x.textBaseline = 'alphabetic'; x.fillStyle = soft; x.textAlign = 'left'; x.font = `600 44px ${fam}`; x.fillText(`Woche ${S.week} · ${S.range}`, 70, 140);
-  const heart = (cx, cy, s, col) => { x.save(); x.translate(cx, cy); x.scale(s, s); x.beginPath(); x.moveTo(0, 30); x.bezierCurveTo(-90, -30, -50, -90, 0, -40); x.bezierCurveTo(50, -90, 90, -30, 0, 30); x.fillStyle = col; x.fill(); x.restore(); };
-  x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96));
+  const heart = (cx, cy, s, col, a = 1) => { x.save(); x.globalAlpha = a; x.translate(cx, cy); x.scale(s, s); x.beginPath(); x.moveTo(0, 30); x.bezierCurveTo(-90, -30, -50, -90, 0, -40); x.bezierCurveTo(50, -90, 90, -30, 0, 30); x.fillStyle = col; x.fill(); x.restore(); };
+  const star = (cx, cy, r, a = .8) => { x.save(); x.globalAlpha = a; x.fillStyle = '#FFFFFF'; x.beginPath(); for (let k = 0; k < 8; k++) { const rr = k % 2 ? r * .28 : r, an = k * Math.PI / 4 - Math.PI / 2; x.lineTo(cx + rr * Math.cos(an), cy + rr * Math.sin(an)); } x.closePath(); x.fill(); x.restore(); };
+  const card = (cx, cy, r) => { x.save(); x.shadowColor = 'rgba(80,30,40,.18)'; x.shadowBlur = 60; x.shadowOffsetY = 24; x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); x.restore(); x.strokeStyle = pri; x.globalAlpha = .25; x.lineWidth = 6; x.beginPath(); x.arc(cx, cy, r + 18, 0, 7); x.stroke(); x.globalAlpha = 1; };
+  // zarte Dekoration: große weiche Kreise, kleine Herzen und Funkelsterne
+  x.save(); x.globalAlpha = .35; x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(940, 220, 260, 0, 7); x.fill(); x.beginPath(); x.arc(110, 1640, 300, 0, 7); x.fill(); x.restore();
+  heart(70, 1700, .5, hm, .5); heart(1010, 1700, .5, hp, .5); heart(80, 110, .3, pri, .35); heart(1000, 110, .3, pri, .35); heart(62, 1480, .28, pri, .3); star(890, 250, 30); star(190, 250, 22); star(1010, 1560, 26); star(55, 1280, 20);
+  x.textBaseline = 'alphabetic'; x.textAlign = 'center'; x.fillStyle = pri; x.font = `700 40px ${fam}`; x.fillText(`WOCHE ${S.week}  ·  ${S.range}`, W / 2, 150);
+  x.strokeStyle = pri; x.globalAlpha = .35; x.lineWidth = 4; x.beginPath(); x.moveTo(W / 2 - 90, 190); x.lineTo(W / 2 + 90, 190); x.stroke(); x.globalAlpha = 1;
+  x.fillStyle = text; const ts = sl.id === 'dev' ? 68 : 80, tl = wrap(sl.title, 900, ts, 800); x.font = `800 ${ts}px ${fam}`; tl.slice(0, 4).forEach((l, k) => x.fillText(l, W / 2, 340 + k * (ts + 22)));
+  const titleEnd = 340 + Math.min(tl.length, 4) * (ts + 22);
   if (sl.id === 'size') {
-    x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(W / 2, 1090, 250, 0, 7); x.fill();
-    if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 175, 915, 350, 350); else {
-    const hue = fruitHue(S.fruit), gr = x.createRadialGradient(W / 2 - 70, 1030, 20, W / 2, 1090, 250); gr.addColorStop(0, `hsl(${hue} 80% 70%)`); gr.addColorStop(1, `hsl(${hue} 70% 45%)`); x.fillStyle = gr; x.beginPath(); x.arc(W / 2, 1110, 240, 0, 7); x.fill();
-    x.fillStyle = `hsl(${(hue + 110) % 360} 55% 38%)`; x.beginPath(); x.ellipse(W / 2 + 40, 850, 90, 38, -0.5, 0, 7); x.fill(); x.fillRect(W / 2 - 6, 845, 12, 50); }
-    x.fillStyle = text; x.font = `700 56px ${fam}`; x.fillText(sl.lines.join(' · '), W / 2, 1560);
+    const cy = Math.max(titleEnd + 380, 1000); card(W / 2, cy, 330);
+    if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 280, cy - 285, 560, 560); else { const hue = fruitHue(S.fruit), gr = x.createRadialGradient(W / 2 - 70, cy - 60, 20, W / 2, cy, 250); gr.addColorStop(0, `hsl(${hue} 80% 70%)`); gr.addColorStop(1, `hsl(${hue} 70% 45%)`); x.fillStyle = gr; x.beginPath(); x.arc(W / 2, cy + 10, 240, 0, 7); x.fill(); }
+    x.fillStyle = strong; { const cl = wrap(sl.lines.join(' · '), 900, 64, 800); x.font = `800 64px ${fam}`; cl.slice(0, 3).forEach((l, k) => x.fillText(l, W / 2, cy + 470 + k * 80)); }
   } else if (sl.id === 'dev') {
-    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 230, 890, 460, 460); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
-    if (sl.quote) { x.fillStyle = text; wrap(sl.quote, 880, 46, 600); wrap(sl.quote, 880, 46, 600).forEach((l, k) => { x.font = `italic 600 46px ${fam}`; x.fillText(l, W / 2, 1600 + k * 62); }); } else { x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680); }
+    const cy = Math.max(titleEnd + 380, 1000); card(W / 2, cy, 330);
+    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 300, cy - 300, 600, 600); else { x.fillStyle = strong; x.beginPath(); x.arc(W / 2, cy, 280, 0, 7); x.fill(); heart(W / 2, cy + 10, 4.2, '#FFFFFF'); }
+    if (sl.quote) { x.fillStyle = text; let qs = 54, ql = wrap(sl.quote, 900, qs, 700); if (ql.length > 3) { qs = 48; ql = wrap(sl.quote, 900, qs, 700); } ql.slice(0, 4).forEach((l, k) => { x.font = `italic 700 ${qs}px ${fam}`; x.fillText(l, W / 2, cy + 470 + k * (qs + 18)); }); } else { x.fillStyle = soft; x.font = `700 56px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, cy + 480); }
   } else {
-    if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 140, 0, 7); x.fill(); x.drawImage(im, cx - 110, 530, 220, 220); }); }
-    x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = (imgs.baby ? 960 : 620) + Math.floor(n / 2) * (imgs.baby ? 190 : 280); x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 80); });
-    x.fillStyle = s2; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, 840, 30, 15) : x.rect(120, 1500, 840, 30); x.fill(); x.fillStyle = strong; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30, 15) : x.rect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30); x.fill();
+    const top = Math.max(titleEnd + 40, 560);
+    if (imgs.baby && imgs.fruit) { [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { card(cx, top + 210, 200); x.drawImage(im, cx - 165, top + 45, 330, 330); }); }
+    const gy = imgs.baby ? top + 500 : top + 160, rs = 185;
+    sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 790 : 290, cy = gy + Math.floor(n / 2) * rs; x.fillStyle = soft; x.font = `700 40px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `800 72px ${fam}`; x.fillText(val, cx, cy + 82); });
+    const by = gy + Math.ceil(sl.rows.length / 2) * rs - 10;
+    x.fillStyle = 'rgba(255,255,255,.7)'; x.beginPath(); x.roundRect ? x.roundRect(120, by, 840, 36, 18) : x.rect(120, by, 840, 36); x.fill(); x.fillStyle = strong; x.beginPath(); x.roundRect ? x.roundRect(120, by, Math.max(36, 840 * S.p.pct / 100), 36, 18) : x.rect(120, by, Math.max(36, 840 * S.p.pct / 100), 36); x.fill();
   }
-  x.textAlign = 'center'; heart(W / 2 - 200, H - 150, 1.1, getComputedStyle(document.documentElement).getPropertyValue('--heart-mama').trim() || pri); heart(W / 2 - 160, H - 150, 1.1, getComputedStyle(document.documentElement).getPropertyValue('--heart-papa').trim() || pri);
-  x.fillStyle = strong; x.font = `700 42px ${fam}`; x.fillText(`${brandName()}  ${brandSub()}`, W / 2 + 40, H - 135);
+  // Fußzeile: zwei verschmolzene Herzen und der App-Name, zusammen mittig
+  x.textAlign = 'left'; x.font = `800 46px ${fam}`; const label = `${brandName()}  ${brandSub()}`, tw = x.measureText(label).width, gw = 92, gx = (W - (gw + 24 + tw)) / 2, fy = H - 120;
+  heart(gx + 30, fy - 16, .5, hm); heart(gx + 62, fy - 16, .5, hp); x.fillStyle = strong; x.fillText(label, gx + gw + 24, fy);
   return c;
-}
-// SVG-Zeichnung als Bild laden (für das Bild zum Teilen)
+}// SVG-Zeichnung als Bild laden (für das Bild zum Teilen)
 const svgImage = svg => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
-async function storyImages(S, i) { const col = storyColors(), id = S.slides[i].id, out = {}; try { if (id !== 'dev') out.fruit = await svgImage(fruitSVG(S.fruit)); if (id !== 'size') out.baby = await svgImage(babySVG(col.text, '#ffffff', col.strong)); } catch { /* Ersatzzeichnung */ } return out; }
+async function storyImages(S, i) { const col = storyColors(), id = S.slides[i].id, out = {}; try { if (id !== 'dev') out.fruit = await svgImage(fruitSVG(S.fruit)); if (id !== 'size') out.baby = await svgImage(babySVG(col.text, '#ffffff', col.strong, S.week, S.fruit)); } catch { /* Ersatzzeichnung */ } return out; }
 const storyFile = async (S, i) => { const blob = await new Promise(async r => drawStory(S, i, await storyImages(S, i)).toBlob(r, 'image/png')); return new File([blob], `${fileSafe(S.kid)}-woche-${S.week}-${S.slides[i].id}.png`, { type: 'image/png' }); };
 function saveFileBlob(f) { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(f), download: f.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 async function shareImages(files, S) {
