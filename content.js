@@ -564,7 +564,7 @@ const TOGETHER_IDEAS_MORE = [
   ['Sagt euch gegenseitig Danke für etwas Konkretes von heute.', null]
 ];
 // Version der App. Muss mit sw.js und der Meta-Angabe in index.html uebereinstimmen (wird getestet).
-const APP_VERSION = { number: '1.0.0', date: '2026-10-16', name: 'Erste Ausgabe' };
+const APP_VERSION = { number: '1.1.0', date: '2026-10-16', name: 'Eigene Farben, Atemübungen und mehr Ruhe' };
 Object.assign(PAGE_ICON, { privacy: 'shield-check' });
 Object.assign(PAGE_AUDIENCE, { privacy: 'together' });
 
@@ -680,3 +680,41 @@ const brandSub = () => cleanBrandSub(brandSettings().appSub) || BRAND_SUB_DEFAUL
 const brandFull = () => `${brandName()} ${brandSub()}`;
 const isDefaultBrand = () => brandName() === BRAND_NAME_DEFAULT && brandSub() === BRAND_SUB_DEFAULT;
 const cssStr = s => String(s).replace(/[\\"]/g, '\\$&');
+
+/* ---------- Atemübungen für Schwangere ----------
+   Inspiration: Apotheken Umschau (längere Ausatmung, Tönen mit offenen Vokalen), TK (Atmung im Geburtsvorbereitungskurs), Perimom und Calm (Bauchatmung, Lippenbremse).
+   Alles sanft: keine langen Atempausen, kein schnelles oder zu tiefes Atmen. Ersetzt keinen Geburtsvorbereitungskurs und keine Hebamme. */
+const BREATH_EXERCISES = [
+  { id: 'belly', name: 'Bauchatmung', tag: 'Zum Runterkommen', pattern: [['Einatmen', 4, 'in'], ['Ausatmen', 6, 'out']],
+    intro: 'Die Basis von allem: Der Atem wandert in den Bauch und macht Platz für Ruhe.',
+    steps: ['Setz dich bequem hin oder leg dich auf die Seite. Eine Hand liegt auf dem Bauch, eine auf der Brust.', 'Atme durch die Nase ein, sodass sich vor allem die Hand auf dem Bauch hebt.', 'Atme langsam wieder aus und spüre, wie der Bauch sinkt.'],
+    fun: 'Dein Baby schaukelt gemütlich mit. Besser als jede Hängematte.' },
+  { id: 'long', name: 'Lange Ausatmung', tag: 'Gegen Anspannung', pattern: [['Einatmen', 4, 'in'], ['Summend ausatmen', 8, 'out']],
+    intro: 'Die Ausatmung ist doppelt so lang wie die Einatmung. Das beruhigt und wird in Geburtsvorbereitungskursen oft geübt.',
+    steps: ['Atme ruhig durch die Nase ein.', 'Atme summend aus, ein weiches „Mmm“, bis die Luft von selbst ausgeht.', 'Schultern und Kiefer bleiben locker.'],
+    fun: 'Summen funktioniert auch im Wartezimmer. Die anderen werden sich fragen, was du weißt.' },
+  { id: 'tone', name: 'Tönen mit A, O, U', tag: 'Für den Beckenboden', pattern: [['Einatmen', 4, 'in'], ['Mit „Aaa“ ausatmen', 8, 'out']],
+    intro: 'Offene Vokale wie A, O und U gelten in Geburtsvorbereitungskursen als hilfreich, weil sich dabei der Beckenboden weich anfühlt.',
+    steps: ['Atme tief und ruhig ein.', 'Atme mit einem tiefen, offenen „Aaa“, „Ooo“ oder „Uuu“ aus.', 'Lass die Stimme tief und weich klingen, laut muss es nicht sein.'],
+    fun: 'Die Nachbarn halten dich für eine Opernsängerin. Das nennt man Karriere.' },
+  { id: 'wave', name: 'Wellenatmung', tag: 'Gleichmäßig wie eine Welle', pattern: [['Einatmen', 5, 'in'], ['Ausatmen', 5, 'out']],
+    intro: 'Ein- und Ausatmen sind gleich lang und gehen ohne Pause ineinander über, wie Wellen am Strand. So findest du einen ruhigen Rhythmus.',
+    steps: ['Stell dir eine Welle vor, die langsam ausläuft und wieder aufbaut.', 'Atme in diesem Rhythmus, ohne zu drücken und ohne Pause.', 'Wenn der Rhythmus nicht passt, atme einfach, wie es sich gut anfühlt.'],
+    fun: 'Strand-Feeling ohne Sonnenbrand. Und ohne Kinderwagen im Sand.' },
+  { id: 'lips', name: 'Lippenbremse', tag: 'Wenn die Luft knapp wird', pattern: [['Einatmen', 3, 'in'], ['Ausatmen mit Lippenbremse', 6, 'out']],
+    intro: 'In den späten Wochen drückt das Baby aufs Zwerchfell. Mit gespitzten Lippen atmest du langsam aus und wirst ruhiger.',
+    steps: ['Atme ruhig durch die Nase ein.', 'Spitze die Lippen, als würdest du eine Kerze sanft ausblasen.', 'Puste lange und gleichmäßig aus.'],
+    fun: 'Die Kerze darf nicht ausgehen. Sie soll nur ein bisschen flackern.' },
+  { id: 'square', name: 'Sanftes Viereck', tag: 'Konzentration finden', pattern: [['Einatmen', 4, 'in'], ['Kurz ruhen', 2, 'hold'], ['Ausatmen', 4, 'out'], ['Kurz ruhen', 2, 'hold']],
+    intro: 'Vier gleiche Seiten, nur mit ganz kurzen Pausen. Gut, wenn die Gedanken kreisen.',
+    steps: ['Atme ein und zähle gedanklich bis vier.', 'Ruhe kurz, ohne die Luft festzuhalten.', 'Atme aus, ruhe kurz, und beginne von vorn.'],
+    fun: 'Quadrate lieben Ordnung. Das Kinderzimmer bekommt sie leider nicht davon.' },
+  { id: 'duo', name: 'Atmen zu zweit', tag: 'Mama und Papa', pattern: [['Einatmen', 4, 'in'], ['Ausatmen', 6, 'out']],
+    intro: 'Papa atmet im selben Takt mit. Das beruhigt beide und wird zur kleinen Probe für die Geburt.',
+    steps: ['Mama sitzt oder liegt bequem, Papa legt eine Hand auf Schulter oder Kreuzbein.', 'Beide atmen im gleichen Takt, Papa atmet hörbar mit.', 'Danach sagt Mama, was gut tat: Druck, Tempo oder Stimme.'],
+    fun: 'Papa-Aufgabe: im Takt atmen, nicht seufzen. Seufzen ist ab Minute drei erlaubt.' }
+];
+const BREATH_SAFETY = ['Bequem sitzen oder auf der Seite liegen. Ab der Mitte der Schwangerschaft nicht lange flach auf dem Rücken.', 'Nie die Luft lange anhalten und nicht tiefer oder schneller atmen, als es angenehm ist.', 'Wird dir schwindelig oder kribbelig: Übung beenden und ruhig normal weiteratmen.', 'Anhaltende Atemnot, Schmerzen oder Unsicherheit: Frauenarzt oder Hebamme fragen, im Notfall 112.'];
+const BREATH_SOURCES = [['Apotheken Umschau: Übungen, richtig atmen in der Schwangerschaft', 'https://www.apotheken-umschau.de/familie/schwangerschaft/gesunde-schwangerschaft/uebungen-richtig-atmen-in-der-schwangerschaft-795275.html'], ['Techniker Krankenkasse: Atmen gegen Schmerz', 'https://www.tk.de/techniker/magazin/familie/kinderwunsch-und-schwangerschaft/atmen-gegen-schmerz-2048352'], ['Calm: Atemübungen in Schwangerschaft und Geburt (englisch)', 'https://www.calm.com/blog/pregnancy-breathing-exercises']];
+Object.assign(PAGE_AUDIENCE, { breathing: 'together' });
+Object.assign(PAGE_ICON, { breathing: 'wind' });

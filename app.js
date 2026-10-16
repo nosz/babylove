@@ -115,14 +115,27 @@ const putImg = (id, blob) => idbOp('readwrite', s => s.put(blob, id));
 const getImg = id => idbOp('readonly', s => s.get(id));
 const delImg = id => idbOp('readwrite', s => s.delete(id));
 
-// Bild verkleinern, damit der Gerätespeicher geschont wird
-async function shrink(file, max = 1280) {
-  const bmp = await createImageBitmap(file);
-  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  return new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+// Jedes hochgeladene Bild wird automatisch komprimiert: längste Seite höchstens max Pixel, JPEG, bei großen Dateien stufenweise stärker
+// (Ziel: höchstens targetKB). Weiße Fläche statt Schwarz bei Transparenz; ein bereits kleineres Original bleibt unverändert.
+const decodeImage = async file => {
+  try { return await createImageBitmap(file); }
+  catch { const url = URL.createObjectURL(file); try { const img = new Image(); img.src = url; await img.decode(); return img; } finally { URL.revokeObjectURL(url); } }
+};
+async function shrink(file, max = 1280, targetKB = 350, square = false) {
+  const bmp = await decodeImage(file), w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+  // Quadrat (für Profilbilder): mittig zuschneiden, bei Hochformat etwas nach oben verschoben, damit das Gesicht erhalten bleibt
+  const side = Math.min(w0, h0), sx = square ? (w0 - side) / 2 : 0, sy = square ? (h0 - side) * 0.3 : 0, sw = square ? side : w0, sh = square ? side : h0;
+  let dim = Math.min(max, Math.max(sw, sh)), q = 0.82, blob = null;
+  for (let i = 0; i < 4; i++) {
+    const k = Math.min(1, dim / Math.max(sw, sh)), c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q));
+    if (!blob || blob.size <= targetKB * 1024) break;
+    q = Math.max(0.55, q - 0.08); dim = Math.round(dim * 0.85);
+  }
+  if (!blob) throw new Error('Bild konnte nicht komprimiert werden');
+  return !square && file.type === 'image/jpeg' && Math.max(w0, h0) <= max && file.size <= blob.size ? file : blob;
 }
 async function storeFile(file) {
   const id = uid();
@@ -207,8 +220,20 @@ const hexToHsl = hex => {
   return [h, Math.round(s * 100), Math.round(l * 100)];
 };
 // Hell: Werte aus THEME_DEFS. Dunkel: aus dem Farbton der Primärfarbe abgeleitet (helle Primärfarbe, dunkle Schrift darauf).
+// Eigene Farbkombination: Hauptfarbe, Akzent und Hintergrund-Ton frei wählbar. Texte und Flächen werden automatisch so berechnet, dass sie gut lesbar bleiben.
+const themeDef = id => id === 'custom' ? customThemeDef() : (THEME_DEFS[id] || THEME_DEFS.rose);
+const CUSTOM_DEFAULT = { primary: '#A0537A', accent: '#E3B27A', bg: '#FAF3F6' };
+const customColors = () => { const c = state.settings.customTheme || {}; return { primary: isHex(c.primary) ? c.primary.toUpperCase() : CUSTOM_DEFAULT.primary, accent: isHex(c.accent) ? c.accent.toUpperCase() : CUSTOM_DEFAULT.accent, bg: isHex(c.bg) ? c.bg.toUpperCase() : CUSTOM_DEFAULT.bg }; };
+function customThemeDef() {
+  const c = customColors(), [h, s0, l0] = hexToHsl(c.primary), [hb, sb] = hexToHsl(c.bg);
+  let l = l0, primary = c.primary; while (contrastHex('#FFFFFF', primary) < 4.6 && l > 8) { l -= 2; primary = hslToHex(h, s0, l); }
+  const strong = hslToHex(h, s0, Math.max(l - 12, 6)), tint = Math.min(Math.max(sb, 8), 50);
+  const bg = hslToHex(hb, tint, 96), s2 = hslToHex(hb, tint, 92), line = hslToHex(hb, Math.min(tint, 40), 85);
+  const text = hslToHex(hb, 22, 15); let sl = 38, soft = hslToHex(hb, 14, sl); while (contrastHex(soft, s2) < 4.6 && sl > 6) { sl -= 2; soft = hslToHex(hb, 14, sl); }
+  return { name: 'Eigene Kombination', bg, s2, line, text, soft, primary, strong, accent: c.accent };
+}
 function themeVars(id, dark) {
-  const t = THEME_DEFS[id] || THEME_DEFS.rose;
+  const t = themeDef(id);
   if (!dark) return { '--bg': t.bg, '--surface': '#FFFFFF', '--surface-2': t.s2, '--line': t.line, '--text': t.text, '--text-soft': t.soft,
     '--primary': t.primary, '--primary-strong': t.strong, '--on-primary': '#FFFFFF', '--accent': t.accent, '--shadow': '0 6px 20px rgba(80, 50, 50, .08)' };
   const [h, s] = hexToHsl(t.primary), sat = Math.min(s, 55);
@@ -255,7 +280,7 @@ function fontScale() {
 }
 function applyTheme() {
   const s = state.settings, root = document.documentElement;
-  if (!THEME_DEFS[s.theme]) s.theme = 'rose';
+  if (!THEME_DEFS[s.theme] && s.theme !== 'custom') s.theme = 'rose';
   root.dataset.theme = s.theme;
   const dark = s.mode === 'dark' || (s.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   root.dataset.mode = dark ? 'dark' : 'light';
@@ -271,7 +296,7 @@ function applyTheme() {
   const mi = $('#topModeIcon'), mb = $('#topMode');
   if (mi) mi.className = 'bi ' + (dark ? 'bi-sun-fill' : 'bi-moon-stars-fill');
   if (mb) mb.setAttribute('aria-label', dark ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln');
-  $('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim() || THEME_DEFS[s.theme].bg;
+  $('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim() || themeDef(s.theme).bg;
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
@@ -323,6 +348,7 @@ routes.onboarding = () => {
    Fest: Begrüßung, Countdown, Wochenkarte. Alles andere sind Bausteine, die man in den Einstellungen ein-/ausschalten und sortieren kann. */
 const HOME_MODULES = {
   quick:     { label: 'Schnellzugriff', desc: 'Vier Buttons für das, was du am häufigsten brauchst', icon: 'lightning-charge-fill' },
+  pins:      { label: 'Meine Verknüpfungen', desc: 'Seiten, die du mit „Zur Startseite“ hinzugefügt hast', icon: 'pin-angle-fill' },
   together:  { label: 'Gemeinsam heute', desc: 'Tägliches Paar-Ritual mit Serie', icon: 'people-fill' },
   daily:     { label: 'Tagesimpuls', desc: 'Ein Spruch für den Tag, dazu einer für den Partner', icon: 'chat-quote' },
   family:    { label: 'Foto von euch', desc: 'Zufällig aus euren Profilfotos', icon: 'image' },
@@ -332,8 +358,8 @@ const HOME_MODULES = {
   tips:      { label: 'Frankfurt-Tipps', desc: 'Hebammen, Kurse, Beratung, Infoabende', icon: 'geo-alt-fill' },
   last:      { label: 'Zuletzt festgehalten', desc: 'Das neueste Foto aus Tagebuch oder Album', icon: 'clock-history' }
 };
-const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'together', 'daily', 'family', 'secret'] };
-const HOME_PRESETS = { simple: ['quick', 'together', 'daily'], all: Object.keys(HOME_MODULES), default: HOME_DEFAULT.on };
+const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'together', 'daily', 'family', 'secret'] };
+const HOME_PRESETS = { simple: ['quick', 'pins', 'together', 'daily'], all: Object.keys(HOME_MODULES), default: HOME_DEFAULT.on };
 
 function homeLayout() {
   const c = state.settings.home || {};
@@ -341,16 +367,37 @@ function homeLayout() {
   for (const id of Object.keys(HOME_MODULES)) if (!order.includes(id)) order.push(id); // neue Bausteine nach Updates anhängen
   return { order, on: new Set((c.on || HOME_DEFAULT.on).filter(id => HOME_MODULES[id])) };
 }
-const saveHome = (order, on) => { state.settings.home = { order, on: [...on] }; save(); };
+const saveHome = (order, on) => { state.settings.home = { ...(state.settings.home || {}), order, on: [...on] }; save(); };
+
+/* ---------- Zur Startseite hinzufügen: jede Seite lässt sich als Kachel auf die Startseite legen ---------- */
+// Seiten, die als Verknüpfung möglich sind: Tagebuch, Fotos und alle Funktionen aus "Mehr" (ohne Einstellungen)
+const pinInfo = () => { const m = { diary: ['journal-text', 'Tagebuch'], photos: ['images', 'Fotos'] }; HUB.forEach(([k, i, t]) => { if (k !== 'einstellungen' && k !== 'more') m[k] = [i, t]; }); return m; };
+const homePins = () => { const info = pinInfo(); return ((state.settings.home || {}).pins || []).filter(k => info[k]); };
+function setHomePin(key, wanted) {
+  const info = pinInfo()[key]; if (!info) return false;
+  const { order, on } = homeLayout(), pins = homePins().filter(k => k !== key);
+  if (wanted) { pins.push(key); on.add('pins'); }
+  state.settings.home = { ...(state.settings.home || {}), order, on: [...on], pins }; save(); return wanted;
+}
+const pinBtnHTML = key => { const p = homePins().includes(key); return `<button type="button" class="pin-btn no-print ${p ? 'on' : ''}" id="pinBtn" data-pin="${key}" aria-pressed="${p}">${bi(p ? 'pin-angle-fill' : 'pin-angle')}<span>${p ? 'Auf der Startseite' : 'Zur Startseite'}</span></button>`; };
+function bindPinBtn() {
+  const b = $('#pinBtn'); if (!b) return;
+  b.onclick = () => {
+    const key = b.dataset.pin, now = !homePins().includes(key), label = pinInfo()[key][1]; setHomePin(key, now);
+    b.classList.toggle('on', now); b.setAttribute('aria-pressed', now); b.innerHTML = `${bi(now ? 'pin-angle-fill' : 'pin-angle')}<span>${now ? 'Auf der Startseite' : 'Zur Startseite'}</span>`;
+    toast(now ? `${label} sitzt jetzt auf eurer Startseite. Ein Klick, und ihr seid da.` : `${label} ist wieder von der Startseite verschwunden.`);
+  };
+}
 
 const HOME_RENDER = {
+  pins: () => { const info = pinInfo(), pins = homePins(); return pins.length ? `<div class="pins"><div class="pin-head small soft">${bi('pin-angle-fill')} Meine Verknüpfungen</div><div class="pin-grid">${pins.map(k => `<a class="pin-tile" href="#/${k}">${bi(info[k][0])}<span>${info[k][1]}</span></a>`).join('')}</div></div>` : ''; },
   quick: () => `<div class="quick">${[['diary', 'journal-text', 'Tagebuch'], ['photos', 'images', 'Fotos'], ['water', 'droplet-half', 'Wasser'], ['planner', 'check2-square', 'Aufgaben']]
     .map(([r, i, l]) => `<a class="quick-btn" href="#/${r}">${bi(i)}<span>${l}</span></a>`).join('')}</div>`,
   together: () => togetherCard(),
   daily: () => `<div class="card daily"><div class="mb-2">${audBadge('mama', 'sm')}</div><p class="quote mb-0">${esc(dailyMsg())}</p>
-    <div class="hstack gap-2 mt-3 pt-3 daily-sep">${personAvatar('partner') || bi('person-heart')}${audBadge('papa', 'sm')}<b class="flex-grow-1">Für ${state.settings.partner ? esc(state.settings.partner) : 'den Papa / Partner'}</b>
+    <div class="hstack gap-2 mt-3 pt-3 daily-sep">${audBadge('papa', 'sm')}<span class="flex-grow-1"></span>
       <button class="btn btn-subtle theme-secondary btn-sm" id="newPartnerMsg" aria-label="Neuer Spruch">${bi('arrow-repeat')}</button></div>
-    <p class="mb-0 mt-1" id="partnerMsg">${esc(partnerMsgToday())}</p></div>`,
+    <p class="mb-0 mt-1" id="partnerMsg">${esc(papaName(partnerMsgToday()))}</p></div>`,
   family: () => familyCard(),
   secret: () => { const s = state.settings;
     return `<div class="card" id="secretCard"><div class="hstack gap-3">${bi('lock-fill')}<div class="flex-grow-1"><b>Psst!</b> Den Namen von ${nick()} wissen bisher nur Mama und Papa.</div>
@@ -371,11 +418,12 @@ routes.home = () => {
   const p = pregnancy(), s = state.settings;
   const [, name] = fruitFor(p.weeks);
   const names = [s.mama, s.partner].filter(Boolean).map(esc).join(' &amp; ');
-  const greet = names ? `Hallo ${names}` : 'Hallo, ihr Superhelden';
+  const gname = (v, k) => `<span class="gn">${nmHeart(k)}${esc(v)}</span>`, gl = [s.mama && gname(s.mama, 'mama'), s.partner && gname(s.partner, 'papa')].filter(Boolean).join(' &amp; ');
+  const greet = gl ? `Hallo ${gl}` : 'Hallo, ihr Superhelden';
   const { order, on } = homeLayout();
   view.innerHTML = `
-    <div class="hstack gap-2">${avatarStack()}
-      <div><p class="soft mb-0">${greet}</p><p class="today mb-0" id="todayLine">Heute ist ${esc(todayLong())}</p></div></div>
+    <div class="greet">${avatarStack()}
+      <div class="greet-text"><p class="greet-hello">${greet}</p><p class="today" id="todayLine">${bi('calendar-heart')}Heute ist ${esc(todayLong())}</p></div></div>
     <h1>${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
     <div class="card hero">
       <div class="hero-top"><span class="fruit" aria-hidden="true">${bi('balloon-heart-fill')}</span><div><div class="big">${p.weeks}. SSW</div><div class="hero-sub">+ ${p.days} Tag${p.days === 1 ? '' : 'e'} · ${trimester(p.weeks)}. Trimester</div></div></div>
@@ -388,33 +436,37 @@ routes.home = () => {
     <a class="home-edit" href="#/homeconfig">${bi('sliders')} Startseite anpassen</a>`;
   bindTogether();
   $('#newHeroQuote').onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
-  const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (q === cur && ++g < 20); $('#partnerMsg').textContent = q; };
+  const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (q === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };
   const r = $('#reveal');
   if (r) r.onclick = () => { $('#secret').classList.add('show'); clearTimeout(r.t); r.t = setTimeout(() => $('#secret')?.classList.remove('show'), 5000); };
 };
 
-// Einstellungen: Startseite einrichten (Bausteine ein/aus, Reihenfolge)
+// Einstellungen: Startseite einrichten (Vorlage, Bausteine ein/aus, Reihenfolge, Verknüpfungen)
 routes.homeconfig = () => {
-  const { order, on } = homeLayout();
+  const { order, on } = homeLayout(), pins = homePins(), info = pinInfo();
+  const preset = Object.entries(HOME_PRESETS).find(([, v]) => v.length === on.size && v.every(x => on.has(x)))?.[0];
   view.innerHTML = `
     <h1>Startseite einrichten</h1><p class="soft">Weniger ist mehr: Wähle nur, was du jeden Tag sehen willst. Begrüßung, Countdown und Wochenkarte bleiben immer.</p>
-    <div class="hstack gap-2 flex-wrap mb-3">
-      <button class="btn btn-subtle theme-secondary" data-preset="simple">Einfach</button>
-      <button class="btn btn-subtle theme-secondary" data-preset="default">Standard</button>
-      <button class="btn btn-subtle theme-secondary" data-preset="all">Alles anzeigen</button></div>
-    <div class="card">${order.map((id, i) => { const m = HOME_MODULES[id];
-      return `<div class="todo hm">${bi(m.icon)}<label class="keep" for="hm_${id}" style="margin:0;font-weight:400;flex:1"><b>${m.label}</b> ${audBadge('together', 'sm')}<div class="small soft">${m.desc}</div></label>
+    <h2>1. Vorlage wählen</h2>
+    <div class="seg" role="group" aria-label="Vorlage">${[['simple', 'Einfach'], ['default', 'Standard'], ['all', 'Alles']].map(([k, l]) => `<button type="button" data-preset="${k}" class="${preset === k ? 'on' : ''}" aria-pressed="${preset === k}">${l}</button>`).join('')}</div>
+    <h2>2. Bausteine <span class="chip" id="hmCount">${on.size} von ${order.length} sichtbar</span></h2>
+    <div class="card hm-list">${order.map((id, i) => { const m = HOME_MODULES[id];
+      return `<div class="hm-row"><span class="hm-ico">${bi(m.icon)}</span><label class="keep hm-text" for="hm_${id}"><b>${m.label}</b><span class="small soft">${m.desc}</span></label>
         <input type="checkbox" role="switch" id="hm_${id}" data-hm="${id}" ${on.has(id) ? 'checked' : ''} aria-label="${m.label} anzeigen">
-        <button class="btn btn-subtle theme-secondary btn-sm" data-up="${id}" ${i === 0 ? 'disabled' : ''} aria-label="${m.label} nach oben">${bi('chevron-up')}</button>
-        <button class="btn btn-subtle theme-secondary btn-sm" data-down="${id}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="${m.label} nach unten">${bi('chevron-down')}</button></div>`; }).join('')}</div>
-    <a class="btn btn-solid theme-primary w-100" href="#/">Fertig, zur Startseite</a>`;
-  view.querySelectorAll('[data-hm]').forEach(c => c.onchange = () => { c.checked ? on.add(c.dataset.hm) : on.delete(c.dataset.hm); saveHome(order, on); });
+        <span class="hm-move"><button type="button" class="btn btn-text btn-sm" data-up="${id}" ${i === 0 ? 'disabled' : ''} aria-label="${m.label} nach oben">${bi('chevron-up')}</button>
+        <button type="button" class="btn btn-text btn-sm" data-down="${id}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="${m.label} nach unten">${bi('chevron-down')}</button></span></div>`; }).join('')}</div>
+    <h2>3. Verknüpfungen <span class="chip" id="pinCount">${pins.length} gewählt</span></h2>
+    <p class="small soft">Tippe die Seiten an, die als Kachel auf der Startseite stehen sollen. Auf jeder Seite gibt es dafür auch den Knopf „Zur Startseite“.</p>
+    <div class="pin-pick">${Object.entries(info).map(([k, [ic, t]]) => `<button type="button" class="pin-opt ${pins.includes(k) ? 'on' : ''}" data-pinopt="${k}" aria-pressed="${pins.includes(k)}">${bi(ic)}<span>${t}</span>${pins.includes(k) ? bi('check-lg') : ''}</button>`).join('')}</div>
+    <a class="btn btn-solid theme-primary w-100 mt-3" href="#/">Fertig, zur Startseite</a>`;
+  view.querySelectorAll('[data-hm]').forEach(c => c.onchange = () => { c.checked ? on.add(c.dataset.hm) : on.delete(c.dataset.hm); saveHome(order, on); markPreset(); $('#hmCount').textContent = `${on.size} von ${order.length} sichtbar`; });
+  const markPreset = () => { const cur = Object.entries(HOME_PRESETS).find(([, v]) => v.length === on.size && v.every(x => on.has(x)))?.[0]; view.querySelectorAll('[data-preset]').forEach(b => { const p = b.dataset.preset === cur; b.classList.toggle('on', p); b.setAttribute('aria-pressed', p); }); };
   const move = (id, d) => { const i = order.indexOf(id), j = i + d; if (j < 0 || j >= order.length) return; [order[i], order[j]] = [order[j], order[i]]; saveHome(order, on); render(); };
   view.querySelectorAll('[data-up]').forEach(b => b.onclick = () => move(b.dataset.up, -1));
   view.querySelectorAll('[data-down]').forEach(b => b.onclick = () => move(b.dataset.down, 1));
   view.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { saveHome(order, new Set(HOME_PRESETS[b.dataset.preset])); render(); toast('Startseite angepasst'); });
+  view.querySelectorAll('[data-pinopt]').forEach(b => b.onclick = () => { setHomePin(b.dataset.pinopt, !homePins().includes(b.dataset.pinopt)); render(); });
 };
-
 // Tagebuch: für Mama (Hauptbereich) und für Papa (geschützter Papa-Bereich), gleiche Bedienung
 const diaryList = () => state.diary;
 const setDiaryList = (_who, list) => { state.diary = list; };
@@ -605,9 +657,37 @@ routes.colors = () => {
   view.innerHTML = `
     <h1>Farben</h1><p class="soft">Such dir die Stimmung aus, die zu dir passt. Alle Farbwelten sind so gewählt, dass Texte gut lesbar bleiben.</p>
     <div class="theme-grid">${Object.keys(THEME_DEFS).map(card).join('')}</div>
+    <h2>Eigene Kombination</h2>
+    <div class="card custom-theme" id="customCard">
+      <button type="button" class="theme-card ${s.theme === 'custom' ? 'sel' : ''}" id="useCustom" aria-pressed="${s.theme === 'custom'}" aria-label="Eigene Kombination verwenden">
+        <span class="theme-prev" id="customPrev" style="background:${themeDef('custom').bg};border-color:${themeDef('custom').line}"><i style="background:${themeDef('custom').s2}"></i><i style="background:${themeDef('custom').primary}"></i><i style="background:${themeDef('custom').accent}"></i></span>
+        <b>Eigene Kombination</b>${s.theme === 'custom' ? bi('check-circle-fill') : ''}</button>
+      <p class="small soft mt-2">Wähle drei Farben. Wir passen Texte und Flächen automatisch an, damit alles gut lesbar bleibt.</p>
+      ${[['primary', 'Hauptfarbe', 'Knöpfe, Überschriften, Symbole'], ['accent', 'Akzentfarbe', 'kleine Highlights'], ['bg', 'Hintergrund-Ton', 'der Farbton des Hintergrunds']].map(([k, l, d]) => `<div class="cc-row"><label class="keep cc-label" for="cc_${k}"><b>${l}</b><span class="small soft">${d}</span></label><input type="color" class="color-input" id="cc_${k}" data-cc="${k}" value="${customColors()[k].toLowerCase()}" aria-label="${l} wählen"><input class="hex-input" data-cch="${k}" value="${customColors()[k]}" maxlength="7" autocomplete="off" spellcheck="false" aria-label="${l} als Hex-Wert"></div>`).join('')}
+      <div class="cc-check small" id="ccCheck" aria-live="polite"></div>
+      <div class="hstack gap-2 mt-2 flex-wrap"><button type="button" class="btn btn-solid theme-primary" id="ccApply">${bi('check2')} Diese Kombination verwenden</button><button type="button" class="btn btn-text" id="ccReset">Zurücksetzen</button></div>
+    </div>
     <h2>Darstellung</h2>
     <div class="card"><div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-m="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>`;
   view.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { s.theme = b.dataset.th; save(); applyTheme(); render(); cheer('style'); });
+  // Eigene Kombination: live anzeigen, mit "Verwenden" speichern
+  const refreshCustom = () => {
+    const t = themeDef('custom'); if (s.theme === 'custom') applyTheme();
+    const pv = $('#customPrev'); if (pv) { pv.style.background = t.bg; pv.style.borderColor = t.line; const i = pv.querySelectorAll('i'); i[0].style.background = t.s2; i[1].style.background = t.primary; i[2].style.background = t.accent; }
+    const r = contrastHex('#FFFFFF', t.primary), rt = contrastHex(t.text, t.bg), ck = $('#ccCheck');
+    if (ck) { const lvl = x => x >= 7 ? 'sehr gut' : x >= 4.5 ? 'gut' : 'schwach'; ck.textContent = `Lesbarkeit: Knöpfe ${lvl(r)} (${r.toFixed(1).replace('.', ',')} : 1), Text ${lvl(rt)} (${rt.toFixed(1).replace('.', ',')} : 1). Die Farben werden bei Bedarf automatisch angepasst.`; }
+  };
+  const setCustom = (k, v) => { s.customTheme = { ...customColors(), ...(s.customTheme || {}), [k]: v.toUpperCase() }; refreshCustom(); };
+  view.querySelectorAll('[data-cc]').forEach(inp => {
+    const k = inp.dataset.cc, hex = view.querySelector(`[data-cch="${k}"]`);
+    inp.addEventListener('input', () => { hex.value = inp.value.toUpperCase(); setCustom(k, inp.value); });
+    inp.addEventListener('change', () => { save(); });
+    hex.addEventListener('change', () => { let v = hex.value.trim(); if (v && v[0] !== '#') v = '#' + v; if (isHex(v)) { inp.value = v.toLowerCase(); hex.value = v.toUpperCase(); setCustom(k, v); save(); } else { toast('Bitte einen Farbwert wie #A0537A eingeben'); hex.value = customColors()[k]; } });
+  });
+  $('#ccApply').onclick = () => { s.customTheme = { ...customColors() }; s.theme = 'custom'; save(); applyTheme(); render(); cheer('style'); };
+  $('#useCustom').onclick = () => { s.customTheme = { ...customColors() }; s.theme = 'custom'; save(); applyTheme(); render(); cheer('style'); };
+  $('#ccReset').onclick = () => { delete s.customTheme; save(); if (s.theme === 'custom') applyTheme(); render(); };
+  refreshCustom();
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { s.mode = b.dataset.m; save(); applyTheme(); render(); });
 };
 
@@ -648,12 +728,19 @@ const favPicker = (who, name, label, hint) => `<label class="keep form-label mt-
       <span class="small soft">Eigene Farbe</span>
     </div>
     <p class="small soft mt-2 mb-0">${hint}</p>`;// Profilformular einer Person. Für Frau und Mann identisch aufgebaut: 1. Name (ganz oben), 2. bis zu 3 Fotos.
+// Foto-Plätze (bis zu 3) für Mama, Papa und das Baby
+const slotsHTML = (who, list) => Array.from({ length: MAX_PHOTOS }, (_, i) => list[i]
+  ? `<div class="slot"><img data-img="${list[i]}" alt=""><button class="slot-del" data-pdel="${who}:${list[i]}" aria-label="Foto entfernen">${bi('x-lg')}</button></div>`
+  : `<button class="slot add" data-padd="${who}" aria-label="Foto hinzufügen">${bi('plus-lg')}</button>`).join('');
+// Bild vom Baby: zum Beispiel das Ultraschallbild, später Fotos vom Kind
+const kidPhotoBlock = () => { const list = photosOf('kid');
+  return `<div class="kid-photos" data-person="kid"><div class="hstack gap-2 mt-3 mb-2"><b class="flex-grow-1">Bild vom Baby</b><span class="chip">${list.length}/${MAX_PHOTOS}</span></div>
+    <div class="photo-slots">${slotsHTML('kid', list)}</div>
+    <input type="file" class="pfile" data-who="kid" accept="image/*" multiple hidden>
+    <p class="small soft mt-2 mb-0">Zum Beispiel das Ultraschallbild oder später ein Foto von ${nick()}. Bis zu ${MAX_PHOTOS} Bilder, sie bleiben auf diesem Gerät und werden automatisch verkleinert.</p></div>`; };
 const personBlock = who => {
   const s = state.settings, w = WHO[who], list = photosOf(who), inputId = who === 'mama' ? 'sm' : 'sp';
-  const slots = Array.from({ length: MAX_PHOTOS }, (_, i) => list[i]
-    ? `<div class="slot"><img data-img="${list[i]}" alt=""><button class="slot-del" data-pdel="${who}:${list[i]}" aria-label="Foto entfernen">${bi('x-lg')}</button></div>`
-    : `<button class="slot add" data-padd="${who}" aria-label="Foto hinzufügen">${bi('plus-lg')}</button>`).join('');
-  return `<div class="card person-form" data-person="${who}">
+  const slots = slotsHTML(who, list); data-person="${who}">
     <label for="${inputId}">Name</label>
     <input id="${inputId}" value="${esc(s[w.name])}" autocomplete="given-name" maxlength="30" placeholder="${who === 'mama' ? 'Dein Name, z. B. Sarah' : 'Dein Name, z. B. Norbert'}">
     <label class="keep form-label mt-3" for="${who}-title">Anrede in der App</label>
@@ -663,7 +750,7 @@ const personBlock = who => {
     <div class="hstack gap-2 mt-3 mb-2"><b class="flex-grow-1">Fotos</b><span class="chip">${list.length}/${MAX_PHOTOS}</span></div>
     <div class="photo-slots">${slots}</div>
     <input type="file" class="pfile" data-who="${who}" accept="image/*" multiple hidden>
-    <p class="small soft mt-2 mb-0">Bis zu ${MAX_PHOTOS} Fotos. Sie tauchen überall in der App auf und bleiben auf diesem Gerät.</p></div>`;
+    <p class="small soft mt-2 mb-0">Bis zu ${MAX_PHOTOS} Fotos. Sie tauchen überall in der App auf und bleiben auf diesem Gerät. Fotos werden automatisch verkleinert, das spart Platz.</p></div>`;
 };
 // Lieblingsfarbe binden (Mama, Papa, Baby)
 function bindFav(who) {
@@ -687,8 +774,8 @@ function bindPerson(who) {
   view.querySelectorAll(`[data-padd="${who}"]`).forEach(b => b.onclick = () => file.click());
   bindFav(who);
   const ti = view.querySelector(`[data-ptitle="${who}"]`);
-  ti.addEventListener('input', e => { const v = cleanTitle(e.target.value); if (v) s[titleKey(who)] = v; else delete s[titleKey(who)]; retitleAll(); });
-  ti.addEventListener('change', () => { save(); render(); toast(`Ab jetzt heißt es überall: ${roleTitle(who)}. Schön!`); });
+  if (ti) ti.addEventListener('input', e => { const v = cleanTitle(e.target.value); if (v) s[titleKey(who)] = v; else delete s[titleKey(who)]; retitleAll(); });
+  if (ti) ti.addEventListener('change', () => { save(); render(); toast(`Ab jetzt heißt es überall: ${roleTitle(who)}. Schön!`); });
   file.onchange = async e => {
     const files = [...e.target.files].slice(0, MAX_PHOTOS - photosOf(who).length); e.target.value = '';
     if (!files.length) return;
@@ -720,9 +807,10 @@ routes.settings = () => {
       <label for="ss">Geheimer Name</label><input id="ss" value="${esc(s.secretName)}" maxlength="40" autocomplete="off" placeholder="Nur Mama und Papa wissen’s">
       <p class="small soft" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und auf der Startseite verdeckt angezeigt.</p>
       ${favPicker('kid', s.nick || 'das Baby', 'Lieblingsfarbe vom Baby', 'Die Farbe vom Herz deines Babys, sichtbar bei den Namen unter jeder Überschrift.')}
+      ${kidPhotoBlock()}
     </div>
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>`;
-  bindPerson('mama'); bindName('#sm', 'mama'); bindFav('kid');
+  bindPerson('mama'); bindName('#sm', 'mama'); bindPerson('kid');
   const bind = (id, key) => $(id).onchange = e => { s[key] = e.target.value.trim(); save(); cheer(); };
   bind('#sd', 'dueDate'); bind('#sn', 'nick'); bind('#ss', 'secretName');
   // Kosename: Kennzeichnung unter der Überschrift zieht beim Tippen sofort mit
@@ -755,26 +843,14 @@ routes.papa = () => {
 };
 
 // Eigener Bereich "Einstellungen": Farben und Datensicherung
+// Einstellungen als Akkordeon: jeder Bereich lässt sich auf- und zuklappen, es ist immer nur einer offen
+let settingsOpen = null;
 routes.einstellungen = () => {
   const s = state.settings, last = s.lastBackup;
-  setTimeout(() => {
-    const g = $('#openGuide'); if (g) g.onclick = showGuide;
-    bindBrandEditor();
-  }, 0);
-  view.innerHTML = `
-    <h1>Einstellungen</h1><p class="soft">Hier stellst du die App so ein, wie sie sich für euch gut anfühlt.</p>
-    ${brandEditorHTML()}
-    <a class="card link-card" href="#/homeconfig"><div class="hstack gap-3">${bi('sliders')}<div class="flex-grow-1"><b>Startseite einrichten</b><div class="small soft">Welche Bausteine du siehst und in welcher Reihenfolge</div></div>${bi('chevron-right')}</div></a>
-    <a class="card link-card" href="#/applock"><div class="hstack gap-3">${bi('shield-lock-fill')}<div class="flex-grow-1"><b>App-Sperre</b><div class="small soft">${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App</div></div>${bi('chevron-right')}</div></a>
-    <button class="card link-card w-100 text-start" id="openGuide" type="button" style="border:1px solid var(--line);color:inherit;font-weight:400"><div class="hstack gap-3">${bi('compass')}<div class="flex-grow-1"><b>Kurzanleitung</b><div class="small soft">So funktioniert BABYLOVE, in einer Minute erklärt</div></div>${bi('chevron-right')}</div></button>
-    <a class="card link-card" href="#/privacy"><div class="hstack gap-3">${bi('shield-check')}<div class="flex-grow-1"><b>Datenschutz und Sicherheit</b><div class="small soft">Offen erklärt: Deine Daten bleiben bei dir</div></div>${bi('chevron-right')}</div></a>
-    <a class="card link-card" href="#/export"><div class="hstack gap-3">${bi('box-arrow-up')}<div class="flex-grow-1"><b>Datenexport</b><div class="small soft">Alles lesbar mitnehmen: JSON, CSV oder HTML</div></div>${bi('chevron-right')}</div></a>
-    <a class="card link-card" href="#/quotes"><div class="hstack gap-3">${bi('chat-quote')}<div class="flex-grow-1"><b>Eigene Sprüche</b><div class="small soft">Sprüche importieren, die täglich wechseln</div></div>${bi('chevron-right')}</div></a>
-    <a class="card link-card" href="#/colors"><div class="hstack gap-3">${bi('palette2')}<div class="flex-grow-1"><b>Farben</b><div class="small soft">${esc(THEME_DEFS[s.theme].name)} · hell, dunkel oder automatisch</div></div>${bi('chevron-right')}</div></a>
-    <a class="card link-card" href="#/backup"><div class="hstack gap-3">${bi('shield-lock')}<div class="flex-grow-1"><b>Datensicherung</b><div class="small soft">${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage</div></div>${bi('chevron-right')}</div></a>
-    <h2>Schrift</h2>
-    <div class="card" id="fontCard">
-      <b id="ffLabel">Schriftart</b>
+  const modeLabel = { auto: 'Automatisch', light: 'Hell', dark: 'Dunkel' }[s.mode] || 'Automatisch';
+  const acc = (id, icon, title, sub, body) => `<details class="acc card" data-acc="${id}"${settingsOpen === id ? ' open' : ''}><summary><span class="acc-ico">${bi(icon)}</span><span class="acc-text"><b>${title}</b><span class="small soft" ${id === 'brand' ? 'id="accBrandSub"' : ''}>${sub}</span></span>${bi('chevron-down')}</summary><div class="acc-body">${body}</div></details>`;
+  const go = (href, label) => `<a class="btn btn-solid theme-primary" href="${href}">${label} ${bi('arrow-right')}</a>`;
+  const fontBody = `<b id="ffLabel">Schriftart</b>
       <div class="font-list mt-2" role="radiogroup" aria-labelledby="ffLabel">${Object.entries(FONT_FAMILIES).map(([k, f]) => `<button type="button" class="font-opt ${(s.fontFamily || 'soft') === k ? 'on' : ''}" role="radio" aria-checked="${(s.fontFamily || 'soft') === k}" data-ff="${k}" style="font-family:${esc(f.stack)}"><span class="fo-name">${f.label}</span><span class="fo-sample">Aa · Du schaffst das!</span><span class="fo-note small">${f.note}</span></button>`).join('')}</div>
       <p class="small soft mt-2 mb-3">Alle Schriften sind auf jedem Gerät und in jedem Browser schon vorhanden: Sie laden schnell, funktionieren offline und übertragen nichts.</p>
       <b id="fsLabel">Schriftgröße</b>
@@ -782,11 +858,29 @@ routes.einstellungen = () => {
         <input type="range" id="fsRange" min="${FONT_SCALE.min}" max="${FONT_SCALE.max}" step="${FONT_SCALE.step}" value="${fontScale()}" aria-label="Schriftgröße in Prozent" aria-valuetext="${fontScale()} Prozent">
         <button type="button" class="btn btn-subtle theme-secondary" id="fsUp" aria-label="Schrift größer">${bi('plus-lg')}</button></div>
       <div class="hstack justify-content-between mt-1"><span class="small soft"><span id="fsValue">${fontScale()}</span> %</span><button type="button" class="btn btn-text btn-sm" id="fsReset">Zurücksetzen auf ${FONT_SCALE.def} %</button></div>
-      <div class="size-preview"><b>So sieht deine Schrift aus</b><p class="mb-0 soft">Noch ${daysLeftText()} bis zum Termin. Du schaffst das, großartig!</p></div>
-    </div>    <h2>Darstellung</h2>
-    <div class="card"><div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+      <div class="size-preview"><b>So sieht deine Schrift aus</b><p class="mb-0 soft">Noch ${daysLeftText()} bis zum Termin. Du schaffst das, großartig!</p></div>`;
+  view.innerHTML = `
+    <h1>Einstellungen</h1><p class="soft">Tippe einen Bereich an, dann klappt er auf. Es ist immer nur einer offen, so bleibt alles übersichtlich.</p>
+    ${acc('brand', 'tag-fill', 'Name der App', esc(brandFull()), brandEditorHTML())}
+    ${acc('colors', 'palette2', 'Farben', `${esc(themeDef(s.theme).name)} · eure Farbwelt`, `<p class="small soft">Acht weiche Farbwelten oder eine eigene Kombination, dazu eine Lieblingsfarbe für Mama, Papa und das Baby.</p>${go('#/colors', 'Farben ändern')}`)}
+    ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
+    ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
+    ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
+    ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
+    ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
+    ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
+    ${acc('quotes', 'chat-quote', 'Eigene Sprüche', 'Sprüche importieren, die täglich wechseln', go('#/quotes', 'Sprüche verwalten'))}
+    ${acc('export', 'box-arrow-up', 'Datenexport', 'Alles lesbar mitnehmen: JSON, CSV oder HTML', go('#/export', 'Daten exportieren'))}
+    ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
     <p class="version" id="appVersion">${esc(versionLine())}</p>`;
+  const panels = [...view.querySelectorAll('details.acc')];
+  panels.forEach(d => d.addEventListener('toggle', () => {
+    if (d.open) { settingsOpen = d.dataset.acc; panels.forEach(o => { if (o !== d && o.open) o.open = false; }); }
+    else if (settingsOpen === d.dataset.acc) settingsOpen = null;
+  }));
+  const g = $('#openGuide'); if (g) g.onclick = showGuide;
+  bindBrandEditor();
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
   const range = $('#fsRange'), setScale = (v, commit) => { v = Math.min(FONT_SCALE.max, Math.max(FONT_SCALE.min, Math.round(v / FONT_SCALE.step) * FONT_SCALE.step)); s.fontScale = v; range.value = v; range.setAttribute('aria-valuetext', v + ' Prozent'); $('#fsValue').textContent = v; applyTheme(); if (commit) { save(); cheer('style'); } };
   range.addEventListener('input', () => setScale(+range.value, false)); range.addEventListener('change', () => setScale(+range.value, true));
@@ -799,7 +893,7 @@ const daysLeftText = () => { const p = pregnancy(); return p ? `${Math.max(p.lef
 const blobToData = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
 async function exportData() {
   const ids = [...state.diary.map(d => d.photoId), ...state.photos.map(p => p.photoId), ...state.milestones.map(m => m.photoId),
-    ...state.pass.map(p => p.photoId), ...state.letters.map(l => l.audioId), ...photosOf('mama'), ...photosOf('partner')].filter(Boolean);
+    ...state.pass.map(p => p.photoId), ...state.letters.map(l => l.audioId), ...photosOf('mama'), ...photosOf('partner'), ...photosOf('kid')].filter(Boolean);
   const images = {};
   for (const id of ids) { const b = await getImg(id); if (b) images[id] = await blobToData(b); }
   const file = new Blob([JSON.stringify({ app: 'babylove', v: 1, state, images })], { type: 'application/json' });
@@ -842,7 +936,8 @@ async function importData(e) {
 // Personen: Frau (mama) und Mann (partner), je bis zu 3 Fotos. Die Fotos tauchen rotierend überall in der App auf.
 const WHO = {
   mama: { photos: 'mamaPhotos', name: 'mama', fallback: 'Ich', nav: 'navMe', title: 'meTitle', navIcon: 'navMeIcon', navImg: 'navMeImg' },
-  partner: { photos: 'partnerPhotos', name: 'partner', fallback: 'Papa', nav: 'navPa', title: 'paTitle', navIcon: 'navPaIcon', navImg: 'navPaImg' }
+  partner: { photos: 'partnerPhotos', name: 'partner', fallback: 'Papa', nav: 'navPa', title: 'paTitle', navIcon: 'navPaIcon', navImg: 'navPaImg' },
+  kid: { photos: 'kidPhotos', name: 'nick', fallback: 'Baby' }
 };
 const MAX_PHOTOS = 3;
 const photosOf = who => state.settings[WHO[who].photos] || [];
@@ -850,13 +945,13 @@ const randomPhoto = who => { const p = photosOf(who); return p.length ? pick(p) 
 const avatar = (id, cls = '') => `<span class="avatar ${cls}">${id ? `<img data-img="${id}" alt="">` : bi('person-fill')}</span>`;
 const personAvatar = (who, cls = 'avatar-sm') => { const id = randomPhoto(who); return id ? avatar(id, cls) : ''; };
 // Kleiner Foto-Stapel für Überschriften: je Person ein zufälliges Foto
-const avatarStack = (cls = 'avatar-sm') => { const ids = ['mama', 'partner'].map(randomPhoto).filter(Boolean); return ids.length ? `<span class="avatar-stack">${ids.map(i => avatar(i, cls)).join('')}</span>` : ''; };
+const avatarStack = (cls = 'avatar-sm') => { const ids = ['mama', 'partner', 'kid'].map(randomPhoto).filter(Boolean); return ids.length ? `<span class="avatar-stack">${ids.map(i => avatar(i, cls)).join('')}</span>` : ''; };
 const FAMILY_CAPTIONS = ['Euer Team', 'Zwei Herzen, ein Baby', 'Die besten Eltern-to-be der Welt', 'Ihr schafft das. Hier der Beweis.', 'Wer lacht, hat schon gewonnen'];
 const familyCard = () => {
-  const pool = ['mama', 'partner'].flatMap(photosOf);
+  const pool = ['mama', 'partner', 'kid'].flatMap(photosOf);
   return pool.length ? `<div class="card family"><img data-img="${pick(pool)}" alt=""><div class="small soft mt-2">${pick(FAMILY_CAPTIONS)}</div></div>` : '';
 };
-async function storeAvatar(file) { const id = uid(); await putImg(id, await shrink(file, 360)); return id; }
+async function storeAvatar(file) { const id = uid(); await putImg(id, await shrink(file, 360, 60, true)); return id; }
 // Früheres Papa-Tagebuch wird ins gemeinsame Tagebuch übernommen (Autor: Papa), nichts geht verloren
 function migrateDiaries() {
   if (Array.isArray(state.papaDiary) && state.papaDiary.length) { state.diary.push(...state.papaDiary.map(d => ({ ...d, by: d.by || 'partner' }))); state.diary.sort((a, b) => b.date.localeCompare(a.date)); save(); }
@@ -922,7 +1017,7 @@ function applyBrand() {
 // Einstellungen ganz oben: App-Name und Text darunter, beides frei wählbar
 function brandEditorHTML() {
   const s = state.settings;
-  return `<div class="card brand-card" id="brandCard"><div class="hstack gap-2 mb-1">${bi('tag-fill')}<b>Name der App</b></div>
+  return `<div id="brandCard">
     <p class="small soft">So heißt eure App. Der Name erscheint überall: Kopfleiste, Begrüßung, Ausdrucke und Exporte.</p>
     <label for="brandName">App-Name</label>
     <input id="brandName" maxlength="${BRAND_NAME_MAX}" value="${esc(cleanBrandName(s.appName))}" placeholder="${BRAND_NAME_DEFAULT}" autocomplete="off">
@@ -933,7 +1028,7 @@ function brandEditorHTML() {
 }
 function bindBrandEditor() {
   const n = $('#brandName'), t = $('#brandSub'); if (!n || !t) return;
-  const refresh = () => { applyBrand(); $('#brandPreview').textContent = brandFull(); const ver = $('#appVersion'); if (ver) ver.textContent = versionLine(); $('#brandCount').textContent = `${cleanBrandSub(t.value).length} von ${BRAND_SUB_MAX} Zeichen`; };
+  const refresh = () => { applyBrand(); $('#brandPreview').textContent = brandFull(); const bs = $('#accBrandSub'); if (bs) bs.textContent = brandFull(); const ver = $('#appVersion'); if (ver) ver.textContent = versionLine(); $('#brandCount').textContent = `${cleanBrandSub(t.value).length} von ${BRAND_SUB_MAX} Zeichen`; };
   const put = (key, el, clean) => { const v = clean(el.value); if (v) state.settings[key] = v; else delete state.settings[key]; save(); refresh(); };
   n.addEventListener('input', () => put('appName', n, cleanBrandName));
   t.addEventListener('input', () => put('appSub', t, cleanBrandSub));
@@ -942,7 +1037,7 @@ function bindBrandEditor() {
   $('#brandReset').onclick = () => { delete state.settings.appName; delete state.settings.appSub; n.value = ''; t.value = ''; save(); refresh(); cheer('style'); };
 }const updateNavNames = () => { updateNavName(undefined, 'mama'); updateNavName(undefined, 'partner'); };
 Object.assign(routes, EXTRA_ROUTES);
-const SUBPAGES = new Set(['partner', 'letters', 'names', 'milestones', 'wishes', 'lists', 'planner', 'recipes', 'food', 'move', 'vits', 'water', 'contacts', 'pass', 'baby', 'tips', 'colors', 'backup']);
+const SUBPAGES = new Set(['partner', 'letters', 'names', 'milestones', 'wishes', 'lists', 'planner', 'recipes', 'food', 'move', 'vits', 'water', 'breathing', 'contacts', 'pass', 'baby', 'tips', 'colors', 'backup']);
 const SETTINGS_PAGES = new Set(['einstellungen', 'colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']); // eigener Bereich, ohne Tab unten
 const SETTINGS_SUB = new Set(['colors', 'backup', 'homeconfig', 'applock', 'quotes', 'export', 'privacy']);
 // Unterseiten mit eigener Rücksprung-Adresse und passendem Menüpunkt unten
@@ -975,6 +1070,7 @@ function render() {
   // Kennzeichnung unter der Überschrift: Mama, Papa oder gemeinsam (zwei Herzen)
   const au = PAGE_AUDIENCE[key];
   if (h1 && au) h1.insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
+  if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) h1.insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
   // Immer gleiche Orientierung: Häuschen mit Herz (Startseite) und ein Schritt zurück in den Bereich
   const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? ['#/more', 'Mehr'] : null;
   if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back">${bi('chevron-left')} ${backTo[1]}</a></div>`);
@@ -990,6 +1086,8 @@ if (!state.settings.firstUse) { state.settings.firstUse = iso(today()); save(); 
 migratePhotos();
 migrateDiaries();
 $('#topShare').onclick = shareApp;
+// Klick auf den App-Namen oben links: immer zur Startseite und ganz nach oben (auch wenn man schon dort ist)
+$('.topbrand').addEventListener('click', e => { e.preventDefault(); const onHome = ['', '#', '#/'].includes(location.hash); if (!onHome) location.hash = '#/'; else render(); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; window.scrollTo(0, 0); });
 applyTheme();
 render();
 appStart();

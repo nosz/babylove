@@ -307,7 +307,7 @@ EXTRA_ROUTES.quotes = () => {
 const versionLine = () => `${brandFull()} · Version ${APP_VERSION.number} · Stand ${fmtDate(APP_VERSION.date)}`;
 EXTRA_ROUTES.privacy = () => {
   const approx = Math.round(((localStorage.getItem('babylove:v1') || '').length * 2) / 1024);
-  const counts = [['Tagebucheinträge', state.diary.length], ['Fotos im Album', state.photos.length], ['Briefe ans Baby', state.letters.length], ['Profilfotos', photosOf('mama').length + photosOf('partner').length], ['Wünsche', state.wishes.length], ['Termine', state.appts.length]];
+  const counts = [['Tagebucheinträge', state.diary.length], ['Fotos im Album', state.photos.length], ['Briefe ans Baby', state.letters.length], ['Profilfotos', photosOf('mama').length + photosOf('partner').length + photosOf('kid').length], ['Wünsche', state.wishes.length], ['Termine', state.appts.length]];
   const item = (title, text) => `<li>${bi('check-circle-fill')}<div><b>${title}</b><div class="small soft">${text}</div></div></li>`;
   view.innerHTML = `${intro('Datenschutz und Sicherheit', 'Deine Schwangerschaft gehört dir. Hier steht offen und verständlich, was die App mit deinen Daten macht.')}
     <div class="card"><ul class="trust-list">

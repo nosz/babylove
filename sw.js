@@ -1,5 +1,5 @@
 // BABYLOVE by Sarah: Service Worker. Version muss zu APP_VERSION in content.js passen.
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const CACHE = 'babylove-' + VERSION;
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './content.js', './features.js', './extras.js', './printing.js',

@@ -44,6 +44,7 @@ const HUB = [
   ['food', 'egg-fried', 'Ernährung', 'Erlaubt, verboten, Hinweise'],
   ['recipes', 'cookie', 'Kochrezepte', 'Gesund, lecker, mit Einkaufsliste'],
   ['move', 'bicycle', 'Bewegung', 'Pro Trimester, Beckenboden, Yoga'],
+  ['breathing', 'wind', 'Atemübungen', 'Ruhig atmen, Kraft sammeln'],
   ['vits', 'capsule', 'Vitamine', 'Tägliche Erinnerung'],
   ['water', 'droplet-half', 'Wasser-Tracker', 'Gläser pro Tag'],
   ['contacts', 'telephone-fill', 'Kontakte & Notfall', 'Hebamme, Arzt, wichtige Nummern'],
@@ -73,7 +74,7 @@ const nextPapaTip = tri => {
 // Beim Öffnen: Tipp des Tages (wechselt täglich); das Icon würfelt zufällig einen neuen
 // Alles Tägliche für den Papa in EINER Karte: Mission, Tipp und Motivation. Alles wechselt täglich, die Icons würfeln neu.
 const papaFor = () => `<span class="pd-for-name">für <span data-name="partner" data-fallback="Papa">${esc((state.settings.partner || '').trim() || 'Papa')}</span></span>`;
-const papaRow = (icon, label, id, text, btn, aria) => `<div class="pd-row"><div class="pd-ico">${bi(icon)}</div><div class="flex-grow-1"><div class="pd-label">${label} ${papaFor()}</div><p class="mb-0" id="${id}">${esc(papaName(text))}</p></div>
+const papaRow = (icon, label, id, text, btn, aria) => `<div class="pd-row"><div class="pd-ico">${bi(icon)}</div><div class="flex-grow-1"><div class="pd-label">${label}</div><p class="mb-0" id="${id}">${esc(papaName(text))}</p></div>
   <button class="btn btn-subtle theme-secondary btn-sm" id="${btn}" aria-label="${aria}">${bi('arrow-repeat')}</button></div>`;
 const papaDailyCard = tri => `<div class="card papa-daily">${papaRow('bullseye', 'Mission des Tages', 'papaMission', dailyPick(quotePool('missions'), 'mission'), 'newMission', 'Neue Mission')}
   ${papaRow('lightbulb', `Tipp für das ${tri}. Trimester`, 'papaTip', dailyPick(quotePool('papaTips', tri), 'tip' + tri), 'newPapaTip', 'Neuer Tipp')}
@@ -417,3 +418,52 @@ function bindTogether() {
     if (!was && togetherDone(day)) toast(pick(TOGETHER_DONE));
   });
 }
+
+/* ---------- Atemübungen ---------- */
+let BREATH_MS = 1000, breathRun = null, breathSel = 'belly', breathMin = 3;
+function stopBreath(done) {
+  const run = breathRun; if (!run) return; breathRun = null; run.alive = false; clearTimeout(run.t);
+  const btn = $('#bStart'), lab = $('#bLabel'), cnt = $('#bCount'), c = $('#bCircle');
+  if (btn) { btn.innerHTML = `${bi('play-fill')} Start`; btn.setAttribute('aria-pressed', 'false'); }
+  if (lab) lab.textContent = done ? 'Geschafft' : 'Bereit?'; if (cnt) cnt.textContent = ''; if (c) { c.style.transition = 'transform .6s ease-out'; c.style.transform = 'scale(.7)'; c.dataset.kind = ''; }
+  if (done) toast(`Schön gemacht, ${run.cycles} ruhige Atemzüge. Das hat gutgetan.`);
+}
+function startBreath(ex, minutes) {
+  stopBreath(); const circle = $('#bCircle'), label = $('#bLabel'), count = $('#bCount'), info = $('#bInfo'), btn = $('#bStart');
+  const run = breathRun = { alive: true, cycles: 0, t: 0 }, startedAt = Date.now(), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  btn.innerHTML = `${bi('stop-fill')} Stopp`; btn.setAttribute('aria-pressed', 'true'); circle.style.transition = 'none'; circle.style.transform = 'scale(.55)'; void circle.offsetWidth;
+  let pi = 0;
+  const phase = () => {
+    if (!run.alive || !document.body.contains(circle)) return stopBreath();
+    if (pi === 0 && run.cycles > 0 && (Date.now() - startedAt) >= minutes * 60 * BREATH_MS) return stopBreath(true);
+    const [name, secs, kind] = ex.pattern[pi]; label.textContent = name; circle.dataset.kind = kind; let left = secs; count.textContent = left;
+    if (!reduce) { circle.style.transition = `transform ${secs * BREATH_MS / 1000}s ease-in-out`; if (kind === 'in') circle.style.transform = 'scale(1)'; else if (kind === 'out') circle.style.transform = 'scale(.55)'; }
+    const tick = () => {
+      if (!run.alive) return; left--;
+      if (left > 0) { count.textContent = left; run.t = setTimeout(tick, BREATH_MS); return; }
+      pi = (pi + 1) % ex.pattern.length; if (pi === 0) { run.cycles++; info.textContent = `${run.cycles} ${run.cycles === 1 ? 'Atemzug' : 'Atemzüge'} geschafft`; } phase();
+    };
+    run.t = setTimeout(tick, BREATH_MS);
+  };
+  info.textContent = 'Los geht’s. Atme im Rhythmus des Kreises.'; phase();
+}
+X.breathing = () => {
+  stopBreath(); const ex = BREATH_EXERCISES.find(e => e.id === breathSel) || BREATH_EXERCISES[0];
+  const rhythm = e => e.pattern.map(([n, s]) => `${s} s`).join(' · ');
+  view.innerHTML = `${intro('Atemübungen', 'Ruhig atmen, Kraft sammeln. Hier kannst du direkt mitatmen. Der Kreis zeigt dir den Takt.')}
+    <div class="card breath-card">
+      <div class="breath-stage" role="img" aria-label="Atemkreis: wächst beim Einatmen und schrumpft beim Ausatmen"><div class="breath-circle" id="bCircle" aria-hidden="true"></div></div>
+      <div class="breath-inner"><div class="breath-label" id="bLabel" aria-live="polite">Bereit?</div><div class="breath-count" id="bCount" aria-hidden="true"></div></div>
+      <p class="small soft center mb-2" id="bInfo">${esc(ex.name)} · ${rhythm(ex)}</p>
+      <div class="hstack gap-2 justify-content-center flex-wrap"><button class="btn btn-solid theme-primary" id="bStart" type="button" aria-pressed="false">${bi('play-fill')} Start</button>
+        <div class="seg" role="group" aria-label="Dauer" style="margin:0">${[1, 3, 5].map(m => `<button type="button" data-bmin="${m}" class="${breathMin === m ? 'on' : ''}" aria-pressed="${breathMin === m}">${m} Min.</button>`).join('')}</div></div>
+    </div>
+    <h2>Übung wählen</h2>
+    <div class="breath-list" role="radiogroup" aria-label="Atemübung">${BREATH_EXERCISES.map(e => `<button type="button" class="breath-opt ${e.id === ex.id ? 'on' : ''}" role="radio" aria-checked="${e.id === ex.id}" data-bex="${e.id}"><span class="bo-name">${e.name}</span><span class="small soft">${e.tag} · ${rhythm(e)}</span></button>`).join('')}</div>
+    <div class="card breath-howto"><b>${esc(ex.name)}</b><p class="soft mt-1">${esc(ex.intro)}</p><ol class="mb-2">${ex.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>${ex.fun ? `<p class="small soft mb-0">${esc(ex.fun)}</p>` : ''}</div>
+    <div class="card"><b>${bi('shield-check')} Sicher atmen</b><ul class="small mt-2 mb-0">${BREATH_SAFETY.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>
+    <p class="small soft">Anregungen aus: ${BREATH_SOURCES.map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`).join(', ')}. Diese Übungen ersetzen keinen Geburtsvorbereitungskurs und keine Beratung durch Hebamme oder Frauenarzt.</p>`;
+  $('#bStart').onclick = () => breathRun ? stopBreath() : startBreath(ex, breathMin);
+  view.querySelectorAll('[data-bmin]').forEach(b => b.onclick = () => { breathMin = +b.dataset.bmin; view.querySelectorAll('[data-bmin]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); });
+  view.querySelectorAll('[data-bex]').forEach(b => b.onclick = () => { breathSel = b.dataset.bex; render(); });
+};

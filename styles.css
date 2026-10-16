@@ -551,3 +551,74 @@ a.link-card.hub .aud { margin-top: 8px; }
 .brand-card .hstack { flex-wrap: wrap; }
 
 .seg { flex-wrap: wrap; gap: 4px; } .seg button { flex: 1 1 auto; min-width: 0; }
+
+/* Begrüßung auf der Startseite */
+.greet { display: flex; align-items: center; gap: 12px; margin: 2px 0 10px; }
+.greet-text { min-width: 0; }
+.greet-hello { margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text); line-height: 1.25; overflow-wrap: anywhere; }
+.greet-hello .gn { white-space: nowrap; } .greet-hello .nm-heart { margin: 0 4px 0 0; font-size: .85em; vertical-align: -.05em; }
+.today { display: inline-flex; align-items: center; gap: 7px; margin: 6px 0 0; padding: 5px 13px 5px 10px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); color: var(--primary-strong); font-size: .86rem; font-weight: 700; }
+.today .bi { font-size: 1rem; }
+
+/* Einstellungen: Akkordeon */
+.acc { padding: 0; overflow: hidden; }
+.acc > summary { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; min-height: 56px; }
+.acc > summary::-webkit-details-marker { display: none; }
+.acc > summary > .bi { flex: none; color: var(--text-soft); transition: transform .2s; }
+.acc[open] > summary > .bi { transform: rotate(180deg); }
+.acc-ico { flex: none; width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--primary-strong); font-size: 1.1rem; }
+.acc-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; } .acc-text .small { overflow-wrap: anywhere; }
+.acc[open] { border-color: var(--primary); }
+.acc-body { padding: 4px 14px 16px; border-top: 1px solid var(--line); }
+.acc-body > :first-child { margin-top: 12px; }
+.acc > summary:focus-visible { outline: 3px solid var(--primary); outline-offset: -3px; border-radius: 16px; }
+
+/* Zur Startseite hinzufügen, Verknüpfungen, Startseite einrichten */
+.aud-row { flex-wrap: wrap; }
+.pin-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface); color: var(--primary-strong); font-size: .82rem; font-weight: 700; min-height: 32px; cursor: pointer; }
+.pin-btn.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.pin-btn:focus-visible, .pin-opt:focus-visible, .pin-tile:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.pins { margin-bottom: 14px; } .pin-head { display: flex; align-items: center; gap: 6px; margin: 0 0 6px 2px; font-weight: 700; }
+.pin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.2rem, 1fr)); gap: 10px; }
+.pin-tile { display: flex; align-items: center; gap: 10px; padding: 12px 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--text); text-decoration: none; font-weight: 700; font-size: .9rem; min-width: 0; box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent); }
+.pin-tile .bi { flex: none; font-size: 1.3rem; color: var(--primary-strong); } .pin-tile span { min-width: 0; overflow-wrap: anywhere; }
+.hm-list { padding: 4px 14px; }
+.hm-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); } .hm-row:last-child { border-bottom: 0; }
+.hm-ico { flex: none; width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--primary-strong); }
+.hm-text { flex: 1; min-width: 0; display: flex; flex-direction: column; margin: 0; font-weight: 400; } .hm-text b { font-weight: 700; }
+.hm-move { display: inline-flex; flex: none; } .hm-move .btn { padding: 4px 6px; min-height: 32px; }
+.pin-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 8px; }
+.pin-opt { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); text-align: left; cursor: pointer; min-height: 44px; font-size: .88rem; font-weight: 600; min-width: 0; }
+.pin-opt span { flex: 1; min-width: 0; overflow-wrap: anywhere; } .pin-opt .bi:first-child { color: var(--primary-strong); }
+.pin-opt.on { border-color: var(--primary); background: var(--surface-2); } .pin-opt.on .bi:last-child { color: var(--ok); }
+
+/* Eigene Farbkombination */
+.custom-theme .theme-card { width: 100%; max-width: 16rem; }
+.cc-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.cc-label { flex: 1; min-width: 0; display: flex; flex-direction: column; margin: 0; font-weight: 400; }
+.cc-row .color-input { flex: none; }
+.cc-row .hex-input { width: 6.4rem !important; flex: none; }
+.cc-check { color: var(--text-soft); margin-top: 8px; }
+.daily-sep { align-items: center; }
+
+/* Atemübungen */
+.breath-stage { position: relative; width: min(64vw, 14rem); aspect-ratio: 1; margin: 6px auto 8px; }
+.breath-circle { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--primary) 55%, #fff), var(--primary)); box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 35%, transparent); transform: scale(.7); opacity: .95; }
+.breath-circle[data-kind="hold"] { opacity: .8; }
+.breath-inner { text-align: center; color: var(--text); margin-bottom: 6px; min-height: 5.2rem; }
+.breath-label { font-weight: 800; font-size: 1.15rem; line-height: 1.2; overflow-wrap: anywhere; }
+.breath-count { font-size: 2.4rem; font-weight: 800; line-height: 1.1; }
+.breath-list { display: grid; gap: 8px; margin-bottom: 12px; }
+.breath-opt { display: flex; flex-direction: column; gap: 1px; text-align: left; width: 100%; padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; min-height: 52px; }
+.breath-opt .bo-name { font-weight: 700; } .breath-opt.on { border-color: var(--primary); background: var(--surface-2); box-shadow: 0 0 0 2px var(--primary) inset; }
+.breath-opt:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.breath-howto ol { padding-left: 1.2rem; }
+@media (prefers-reduced-motion: reduce) { .breath-circle { transition: none !important; } }
+
+/* Profilbilder und Fotos sauber auf dem Handy: Menü-Foto genau so groß wie die Symbole, Gesichter oben, Fotos nie überlang */
+#nav a img.avatar-nav { display: block; flex: none; width: 28px; height: 28px; min-height: 0; margin: 0 auto; padding: 0; border: 2px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--line); object-fit: cover; object-position: 50% 30%; aspect-ratio: 1; background: var(--surface-2); }
+#nav a img.avatar-nav[hidden] { display: none; }
+#nav a.active img.avatar-nav { box-shadow: 0 0 0 2px var(--primary-strong); }
+.avatar img { object-position: 50% 30%; }
+img[data-img][style*="width:100%"] { max-height: 72vh; object-fit: contain; background: var(--surface-2); }
+.photo-slots .slot img { object-fit: cover; object-position: 50% 30%; }
