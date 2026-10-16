@@ -222,7 +222,7 @@ X.wishes = () => {
   const w = state.wishes;
   view.innerHTML = `${intro('Wunschliste', 'Sag es lieber vorher, sonst gibt es 14 Mützen in Größe 50.')}
     ${w.length ? `<div class="card">${w.map(x => `<div class="todo ${x.got ? 'done' : ''}"><input type="checkbox" id="w${x.id}" data-g="${x.id}" ${x.got ? 'checked' : ''}>
-      <label for="w${x.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(x.text)}</span>${x.assigned ? ` <span class="chip">${bi('person-check')} bei ${esc(x.assigned)}</span>` : ''}${isUrl(x.link) ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')}</a>` : ''}</label>
+      <label for="w${x.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(x.text)}</span>${x.assigned ? ` <span class="chip">${bi('person-check')} bei ${esc(x.assigned)}</span>` : x.got ? '' : ` <span class="chip chip-free">${bi('person-dash')} Noch niemand zugewiesen</span>`}${isUrl(x.link) ? ` <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')}</a>` : ''}</label>
       <button class="btn btn-text theme-danger btn-sm" data-d="${x.id}" aria-label="Entfernen">${bi('x-lg')}</button></div>`).join('')}</div>` : empty('gift', 'Noch leer. Ein Kinderwagen mit Getränkehalter? Nur zu!')}
     <form id="wf" class="mt-3"><input id="wt" placeholder="Wunsch, z. B. Tragetuch" aria-label="Wunsch" maxlength="80" required><input id="wl" type="url" placeholder="Link (optional)" aria-label="Link zum Wunsch (optional)" style="margin-top:8px"><button class="btn btn-solid theme-primary w-100 mt-2">Hinzufügen</button></form>
     <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-solid theme-primary flex-grow-1" href="#/wishprint">${bi('printer')} Wunschzettel drucken</a><a class="btn btn-subtle theme-secondary flex-grow-1" href="#/wishlistprint">${bi('file-earmark-richtext')} Vorschau und Export</a>${w.length ? `<button class="btn btn-subtle theme-secondary flex-grow-1" id="shw">${bi('share')} Liste teilen</button>` : ''}</div>`;
@@ -315,14 +315,19 @@ function confetti(n = 220) {
   document.body.appendChild(box); setTimeout(() => box.remove(), 6200); return n;
 }
 // Super-Lob: große Karte in der Mitte mit Pokal, Lob und Konfetti, schließt sich von selbst oder per Tipp
-const PRAISE = ['Das hast du richtig stark gemacht!', 'Wahnsinn! Das Baby klatscht innerlich mit.', 'Du bist eine Wucht, wirklich!', 'Applaus, Applaus! Heute hast du alles gegeben.', 'Besser geht’s nicht. Gold für dich!', 'Du rockst das, und das Baby ist mächtig stolz.', 'Spitze! So sieht eine Heldin des Alltags aus.', 'Ein Hoch auf dich: konsequent, liebevoll, großartig.'];
-const PRAISE_TOGETHER = ['Ihr zwei seid ein Traumteam!', 'Zusammen seid ihr unschlagbar. Das Baby hat die besten Eltern der Welt!', 'Applaus für euch beide, das war richtig schön!', 'Mehr Liebe pro Tag geht kaum. Bravo, ihr zwei!'];
-function celebrate(kind = 'water') {
+// Lob-Texte: Hochdeutsch, bei gewählter Mundart (Einstellungen: Sprüche und Mundart) in dieser Mundart. "Oft" nur Mundart, "Ab und zu" mit Hochdeutsch gemischt.
+function praisePool(kind = 'mama') {
+  const key = kind === 'together' ? 'together' : 'mama', base = kind === 'water' ? [...PRAISE_BASE.mama, ...PRAISE_BASE.water] : PRAISE_BASE[key];
+  const dia = dialectKeys().flatMap(k => (PRAISE_DIALECT[k] || {})[key] || []);
+  if (!dia.length) return base;
+  return state.settings.dialectFreq === 'often' ? dia : [...dia, ...dia, ...base.slice(0, Math.max(2, Math.round(dia.length * .6)))];
+}
+const praiseLine = kind => pick(praisePool(kind));function celebrate(kind = 'water') {
   confetti(220);
   const st = state.settings, who = kind === 'together' ? [st.mama, st.partner].map(v => String(v || '').trim()).filter(Boolean).join(' und ') : String(st.mama || '').trim();
   const old = document.getElementById('praisePop'); if (old) old.remove();
   const el = document.createElement('div'); el.id = 'praisePop'; el.className = 'praise-pop'; el.setAttribute('role', 'status');
-  el.innerHTML = `<div class="pp-card"><span class="pp-ico">${bi('trophy-fill')}</span><b>Tagesziel erreicht!</b>${who ? `<span class="pp-name">Bravo, ${esc(who)}!</span>` : ''}<p>${esc(pick(kind === 'together' ? PRAISE_TOGETHER : PRAISE))}</p><span class="pp-stars" aria-hidden="true">${bi('stars')}</span><button type="button" class="btn btn-solid theme-primary">Danke, das tut gut!</button></div>`;
+  el.innerHTML = `<div class="pp-card"><span class="pp-ico">${bi('trophy-fill')}</span><b>Tagesziel erreicht!</b>${who ? `<span class="pp-name">Bravo, ${esc(who)}!</span>` : ''}<p>${esc(praiseLine(kind === 'together' ? 'together' : 'water'))}</p><span class="pp-stars" aria-hidden="true">${bi('stars')}</span><button type="button" class="btn btn-solid theme-primary">Danke, das tut gut!</button></div>`;
   document.body.appendChild(el);
   const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
   el.onclick = close; setTimeout(() => { if (el.isConnected) close(); }, 6500);
@@ -335,10 +340,10 @@ X.water = () => {
   view.innerHTML = `${intro('Wasser-Tracker', 'Dein Körper besteht zu großen Teilen aus Wasser. Und gerade baust du noch einen dazu.')}
     <div class="card center ${n >= goal ? 'goal-card' : ''}"><div style="font-size:3rem;font-weight:800">${n} <span class="soft" style="font-size:1.2rem">/ ${goal} Gläser</span></div>
       <div class="progress my-3" role="progressbar" aria-label="Wasserziel" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${goal}"><div class="progress-bar" style="width:${Math.min(100, n / goal * 100)}%"></div></div>
-      ${n >= goal ? `<p class="soft mb-2">${n * 250} ml</p>${goalBanner('Du bist ein Wasserfall der Motivation.')}` : `<p class="soft">${n * 250} ml · ${msgs}</p>`}
+      ${n >= goal ? `<p class="soft mb-2">${n * 250} ml</p>${goalBanner(dailyPick(praisePool('water'), 'praise-water'))}` : `<p class="soft">${n * 250} ml · ${msgs}</p>`}
       <div class="hstack gap-2 justify-content-center"><button class="btn btn-subtle theme-secondary" id="minus" aria-label="Ein Glas weniger">${bi('dash-lg')}</button><button class="btn btn-solid theme-primary" id="plus" style="min-width:140px">${bi('droplet-fill')} Glas getrunken</button></div></div>
     <div class="card"><label for="goal" class="form-label">Tagesziel (Gläser à 250 ml)</label><input id="goal" type="number" min="1" max="20" value="${goal}"><p class="small soft mt-2 mb-0">Wie viel für dich passt, klärst du mit Arzt oder Hebamme.</p></div>`;
-  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); celebrate('water'); toast('Tagesziel erreicht! Du bist ein Wasserfall der Motivation.'); } else cheer('water'); };
+  $('#plus').onclick = () => { state.water[d] = n + 1; save(); render(); if (n + 1 === goal && state.waterWin !== d) { state.waterWin = d; save(); celebrate('water'); toast('Tagesziel erreicht! ' + praiseLine('water')); } else cheer('water'); };
   $('#minus').onclick = () => { state.water[d] = Math.max(0, n - 1); save(); render(); };
   $('#goal').onchange = e => { state.waterGoal = Math.min(20, Math.max(1, +e.target.value || 8)); save(); render(); };
 };
@@ -676,13 +681,11 @@ function fetalCard(S) {
 X.weekstory = () => {
   const S = storyData(), n = S.slides.length; storyIdx = Math.max(0, Math.min(n - 1, storyIdx));
   view.innerHTML = `${intro('Wochen-Story', `Die aktuelle Entwicklung von ${esc(S.kid)} als drei schöne Bilder zum Teilen: mit Größenvergleich, Entwicklung und Zusammenfassung.`)}
-    <div class="st-lang"><label for="stDia" class="keep">${bi('translate')} Sprache der Story</label><select id="stDia" aria-label="Sprache der Story">${[['off', 'Hochdeutsch'], ...Object.entries(DIALECTS), ['alle', 'Bunt gemischt']].map(([k, l]) => `<option value="${k}" ${(state.settings.dialect || 'off') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
     <div class="story-wrap" id="storyWrap"><button type="button" class="st-nav st-prev" id="stPrev" aria-label="Voriges Bild">${bi('chevron-left')}</button><div id="storyBox">${storySlideHTML(S, storyIdx)}</div><button type="button" class="st-nav st-next" id="stNext" aria-label="Nächstes Bild">${bi('chevron-right')}</button></div>
     <div class="st-dots" role="group" aria-label="Bild wählen">${S.slides.map((s, i) => `<button type="button" class="st-dot ${i === storyIdx ? 'on' : ''}" data-st="${i}" aria-label="Bild ${i + 1} von ${n}" aria-pressed="${i === storyIdx}"></button>`).join('')}</div>
     <div class="hstack gap-2 flex-wrap mt-3"><button type="button" class="btn btn-solid theme-primary flex-grow-1" id="stShare">${bi('share-fill')} Dieses Bild teilen</button><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="stAll">${bi('images')} Alle drei teilen</button></div>
     ${fetalCard(S)}
     <p class="small soft mt-2" id="stNote">${S.body.mmM || S.body.gM ? `Größe und Gewicht dieser Woche sind eure eigenen Messwerte vom ${esc(fmtDate(S.body.date))}. Fehlende Werte sind Durchschnittswerte (Richtwerte).` : 'Größe und Gewicht sind Durchschnittswerte (Richtwerte). Eigene Messwerte könnt ihr oben eintragen.'} Beides ersetzt keine ärztliche Beratung. Auf dem Handy öffnet sich direkt das Teilen-Menü, am Computer werden die Bilder gespeichert.</p>`;
-  $('#stDia').onchange = e => { const k = e.target.value; if (k === 'off') { delete state.settings.dialect; delete state.settings.dialectFreq; } else state.settings.dialect = k; save(); render(); toast(k === 'off' ? 'Die Story ist wieder auf Hochdeutsch.' : `Die Story spricht jetzt ${k === 'alle' ? 'bunt gemischt' : DIALECTS[k]}!`); };
   const go = i => { storyIdx = (i + n) % n; render(); };
   $('#stPrev').onclick = () => go(storyIdx - 1); $('#stNext').onclick = () => go(storyIdx + 1);
   view.querySelectorAll('[data-st]').forEach(b => b.onclick = () => go(+b.dataset.st));

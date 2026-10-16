@@ -899,3 +899,9 @@ body:not(.onboarding) #view > h1:first-child{position:sticky;top:calc(var(--topb
 
 .confetti.still i{top:auto;opacity:0;animation:confetti-still 3.6s ease var(--delay,0s) forwards}
 @keyframes confetti-still{0%{opacity:0}20%{opacity:1}75%{opacity:1}100%{opacity:0}}
+
+/* Wunschzettel: einfache drei Schritte */
+.wp-more>summary{display:flex;flex-direction:column;gap:2px;cursor:pointer;list-style:none}.wp-more>summary::-webkit-details-marker{display:none}.wp-more[open]>summary{margin-bottom:10px}
+.wish-send .btn{min-height:48px}
+
+.chip.chip-free{background:transparent;border:1.5px dashed var(--line);color:var(--text-soft)}

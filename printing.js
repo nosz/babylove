@@ -61,11 +61,26 @@ EXTRA_ROUTES.wishprint = () => {
   const cfg = wishCfg(), open = state.wishes.filter(w => !w.got);
   cfg.sel = cfg.sel.filter(id => open.some(w => w.id === id));
   const contacts = (state.contacts || []).map(c => c.name);
-  view.innerHTML = `<div class="no-print">${intro('Wunschzettel drucken', 'Such dir bis zu drei Wünsche aus, gib den Zettel einer Person und lass sie die Wünsche erfüllen. Mit Humor und in professionellem Layout.')}
+  const people = [...new Set([...contacts, 'Oma', 'Opa', 'Tante', 'Onkel', 'Patentante', 'Patenonkel', 'Freundin', 'Freund'])].slice(0, 10);
+  view.innerHTML = `<div class="no-print">${intro('Wunschzettel', 'In drei einfachen Schritten: Person wählen, Wünsche aussuchen, verschicken. Mit Humor und in schönem Layout.')}
+    <h2>1. Für wen?</h2>
     <div class="card">
-      <label for="wp-to">Für wen ist der Zettel?</label><input id="wp-to" list="wp-people" value="${esc(cfg.to)}" maxlength="40" placeholder="z. B. Oma Ulla" autocomplete="off">
-      <datalist id="wp-people">${[...contacts, 'Oma', 'Opa', 'Tante', 'Onkel', 'Patentante', 'Patenonkel', 'Freundin', 'Freund'].map(n => `<option value="${esc(n)}">`).join('')}</datalist>
-      <label for="wp-count">Wie viele Wünsche soll sie oder er erfüllen?</label>
+      <input id="wp-to" list="wp-people" value="${esc(cfg.to)}" maxlength="40" placeholder="Name eintippen, z. B. Oma Ulla" autocomplete="off" aria-label="Für wen ist der Zettel?">
+      <datalist id="wp-people">${people.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+      <div class="chip-row mt-2" role="group" aria-label="Schnellauswahl">${people.slice(0, 6).map(n => `<button type="button" class="chip-btn ${cfg.to.trim() === n ? 'on' : ''}" data-who="${esc(n)}" aria-pressed="${cfg.to.trim() === n}">${esc(n)}</button>`).join('')}</div>
+    </div>
+    <h2>2. Wünsche auswählen <span class="chip" id="wp-counter"></span></h2>
+    ${open.length ? `<div class="card" id="wp-list">${open.map(w => `<div class="todo"><input type="checkbox" id="wsel_${w.id}" data-ws="${w.id}"><label for="wsel_${w.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(w.text)}</span>${w.assigned ? ` <span class="chip">bei ${esc(w.assigned)}</span>` : ''}</label></div>`).join('')}</div>
+      <button type="button" class="btn btn-text btn-sm mt-1" id="wsSuggest">${bi('magic')} Wünsche für mich aussuchen</button>`
+      : `<div class="card center"><p class="mb-2">Noch keine offenen Wünsche.</p><a class="btn btn-solid theme-primary" href="#/wishes">${bi('plus-lg')} Zur Wunschliste</a></div>`}
+    <h2>3. Verschicken</h2>
+    <div class="card wish-send">
+      <p class="small soft mb-2" id="wsHint" aria-live="polite"></p><button type="button" class="btn btn-solid theme-primary w-100" id="wsShare">${bi('send-fill')} Wunschzettel verschicken</button>
+      <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-subtle theme-secondary flex-grow-1" id="wsWa" href="#" target="_blank" rel="noopener noreferrer">${bi('chat-heart')} WhatsApp</a><a class="btn btn-subtle theme-secondary flex-grow-1" id="wsMail" href="#" rel="noopener">${bi('envelope-heart')} E-Mail</a><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="wsCopy">${bi('clipboard-heart')} Text kopieren</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="doPrint">${bi('printer')} Drucken oder PDF</button></div>
+      <p class="small soft mt-2 mb-0">Die gewählten Wünsche werden beim Verschicken automatisch der Person zugewiesen. So wird nichts doppelt gekauft.</p>
+    </div>
+    <details class="card wp-more" ${cfg.child === 'secret' ? 'open' : ''}><summary><b>${bi('sliders')} Weitere Einstellungen</b><span class="small soft">Anzahl, Tonfall, Name des Kindes, persönliche Zeile</span></summary>
+      <label for="wp-count">Wie viele Wünsche soll die Person erfüllen?</label>
       <select id="wp-count">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${cfg.count === n ? 'selected' : ''}>${n}${n === 3 ? ' (empfohlen)' : ''}</option>`).join('')}</select>
       <label class="keep form-label">Tonfall</label>
       <div class="seg" style="margin:0">${Object.entries(WISH_TONES).map(([k, t]) => `<button data-tone="${k}" class="${cfg.tone === k ? 'on' : ''}">${t.label}</button>`).join('')}</div>
@@ -73,15 +88,8 @@ EXTRA_ROUTES.wishprint = () => {
       <div class="seg" style="margin:0"><button data-child="none" class="${cfg.child === 'none' ? 'on' : ''}">Kein Name</button><button data-child="nick" class="${cfg.child === 'nick' ? 'on' : ''}">Kosename${state.settings.nick ? ' (' + esc(state.settings.nick) + ')' : ''}</button>${state.settings.secretName ? `<button data-child="secret" class="${cfg.child === 'secret' ? 'on' : ''}">Echter Name</button>` : ''}</div>
       ${cfg.child === 'secret' ? '<p class="small soft mt-2 mb-0">Achtung: Der geheime Name wird dann gedruckt.</p>' : ''}
       <label for="wp-msg">Persönliche Zeile (optional)</label><textarea id="wp-msg" maxlength="240" style="min-height:70px" placeholder="z. B. Wir freuen uns auf Sonntag bei euch!">${esc(cfg.message)}</textarea>
-    </div>
-    <h2>Wünsche auswählen <span class="chip" id="wp-counter"></span></h2>
-    ${open.length ? `<div class="card" id="wp-list">${open.map(w => `<div class="todo"><input type="checkbox" id="wsel_${w.id}" data-ws="${w.id}"><label for="wsel_${w.id}" class="keep" style="margin:0;font-weight:400;flex:1"><span>${esc(w.text)}</span>${w.assigned ? ` <span class="chip">bei ${esc(w.assigned)}</span>` : ''}</label></div>`).join('')}</div>`
-      : `<div class="card center"><p class="mb-0">Noch keine offenen Wünsche. <a href="#/wishes">Zur Wunschliste</a></p></div>`}
-    <h2>Senden</h2>
-    <div class="card wish-send"><p class="small soft mb-2">Schickt den Wunschzettel direkt als Nachricht. Der Text enthält die ausgewählten Wünsche mit Links, eine liebe Bitte und einen Gruß. Gleichzeitig wird alles der Person zugewiesen, damit nichts doppelt gekauft wird.</p>
-      <div class="hstack gap-2 flex-wrap"><button type="button" class="btn btn-solid theme-primary" id="wsShare">${bi('send-fill')} Teilen oder senden</button><a class="btn btn-subtle theme-secondary" id="wsMail" href="#" rel="noopener">${bi('envelope-heart')} E-Mail</a><a class="btn btn-subtle theme-secondary" id="wsWa" href="#" target="_blank" rel="noopener noreferrer">${bi('chat-heart')} WhatsApp</a><button type="button" class="btn btn-subtle theme-secondary" id="wsCopy">${bi('clipboard-heart')} Text kopieren</button></div></div>
-    <div class="hstack gap-2 flex-wrap mb-3"><button class="btn btn-solid theme-primary" id="doPrint">${bi('printer')} Drucken oder als PDF speichern</button>
-      <button class="btn btn-subtle theme-secondary" id="doAssign">${bi('person-check')} Wünsche der Person zuweisen</button></div>
+      <button class="btn btn-subtle theme-secondary mt-2" id="doAssign">${bi('person-check')} Nur zuweisen, ohne zu verschicken</button>
+    </details>
     <h2>Vorschau</h2></div>
     <div class="print-sheet" id="printArea">${wishSheetHTML(cfg)}</div>`;
   const get = () => { const c = wishCfg(); return Object.assign(c, cfg); };
@@ -105,10 +113,12 @@ EXTRA_ROUTES.wishprint = () => {
   $('#doAssign').onclick = () => { if (assign()) { toast(`${cfg.sel.length} Wünsche sind jetzt bei ${cfg.to.trim()}. Nichts wird doppelt gekauft.`); render(); } };
   $('#doPrint').onclick = () => { if (!cfg.sel.length) return toast('Bitte mindestens einen Wunsch auswählen'); if (cfg.to.trim()) assign(); window.print(); };
   const wsReady = () => { if (!cfg.sel.length) { toast('Bitte erst mindestens einen Wunsch auswählen'); return false; } if (cfg.to.trim()) assign(); return true; };
-  const wsUpdate = () => { const m = wishMessage(cfg), q = encodeURIComponent; const mail = $('#wsMail'), wa = $('#wsWa'); if (mail) mail.href = `mailto:?subject=${q(m.subject)}&body=${q(m.text)}`; if (wa) wa.href = `https://wa.me/?text=${q(m.text)}`; [$('#wsShare'), mail, wa, $('#wsCopy')].forEach(e => e && e.setAttribute('aria-disabled', !cfg.sel.length)); };
+  const wsUpdate = () => { const m = wishMessage(cfg), q = encodeURIComponent; const mail = $('#wsMail'), wa = $('#wsWa'); if (mail) mail.href = `mailto:?subject=${q(m.subject)}&body=${q(m.text)}`; if (wa) wa.href = `https://wa.me/?text=${q(m.text)}`; [$('#wsShare'), mail, wa, $('#wsCopy'), $('#doPrint')].forEach(e => e && e.setAttribute('aria-disabled', !cfg.sel.length)); const hint = $('#wsHint'); if (hint) hint.textContent = cfg.sel.length ? `Fertig: ${cfg.sel.length} ${cfg.sel.length === 1 ? 'Wunsch' : 'Wünsche'} gewählt${cfg.to.trim() ? ' für ' + cfg.to.trim() : ''}. Jetzt verschicken oder drucken.` : 'Wähle oben mindestens einen Wunsch aus, dann geht es los.'; };
   $('#wsShare').onclick = async () => { if (!wsReady()) return; const m = wishMessage(cfg); await shareThing({ title: m.subject, text: m.text }); render(); };
   $('#wsCopy').onclick = async () => { if (!wsReady()) return; try { await navigator.clipboard.writeText(wishMessage(cfg).text); toast('Wunschzettel-Text kopiert. Jetzt nur noch einfügen und abschicken.'); } catch { toast('Kopieren klappt hier leider nicht'); } };
   [$('#wsMail'), $('#wsWa')].forEach(a => a.addEventListener('click', e => { if (!wsReady()) e.preventDefault(); }));
+  view.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { cfg.to = b.dataset.who; $('#wp-to').value = cfg.to; view.querySelectorAll('[data-who]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); refresh(); });
+  const sg = $('#wsSuggest'); if (sg) sg.onclick = () => { const free = open.filter(w => !w.assigned), pool = (free.length >= cfg.count ? free : open); cfg.sel = pool.slice(0, cfg.count).map(w => w.id); refresh(); toast('Das sind meine Vorschläge. Du kannst sie jederzeit ändern.'); };
   refresh();
 };
 
