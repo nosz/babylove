@@ -76,7 +76,7 @@ function startRetitle() {
   rtObs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: RT_ATTRS });
 }
 // Bestätigungen lassen sich abschalten (Einstellungen). Probleme und Fehler melden sich immer.
-const TOAST_ALWAYS = /fehlgeschlagen|konnte|nicht |ungültig|höchstens|mindestens|bitte|fehler|voll|kein /i;
+const TOAST_ALWAYS = /fehlgeschlagen|konnte|nicht |ungültig|gültige|neueren|höchstens|mindestens|bitte|fehler|voll|kein |zurückholen/i;
 function toast(msg) {
   if (state.settings.toasts !== true && !TOAST_ALWAYS.test(String(msg))) return;
   const t = $('#toast');
@@ -355,7 +355,9 @@ routes.onboarding = () => {
       <input id="nick" value="Krümel" maxlength="24">
       <button class="btn btn-solid theme-primary w-100 ob-go">Los geht’s</button>
       <p class="small soft center mb-0">Den echten Namen könnt ihr später geheim hinterlegen.</p>
-    </form>`;
+    </form>
+    <div class="ob-import"><span class="small soft">Neues Gerät? Schon ein Backup von früher?</span><button type="button" class="btn btn-subtle theme-secondary" id="obImport">${bi('upload')} Backup importieren</button><input id="impf" type="file" accept="application/json,.json" hidden></div>`;
+  $('#obImport').onclick = () => $('#impf').click(); $('#impf').onchange = importData;
   $('#ob').onsubmit = e => {
     e.preventDefault();
     const err = dueError($('#due').value), box = $('#dueErr'); box.hidden = !err; box.textContent = err; $('#due').setAttribute('aria-invalid', !!err); if (err) { $('#due').focus(); return; }
@@ -471,10 +473,10 @@ routes.home = () => {
   const greet = gl || 'Ihr Superhelden';
   const { order, on } = homeLayout();
   view.innerHTML = `
-    <div class="greet">${avatarStack()}
-      <div class="greet-text"><p class="greet-hello">${greet}</p></div></div>
-    <div class="today-row today-sticky"><p class="today" id="todayLine">${bi('calendar-heart')}${esc(todayLong())}</p>${searchBoxHTML()}</div>
-    <h1>${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
+    <div class="greet greet-sticky">${avatarStack()}
+      <div class="greet-text"><p class="greet-hello">${greet}</p></div>${searchBoxHTML()}</div>
+    <div class="today-row"><p class="today" id="todayLine">${bi('calendar-heart')}${esc(todayLong())}</p></div>
+    <h1 class="visually-hidden">${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
     ${heroHTML(p)}
     ${order.filter(id => on.has(id)).map(id => HOME_RENDER[id]()).join('')}
     <a class="home-edit" href="#/homeconfig">${bi('sliders')} Startseite anpassen</a>`;
@@ -809,9 +811,16 @@ routes.colors = () => {
 routes.backup = () => {
   view.innerHTML = `
     <h1>Datensicherung</h1><p class="soft">Alles liegt nur auf diesem Gerät. Mach hin und wieder ein Backup, sonst sind die Erinnerungen bei einem Gerätewechsel weg.</p>
+    <h2>Export und Import</h2>
     <div class="card">
-      <div class="hstack gap-2 flex-wrap"><button class="btn btn-solid theme-primary" id="exp">${bi('download')} Backup speichern</button><button class="btn btn-subtle theme-secondary" id="imp">${bi('upload')} Backup laden</button><input id="impf" type="file" accept="application/json" hidden></div>
-      <p class="small soft mt-3 mb-0">Die Datei enthält persönliche Daten und Fotos. Bewahre sie sicher auf und teile sie nur mit Menschen, denen du vertraust.</p>
+      <ol class="move-steps">
+        <li><span class="ms-n">1</span><div><b>Altes Gerät: Backup erstellen</b><p class="small soft mb-0">Speichert alle Einträge, Fotos und Einstellungen in einer Datei.</p></div></li>
+        <li><span class="ms-n">2</span><div><b>Datei zum neuen Gerät bringen</b><p class="small soft mb-0">Per E-Mail, Cloud, AirDrop, Nearby Share oder USB-Kabel.</p></div></li>
+        <li><span class="ms-n">3</span><div><b>Neues Gerät: Backup importieren</b><p class="small soft mb-0">BABYLOVE öffnen, auf „Backup importieren“ tippen und die Datei wählen. Auch gleich beim ersten Start möglich.</p></div></li>
+      </ol>
+      <div class="hstack gap-2 flex-wrap"><button class="btn btn-solid theme-primary flex-grow-1" id="exp">${bi('download')} Backup speichern</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="expShare">${bi('send')} An anderes Gerät senden</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="imp">${bi('upload')} Backup importieren</button><input id="impf" type="file" accept="application/json,.json" hidden></div>
+      <p class="small soft mt-3 mb-0">Die Datei enthält persönliche Daten und Fotos. Bewahre sie sicher auf und teile sie nur mit Menschen, denen du vertraust. Nach dem Import auf dem neuen Gerät kannst du die Datei löschen.</p>
+      ${localStorage.getItem(KEY + ':vorher') ? `<div class="imp-undo mt-3"><span class="small">Vor dem letzten Import wurde der frühere Stand gesichert.</span><button class="btn btn-text btn-sm" id="undoImp">${bi('arrow-counterclockwise')} Früheren Stand zurückholen</button></div>` : ''}
     </div>
     <h2>Erinnerung</h2>
     <div class="card">
@@ -824,13 +833,15 @@ routes.backup = () => {
     <div class="card"><p class="small soft">Entfernt alle Einträge, Fotos und Einstellungen von diesem Gerät. Das lässt sich nicht rückgängig machen.</p>
       <button class="btn btn-text theme-danger" id="wipe">${bi('trash')} Alle Daten löschen</button></div>`;
   $('#exp').onclick = () => exportData().then(render);
+  $('#expShare').onclick = () => sendBackup().then(render);
   $('#imp').onclick = () => $('#impf').click();
   $('#impf').onchange = importData;
+  const ui = $('#undoImp'); if (ui) ui.onclick = () => { if (confirm('Den Stand von vor dem letzten Import zurückholen? Die jetzigen Daten werden dabei ersetzt.')) undoImport(); };
   view.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { state.settings.backupDays = +b.dataset.b; save(); render(); toast(`Alle ${b.dataset.b} Tage. Ich melde mich!`); });
   $('#wipe').onclick = async () => {
     if (!confirm('Wirklich ALLES löschen? Das kann nicht rückgängig gemacht werden.')) return;
     const db = await idb; db.transaction('img', 'readwrite').objectStore('img').clear();
-    localStorage.removeItem(KEY); state = emptyState(); urls.clear(); applyTheme(); location.hash = '#/'; render();
+    localStorage.removeItem(KEY); localStorage.removeItem(KEY + ':vorher'); state = emptyState(); urls.clear(); applyTheme(); location.hash = '#/'; render();
   };
 };
 
@@ -1067,18 +1078,30 @@ const daysLeftText = () => { const p = pregnancy(); return p ? `${Math.max(p.lef
 
 /* ---------- Backup ---------- */
 const blobToData = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
-async function exportData() {
+const BACKUP_V = 2;
+// Backup-Datei bauen: alle Daten, alle Fotos und Sprachnachrichten, dazu Datum und App-Version für die Prüfung beim Import
+async function buildBackup() {
   const ids = [...state.diary.map(d => d.photoId), ...state.photos.map(p => p.photoId), ...state.milestones.map(m => m.photoId),
     ...state.pass.map(p => p.photoId), ...state.letters.map(l => l.audioId), ...photosOf('mama'), ...photosOf('partner'), ...photosOf('kid'), bannerCfg().bgId].filter(Boolean);
   const images = {};
   for (const id of ids) { const b = await getImg(id); if (b) images[id] = await blobToData(b); }
-  const file = new Blob([JSON.stringify({ app: 'babylove', v: 1, state, images })], { type: 'application/json' });
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(file), download: `${fileSafe(brandFull()).slice(0, 48)}-backup-${iso(today())}.json` });
+  const file = new Blob([JSON.stringify({ app: 'babylove', v: BACKUP_V, exported: new Date().toISOString(), appVersion: APP_VERSION.number, state, images })], { type: 'application/json' });
+  return { file, name: `${fileSafe(brandFull()).slice(0, 48)}-backup-${iso(today())}.json` };
+}
+const markBackupDone = () => { state.settings.lastBackup = iso(today()); state.settings.backupSnooze = ''; save(); };
+async function exportData() {
+  const { file, name } = await buildBackup();
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(file), download: name });
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  state.settings.lastBackup = iso(today()); state.settings.backupSnooze = ''; save();
+  markBackupDone();
   toast('Backup gespeichert. Gut aufbewahren, es enthält persönliche Daten.');
 }
-
+// Backup direkt an ein anderes Gerät schicken (Teilen-Menü: AirDrop, Nearby Share, E-Mail, WhatsApp, Cloud)
+async function sendBackup() {
+  const { file, name } = await buildBackup(), f = new File([file], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: 'BABYLOVE Backup' }); markBackupDone(); } catch (e) { if (e.name !== 'AbortError') toast('Teilen klappt hier leider nicht. Bitte „Backup speichern“ nutzen.'); } }
+  else await exportData();
+}
 /* ---------- Backup-Erinnerung ---------- */
 const backupDays = () => [7, 14, 30].includes(state.settings.backupDays) ? state.settings.backupDays : 7;
 const daysSince = d => Math.round((today() - new Date(d + 'T00:00')) / DAY);
@@ -1097,17 +1120,41 @@ function maybeAskBackup() {
     $('#now', el).onclick = async () => { await exportData(); closeSheet(); if (location.hash === '#/backup') render(); };
   });
 }
+const backupCounts = st => { const n = k => (Array.isArray(st && st[k]) ? st[k].length : 0); return [['journal-text', 'Tagebucheinträge', n('diary')], ['images', 'Fotos im Album', n('photos')], ['gift', 'Wünsche', n('wishes')], ['envelope-heart', 'Briefe ans Baby', n('letters')], ['tags', 'Namen', n('names')], ['check2-square', 'Aufgaben', n('todos')], ['calendar-heart', 'Termine', n('appts')], ['telephone-fill', 'Kontakte', n('contacts')]].filter(r => r[2]); };
+// Schritt 1: Datei lesen und prüfen. Schritt 2: Vorschau mit Inhalt und Warnung. Schritt 3: erst nach Bestätigung ersetzen (der bisherige Stand wird vorher gesichert)
 async function importData(e) {
-  const f = e.target.files[0]; if (!f) return;
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  let data;
   try {
-    const data = JSON.parse(await f.text());
-    if (data.app !== 'babylove' || !data.state) throw new Error('format');
-    if (!confirm('Aktuelle Daten werden durch das Backup ersetzt. Fortfahren?')) return;
-    for (const [id, url] of Object.entries(data.images || {})) await putImg(id, await (await fetch(url)).blob());
-    state = Object.assign(emptyState(), data.state); state.settings.lastBackup = iso(today()); migratePhotos(); migrateDiaries(); save(); urls.clear(); applyTheme(); location.hash = '#/'; render(); toast('Backup geladen');
-  } catch { toast('Das ist keine gültige BABYLOVE-Sicherung'); }
+    data = JSON.parse(await f.text());
+    if (!data || data.app !== 'babylove' || !data.state || typeof data.state !== 'object' || Array.isArray(data.state)) throw new Error('format');
+  } catch { toast('Das ist keine gültige BABYLOVE-Sicherung'); e.target.value = ''; return; }
+  e.target.value = '';
+  if ((data.v || 1) > BACKUP_V) { toast('Diese Sicherung stammt aus einer neueren Version. Bitte zuerst die App aktualisieren.'); return; }
+  const rows = backupCounts(data.state), imgs = Object.keys(data.images || {}).length, st = data.state.settings || {};
+  const when = data.exported ? new Date(data.exported).toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'short' }) : (st.lastBackup ? fmtDate(st.lastBackup) : 'unbekannt');
+  const names = [st.mama, st.partner].filter(Boolean).map(esc).join(' und ');
+  openSheet(`<h2 style="margin-top:0">Backup prüfen</h2>
+    <p class="small soft mb-2">${esc(f.name)} · gesichert am ${esc(when)}${data.appVersion ? ` · App-Version ${esc(data.appVersion)}` : ''}${names ? `<br>Von ${names}` : ''}</p>
+    <ul class="imp-list">${st.dueDate ? `<li>${bi('calendar-heart')}<span>Errechneter Termin</span><b>${esc(fmtDate(st.dueDate))}</b></li>` : ''}${rows.map(([i, l, n]) => `<li>${bi(i)}<span>${l}</span><b>${n}</b></li>`).join('')}${imgs ? `<li>${bi('camera')}<span>Fotos und Sprachnachrichten</span><b>${imgs}</b></li>` : ''}${!rows.length && !imgs && !st.dueDate ? '<li><span>Die Datei enthält keine Einträge.</span></li>' : ''}</ul>
+    <p class="imp-warn">${bi('exclamation-triangle-fill')} <span><b>Achtung:</b> Die Daten auf diesem Gerät werden durch dieses Backup ersetzt. Der bisherige Stand wird vorher automatisch gesichert und lässt sich unter „Datensicherung“ zurückholen.</span></p>
+    <div class="hstack gap-2" style="margin-top:14px"><button class="btn btn-subtle theme-secondary" id="impCancel" type="button">Abbrechen</button><span class="flex-grow-1"></span><button class="btn btn-solid theme-primary" id="impGo" type="button">${bi('upload')} Jetzt importieren</button></div>`, el => {
+    $('#impCancel', el).onclick = closeSheet;
+    $('#impGo', el).onclick = async () => {
+      $('#impGo', el).disabled = true;
+      try {
+        try { localStorage.setItem(KEY + ':vorher', JSON.stringify(state)); } catch { /* zu groß: dann ohne Rückholpunkt */ }
+        for (const [id, url] of Object.entries(data.images || {})) await putImg(id, await (await fetch(url)).blob());
+        state = Object.assign(emptyState(), data.state); state.settings.lastBackup = iso(today()); migratePhotos(); migrateDiaries(); save(); urls.clear(); closeSheet(); buildNav(); applyTheme(); location.hash = '#/'; render(); toast('Backup geladen. Willkommen auf dem neuen Gerät!');
+      } catch { closeSheet(); toast('Der Import hat nicht geklappt. Eure bisherigen Daten sind unverändert.'); }
+    };
+  });
 }
-
+function undoImport() {
+  let prev; try { prev = JSON.parse(localStorage.getItem(KEY + ':vorher')); } catch { prev = null; }
+  if (!prev) return toast('Es gibt keinen früheren Stand zum Zurückholen.');
+  state = Object.assign(emptyState(), prev); migratePhotos(); migrateDiaries(); save(); localStorage.removeItem(KEY + ':vorher'); urls.clear(); buildNav(); applyTheme(); location.hash = '#/'; render(); toast('Der frühere Stand ist wieder da.');
+}
 /* ---------- Router ---------- */
 // Personen: Frau (mama) und Mann (partner), je bis zu 3 Fotos. Die Fotos tauchen rotierend überall in der App auf.
 const WHO = {
@@ -1291,7 +1338,7 @@ function render() {
   }
   // Kennzeichnung unter der Überschrift: Mama, Papa oder gemeinsam (zwei Herzen)
   const au = PAGE_AUDIENCE[key];
-  if (h1 && au) (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
+  if (h1 && au && key !== 'home') (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
   if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
   // Immer gleiche Orientierung: Häuschen mit Herz (Startseite) und ein Schritt zurück in den Bereich
   const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? (cameFromHome ? ['#/', 'Startseite'] : ['#/more', 'Schatzkiste']) : null;

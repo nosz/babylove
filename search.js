@@ -31,7 +31,7 @@ const SEARCH_SETTINGS = [
   ['colors', 'Farben', 'Farbwelt Lieblingsfarbe Design'], ['banner', 'Banner der Startseite', 'Hintergrund Foto'],
   ['mode', 'Darstellung', 'Hell Dunkel Modus'], ['font', 'Schrift', 'Größe Schriftart lesbar'],
   ['hints', 'Hinweise nach dem Speichern', 'Bestätigungen Meldungen'], ['quotes', 'Eigene Sprüche und Mundart', 'Sprüche Sprache Hessisch Bayrisch Schwäbisch Sächsisch Ostfriesisch'],
-  ['city', 'Ort für Tipps', 'Stadt Region'], ['lock', 'App-Sperre', 'PIN Passwort Schutz'], ['backup', 'Datensicherung', 'Backup sichern laden'],
+  ['city', 'Ort für Tipps', 'Stadt Region'], ['lock', 'App-Sperre', 'PIN Passwort Schutz'], ['backup', 'Datensicherung', 'Backup sichern laden Import Export Gerätewechsel neues Handy Daten übernehmen'],
   ['storage', 'Speicherplatz', 'Datenspeicher Bilder Größe'], ['export', 'Datenexport', 'JSON CSV Daten mitnehmen'], ['privacy', 'Datenschutz und Sicherheit', 'Privatsphäre'],
   ['guide', 'Kurzanleitung', 'Hilfe erklärt'], ['update', 'Version und Updates', 'Neue Version aktualisieren']
 ];
