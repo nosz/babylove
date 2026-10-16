@@ -355,7 +355,7 @@ const HOME_MODULES = {
   secret:    { label: 'Der geheime Name', desc: 'Verdeckt, nur auf Antippen sichtbar', icon: 'lock-fill' },
   milestone: { label: 'Meilenstein der Woche', desc: 'Ein Hinweis, sobald eine Etappe erreicht ist', icon: 'stars' },
   planner:   { label: 'To-dos und Termine', desc: 'Offene Aufgaben und der nächste Termin', icon: 'check2-square' },
-  tips:      { label: 'Frankfurt-Tipps', desc: 'Hebammen, Kurse, Beratung, Infoabende', icon: 'geo-alt-fill' },
+  tips:      { label: 'Tipps vor Ort', desc: 'Hebammen, Kurse, Beratung, Infoabende (Ort frei wählbar)', icon: 'geo-alt-fill' },
   last:      { label: 'Zuletzt festgehalten', desc: 'Das neueste Foto aus Tagebuch oder Album', icon: 'clock-history' }
 };
 const HOME_DEFAULT = { order: Object.keys(HOME_MODULES), on: ['quick', 'pins', 'together', 'daily', 'family', 'secret'] };
@@ -371,7 +371,7 @@ const saveHome = (order, on) => { state.settings.home = { ...(state.settings.hom
 
 /* ---------- Zur Startseite hinzufügen: jede Seite lässt sich als Kachel auf die Startseite legen ---------- */
 // Seiten, die als Verknüpfung möglich sind: Tagebuch, Fotos und alle Funktionen aus "Mehr" (ohne Einstellungen)
-const pinInfo = () => { const m = { diary: ['journal-text', 'Tagebuch'], photos: ['images', 'Fotos'] }; HUB.forEach(([k, i, t]) => { if (k !== 'einstellungen' && k !== 'more') m[k] = [i, t]; }); return m; };
+const pinInfo = () => { const m = { diary: ['journal-text', 'Tagebuch'], photos: ['images', 'Fotos'] }; HUB.forEach(([k, i, t]) => { if (k !== 'einstellungen' && k !== 'more') m[k] = [i, labelOf(t)]; }); return m; };
 const homePins = () => { const info = pinInfo(); return ((state.settings.home || {}).pins || []).filter(k => info[k]); };
 function setHomePin(key, wanted) {
   const info = pinInfo()[key]; if (!info) return false;
@@ -409,7 +409,7 @@ const HOME_RENDER = {
     return `<div class="grid" style="grid-template-columns:1fr 1fr">
       <a class="card link-card mb-0" href="#/planner"><b>${open}</b> offene To-dos<br><span class="small soft">Checkliste</span></a>
       <a class="card link-card mb-0" href="#/planner">${next ? `<b>${esc(next.title)}</b><br><span class="small soft">${fmtDate(next.date)}${next.time ? ' · ' + esc(next.time) : ''}</span>` : '<b>Kein Termin</b><br><span class="small soft">Alles entspannt</span>'}</a></div>`; },
-  tips: () => `<a class="card link-card" href="#/tips"><div class="hstack gap-3">${bi('geo-alt-fill')}<div class="flex-grow-1"><b>Tipps für Schwangere in Frankfurt</b><div class="small soft">Hebammen, Kurse, Beratung, Infoabende</div></div>${bi('chevron-right')}</div></a>`,
+  tips: () => `<a class="card link-card" href="#/tips"><div class="hstack gap-3">${bi('geo-alt-fill')}<div class="flex-grow-1"><b>Tipps für Schwangere in ${esc(tipsCity())}</b><div class="small soft">Hebammen, Kurse, Beratung, Infoabende</div></div>${bi('chevron-right')}</div></a>`,
   last: () => { const last = state.photos[0] || state.diary.find(d => d.photoId);
     return last ? `<div class="card"><div class="small soft mb-2">Zuletzt festgehalten</div><img data-img="${last.photoId}" alt="" style="width:100%;border-radius:14px;display:block"></div>` : ''; }
 };
@@ -633,19 +633,42 @@ function apptForm() {
   });
 }
 
+// Ort für die Tipps: Frankfurt ist voreingestellt (mit geprüften Anlaufstellen), jeder andere Ort lässt sich frei eintragen und mit eigenen Anlaufstellen füllen
+const tipsCity = () => cleanText(state.settings.tipsCity, 40) || 'Frankfurt';
+const isFfm = () => /^frankfurt(\s+am\s+main)?$/i.test(tipsCity());
+const labelOf = v => typeof v === 'function' ? v() : v;
+const GENERAL_HELP = [
+  { icon: 'search-heart', title: 'Hebammensuche (Deutscher Hebammenverband)', url: 'https://www.hebammensuche.de', text: 'Hebammen in der Nähe finden. Am besten direkt nach dem positiven Test anfragen.' },
+  { icon: 'people', title: 'Elternsein.info (Frühe Hilfen)', url: 'https://www.elternsein.info', text: 'Informationen und Angebote für Schwangere und Eltern, auch zur Suche in der eigenen Region.' }
+];
+function bindCityInput(el, after) {
+  el.addEventListener('input', () => { const v = cleanText(el.value, 40); if (v) state.settings.tipsCity = v; else delete state.settings.tipsCity; save(); after && after(); });
+  el.addEventListener('change', () => { el.value = state.settings.tipsCity || ''; cheer('style'); if (location.hash === '#/tips') render(); });
+}
 routes.tips = () => {
-  view.innerHTML = `
-    <h1>Frankfurt</h1><p class="soft">Hilfe und Tipps für Schwangere in Frankfurt am Main.</p>
-    <h2>Gut zu wissen</h2>
+  const city = tipsCity(), own = state.localTips = state.localTips || [], ffm = isFfm();
+  const card = (f, ext = true) => `<${f.url ? `a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="card link-card" ${f.url ? '' : 'style="color:inherit"'}>
+      <div class="hstack gap-3 align-items-start"><i class="bi bi-${f.icon || 'geo-alt'} ico" aria-hidden="true"></i>
+      <div class="flex-grow-1"><b>${esc(f.title)}</b>${f.text ? `<p class="small soft mb-0">${esc(f.text)}</p>` : ''}</div>${f.id ? `<button type="button" class="btn btn-text theme-danger btn-sm" data-ltdel="${f.id}" aria-label="${esc(f.title)} entfernen">${bi('x-lg')}</button>` : ''}${f.url && ext ? '<i class="bi bi-box-arrow-up-right soft small" aria-hidden="true"></i>' : ''}</div></${f.url ? 'a' : 'div'}>`;
+  const ownCard = o => `<div class="card"><div class="hstack gap-3 align-items-start"><i class="bi bi-geo-alt ico" aria-hidden="true"></i><div class="flex-grow-1"><b>${esc(o.title)}</b>${o.text ? `<p class="small soft mb-0">${esc(o.text)}</p>` : ''}${o.url ? `<a class="small" href="${esc(o.url)}" target="_blank" rel="noopener noreferrer">${bi('box-arrow-up-right')} Link öffnen</a>` : ''}</div><button type="button" class="btn btn-text theme-danger btn-sm" data-ltdel="${o.id}" aria-label="${esc(o.title)} entfernen">${bi('x-lg')}</button></div></div>`;  view.innerHTML = `
+    <h1>${esc(city)}</h1><p class="soft">Hilfe und Tipps für Schwangere in ${esc(city)}${ffm ? ' am Main' : ''}.</p>
+    <div class="card"><label for="tipsCity">Ort für die Tipps</label><input id="tipsCity" maxlength="40" value="${esc(state.settings.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off">
+      <p class="small soft mt-2 mb-0">${ffm ? 'Für Frankfurt zeigen wir ausgewählte Anlaufstellen. ' : ''}Für jeden anderen Ort könnt ihr unten eigene Anlaufstellen sammeln: Hebamme, Klinik, Kurse, Beratung.</p></div>
+    ${ffm ? `<h2>Gut zu wissen</h2>
     <div class="card"><ul class="mb-0 ps-3">${FFM_TIPS.map(t => `<li class="mb-2">${esc(t)}</li>`).join('')}</ul></div>
-    <h2>Anlaufstellen</h2>
-    ${FFM.map(f => `<a class="card link-card" href="${f.url}" target="_blank" rel="noopener noreferrer">
-      <div class="hstack gap-3 align-items-start"><i class="bi bi-${f.icon} ico" aria-hidden="true"></i>
-      <div class="flex-grow-1"><b>${esc(f.title)}</b><p class="small soft mb-0">${esc(f.text)}</p></div><i class="bi bi-box-arrow-up-right soft small" aria-hidden="true"></i></div></a>`).join('')}
-    <p class="small soft">Quelle: <a href="${FFM_WEGWEISER}" target="_blank" rel="noopener noreferrer">Wegweiser „Frühe Hilfen“ der Stadt Frankfurt</a>. Angaben ohne Gewähr, bitte Termine, Kosten und Öffnungszeiten beim Träger prüfen. Zum Öffnen der Links brauchst du Internet.</p>
+    <h2>Anlaufstellen</h2>${FFM.map(f => card(f)).join('')}
+    <p class="small soft">Quelle: <a href="${FFM_WEGWEISER}" target="_blank" rel="noopener noreferrer">Wegweiser „Frühe Hilfen“ der Stadt Frankfurt</a>. Angaben ohne Gewähr, bitte Termine, Kosten und Öffnungszeiten beim Träger prüfen. Zum Öffnen der Links brauchst du Internet.</p>`
+    : `<h2>Gut zu wissen</h2><div class="card"><ul class="mb-0 ps-3"><li class="mb-2">Hebamme früh suchen: Fragt direkt nach dem positiven Test an, gute Plätze sind oft schnell vergeben.</li><li class="mb-2">Geburtsklinik anschauen: Viele Kliniken bieten Infoabende und Kreißsaalführungen an.</li><li>Kassen übernehmen Hebammenhilfe und viele Kurse. Fragt bei eurer Krankenkasse nach.</li></ul></div>
+    <h2>Hilfreich in ganz Deutschland</h2>${GENERAL_HELP.map(f => card(f)).join('')}
+    <p class="small soft">Angaben ohne Gewähr. Ärztlicher Bereitschaftsdienst: 116 117, im Notfall 112.</p>`}
+    <h2>Eigene Anlaufstellen <span class="chip">${own.length}</span></h2>
+    ${own.length ? own.map(ownCard).join('') : '<div class="card center soft">Noch nichts gesammelt. Tragt hier eure Hebamme, Klinik oder einen guten Kurs ein, damit ihr alles an einem Ort habt.</div>'}
+    <form id="ltForm" class="card"><label for="ltTitle">Name der Anlaufstelle</label><input id="ltTitle" maxlength="80" required placeholder="z. B. Hebamme Anna Muster"><label for="ltText">Notiz (optional)</label><input id="ltText" maxlength="160" placeholder="z. B. Telefon, Sprechzeiten, Kosten"><label for="ltUrl">Link (optional)</label><input id="ltUrl" type="url" maxlength="300" placeholder="https://"><button class="btn btn-solid theme-primary w-100 mt-2" type="submit">${bi('plus-lg')} Hinzufügen</button></form>
     <p class="small soft">Bei akuten Beschwerden: Frauenarzt oder Hebamme, im Notfall 112.</p>`;
+  bindCityInput($('#tipsCity'));
+  $('#ltForm').onsubmit = e => { e.preventDefault(); const title = $('#ltTitle').value.trim(); if (!title) return; const url = $('#ltUrl').value.trim(); own.push({ id: uid(), title, text: $('#ltText').value.trim(), url: isUrl(url) ? url : '', icon: 'geo-alt' }); save(); render(); cheer('add'); };
+  view.querySelectorAll('[data-ltdel]').forEach(b => b.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); state.localTips = own.filter(x => x.id !== b.dataset.ltdel); save(); render(); });
 };
-
 routes.colors = () => {
   const s = state.settings;
   const card = id => {
@@ -869,6 +892,7 @@ routes.einstellungen = () => {
     ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
     ${acc('install', 'download', 'App installieren', isStandalone() ? 'Schon installiert, schön!' : 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} ${isStandalone() ? 'So funktioniert es' : 'Installieren oder Anleitung zeigen'}</button>`)}
     ${acc('home', 'sliders', 'Startseite einrichten', 'Welche Bausteine du siehst und in welcher Reihenfolge', go('#/homeconfig', 'Startseite anpassen'))}
+    ${acc('city', 'geo-alt-fill', 'Ort für Tipps', esc(tipsCity()), `<p class="small soft">In welcher Stadt wohnt ihr? Für Frankfurt gibt es ausgewählte Anlaufstellen, für jeden anderen Ort sammelt ihr eigene.</p><label for="cityInput">Stadt oder Region</label><input id="cityInput" maxlength="40" value="${esc(s.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><div class="hstack gap-2 mt-2">${go('#/tips', 'Zu den Tipps')}</div>`)}
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
     ${acc('quotes', 'chat-quote', 'Eigene Sprüche', 'Sprüche importieren, die täglich wechseln', go('#/quotes', 'Sprüche verwalten'))}
@@ -884,6 +908,7 @@ routes.einstellungen = () => {
   const g = $('#openGuide'); if (g) g.onclick = showGuide;
   const oi = $('#openInstall'); if (oi) oi.onclick = () => showInstall(true);
   bindBrandEditor();
+  const ci = $('#cityInput'); if (ci) bindCityInput(ci, () => { const sub = $('details[data-acc="city"] summary .small'); if (sub) sub.textContent = tipsCity(); });
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
   const range = $('#fsRange'), setScale = (v, commit) => { v = Math.min(FONT_SCALE.max, Math.max(FONT_SCALE.min, Math.round(v / FONT_SCALE.step) * FONT_SCALE.step)); s.fontScale = v; range.value = v; range.setAttribute('aria-valuetext', v + ' Prozent'); $('#fsValue').textContent = v; applyTheme(); if (commit) { save(); cheer('style'); } };
   range.addEventListener('input', () => setScale(+range.value, false)); range.addEventListener('change', () => setScale(+range.value, true));

@@ -51,13 +51,13 @@ const HUB = [
   ['contacts', 'telephone-fill', 'Kontakte & Notfall', 'Hebamme, Arzt, wichtige Nummern'],
   ['pass', 'journal-medical', 'Mutterpass digital', 'Werte und Fotos'],
   ['baby', 'moon-stars', 'Baby-Tracker', 'Für danach: Stillen, Windeln, Schlaf'],
-  ['tips', 'geo-alt-fill', 'Frankfurt', 'Anlaufstellen und Tipps'],
+  ['tips', 'geo-alt-fill', () => tipsCity(), 'Anlaufstellen und Tipps vor Ort'],
   ['planner', 'check2-square', 'Planer', 'To-dos und Termine'],
   ['einstellungen', 'gear-fill', 'Einstellungen', 'Farben, Schrift, Datensicherung']
 ];
 X.more = () => {
   view.innerHTML = `${intro('Mehr', 'Alles, was eine Schwangerschaft so braucht. Und ein bisschen mehr.')}
-    <div class="grid">${HUB.map(([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${t}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`).join('')}</div>`;
+    <div class="grid">${HUB.map(([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${labelOf(t)}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`).join('')}</div>`;
 };
 
 /* ---------- Partner-Modus ---------- */
@@ -80,7 +80,7 @@ const papaDailyCard = tri => `<div class="card papa-daily">${papaRow('bullseye',
 const bindTip = tri => {
   const b = $('#newPapaTip'); if (b) b.onclick = () => { $('#papaTip').textContent = papaName(nextPapaTip(tri)); };
   const m = $('#newMission'); if (m) m.onclick = () => { const pool = quotePool('missions'), cur = $('#papaMission').textContent; let q, g = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++g < 20); $('#papaMission').textContent = papaName(q); };
-  const s = $('#newPapaMsg'); if (s) s.onclick = () => { $('#papaMsg').textContent = papaName(partnerMsg()); };
+  const s = $('#newPapaMsg'); if (s) s.onclick = () => { const cur = $('#papaMsg').textContent; let q, g = 0; do { q = papaName(partnerMsg()); } while (q === cur && ++g < 20); $('#papaMsg').textContent = q; };
 };
 X.partner = () => {
   const p = pregnancy(), s = state.settings;

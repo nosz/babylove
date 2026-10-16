@@ -551,7 +551,7 @@ const TOGETHER_IDEAS_MORE = [
   ['Plant gemeinsam das Kinderzimmer: Farben, Möbel, Platz.', null],
   ['Besprecht, wer nachts was übernimmt. Humor ist ausdrücklich erlaubt.', null],
   ['Schreibt euch gegenseitig einen kurzen Liebesbrief auf einen Zettel.', null],
-  ['Schaut euch gemeinsam die Frankfurter Anlaufstellen an.', 'tips'],
+  ['Schaut euch gemeinsam die Anlaufstellen vor Ort an.', 'tips'],
   ['Prüft gemeinsam, ob die Notfallnummern griffbereit sind.', 'contacts'],
   ['Feiert einen kleinen Erfolg der Woche mit einem Eis.', null],
   ['Tragt euren Wasserverbrauch zusammen ein und stoßt an.', 'water'],

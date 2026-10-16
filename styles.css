@@ -655,3 +655,5 @@ img[data-img][style*="width:100%"] { max-height: 72vh; object-fit: contain; back
 /* Profilfoto im Menü: Bild wird rund abgeschnitten (bei overflow: visible ragt ein Bild mit object-fit sonst eckig heraus) */
 img.avatar, #nav a img.avatar-nav, .avatar img, .slot img { overflow: hidden; border-radius: 50%; }
 .slot img { border-radius: 14px; }
+
+h1, h2 { overflow-wrap: anywhere; }
