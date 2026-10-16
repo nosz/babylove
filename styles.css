@@ -38,7 +38,7 @@
 .hero .progress-bar { background: var(--on-primary); }
 .back { display: inline-block; margin-bottom: 6px; font-weight: 700; text-decoration: none; }
 a.link-card.hub { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 0; line-height: 1.3; }
-a.link-card.hub i { font-size: 1.6rem; color: var(--primary-strong); margin-bottom: 4px; }
+a.link-card.hub > i { font-size: 1.6rem; color: var(--primary-strong); margin-bottom: 4px; }
 a.link-card.hub .small { display: block; }
 .milestone { text-align: left; color: inherit; font-weight: 400; }
 .milestone.done .bi:first-child { color: var(--ok); }
@@ -254,7 +254,7 @@ main h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; col
 .mood { font-size: 1.6rem; color: var(--primary-strong); }
 .moods button { color: var(--primary-strong); }
 .moods button[aria-pressed="true"] { color: var(--on-primary); }
-.card.link-card .bi:first-child, .card.info > .bi:first-child { font-size: 1.4rem; color: var(--primary-strong); }
+.card.link-card .hstack > .bi:first-child, .card.info > .bi:first-child { font-size: 1.4rem; color: var(--primary-strong); }
 input, textarea, select { border-radius: 14px; }
 input:focus, textarea:focus, select:focus { border-color: var(--primary); outline: 3px solid color-mix(in srgb, var(--primary) 28%, transparent); outline-offset: 0; }
 
@@ -294,3 +294,258 @@ input:focus, textarea:focus, select:focus { border-color: var(--primary); outlin
 .hm .bi:first-child { font-size: 1.4rem; color: var(--primary-strong); width: 2rem; text-align: center; flex: none; }
 .hm input[type=checkbox] { width: 44px; height: 26px; }
 .hm .btn { padding: 4px 8px; }
+
+/* Marke überall */
+.brand-foot { text-align: center; margin: 28px 0 4px; font-size: .8rem; letter-spacing: .14em; color: var(--text-soft); }
+.brand-foot span { font-weight: 800; color: var(--primary-strong); }
+.brand-foot i { letter-spacing: .02em; font-weight: 600; }
+
+/* Rezepte */
+.chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; margin-bottom: 4px; scrollbar-width: none; }
+.chip-btn { flex: none; border-radius: 99px; padding: 8px 14px; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: .85rem; min-height: 38px; border: 1px solid transparent; }
+.chip-btn.on { background: var(--primary); color: var(--on-primary); }
+button.card.recipe { display: block; color: var(--text); font-weight: 400; text-align: left; border: 1px solid var(--line); }
+.card.recipe .bi-heart-fill { color: var(--primary-strong); }
+.seg button { padding: 8px 6px; font-size: .85rem; }
+
+/* Sperrbildschirm */
+body.is-locked > *:not(#lock) { visibility: hidden; }
+#lock { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.lock-box { width: 100%; max-width: 340px; text-align: center; }
+.lock-brand { display: flex; flex-direction: column; line-height: 1.05; margin-bottom: 18px; }
+.lock-badge { width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 50%; background: linear-gradient(145deg, var(--primary), var(--primary-strong)); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+.lock-title { font-weight: 800; margin-bottom: 10px; }
+.lock-dots { display: flex; justify-content: center; gap: 14px; margin: 6px 0; min-height: 18px; }
+.lock-dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--primary-strong); display: block; }
+.lock-dots i.on { background: var(--primary-strong); }
+.lock-dots.shake { animation: shake .35s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.lock-msg { min-height: 1.5em; color: var(--text-soft); font-size: .9rem; margin: 6px 0 10px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.key { height: 64px; border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 1.5rem; font-weight: 700; padding: 0; border: 1px solid var(--line); }
+.key:active { background: var(--primary); color: var(--on-primary); }
+.lock-forgot { background: none; color: var(--text-soft); font-weight: 600; margin-top: 12px; font-size: .85rem; }
+
+/* Begrüßung beim Start */
+#splash { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; color: var(--on-primary);
+  background: radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--primary) 85%, #fff), var(--primary-strong)); animation: splash-in .5s ease; }
+#splash.out { opacity: 0; transition: opacity .35s; pointer-events: none; }
+@keyframes splash-in { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: none; } }
+.splash-in { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.splash-badge { width: 96px; height: 96px; border-radius: 50%; background: color-mix(in srgb, var(--on-primary) 18%, transparent); display: flex; align-items: center; justify-content: center; font-size: 2.6rem; animation: beat 1.8s ease-in-out infinite; }
+.splash-photo { width: 110px; height: 110px; border: 3px solid color-mix(in srgb, var(--on-primary) 70%, transparent); }
+@keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.splash-brand { display: flex; flex-direction: column; line-height: 1.05; }
+.sb-name { font-size: 2.4rem; font-weight: 800; letter-spacing: .08em; }
+.sb-by { font-size: 1.1rem; font-style: italic; opacity: .9; }
+#splash h2.splash-hello { font-size: 1.5rem; font-weight: 800; text-transform: none; letter-spacing: 0; color: inherit; margin: 10px 0 0; }
+.splash-line { font-size: 1.1rem; line-height: 1.5; margin: 0; opacity: .95; }
+.splash-week { font-size: .9rem; padding: 6px 14px; border-radius: 99px; background: color-mix(in srgb, var(--on-primary) 16%, transparent); }
+.splash-go { margin-top: 10px; min-width: 180px; background: var(--on-primary); color: var(--primary-strong); font-weight: 800; border-radius: 99px; padding: 14px 24px; box-shadow: 0 10px 24px rgba(0, 0, 0, .18); }
+@media (prefers-reduced-motion: reduce) { #splash, .splash-badge, .lock-dots.shake { animation: none !important; } }
+
+/* Schöner "Los geht's"-Button */
+.tg-go { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 9px 18px; border-radius: 99px; text-decoration: none; font-weight: 800; font-size: .9rem;
+  color: var(--on-primary); background: linear-gradient(145deg, var(--primary), var(--primary-strong)); box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 30%, transparent); }
+.tg-go:active { transform: scale(.97); }
+.tg-go .bi { transition: transform .2s; } .tg-go:hover .bi { transform: translateX(3px); }
+
+/* Papa-Bereich gesperrt */
+.papa-gate { max-width: 340px; margin: 18px auto 0; text-align: center; }
+.papa-gate .gate-title { font-size: 1.4rem; font-weight: 800; margin: 6px 0 4px; }
+
+/* Druckvorschau und Druck: Wunschzettel und Tagebuch (immer hell, unabhängig von Farbwelt und Dunkelmodus) */
+.print-sheet { background: #fff; color: #3a2c2d; border: 1px solid #e8d6d2; border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, .12); padding: 28px 26px; margin: 0 0 24px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.55; }
+.print-doc .pd-head { text-align: center; border-bottom: 2px solid #c97b84; padding-bottom: 16px; margin-bottom: 18px; }
+.print-doc .pd-brand { font-family: 'Segoe UI', Arial, sans-serif; letter-spacing: .22em; font-weight: 800; color: #8b4752; font-size: .85rem; } .pd-brand i { letter-spacing: .02em; font-weight: 500; }
+.print-doc h2 { font-size: 2.1rem; margin: .2em 0 .1em; color: #8b4752; text-transform: none; letter-spacing: 0; font-weight: 700; }
+.print-doc .pd-for { margin: 0; color: #6e5a59; font-size: 1.1rem; }
+.print-doc .pd-from { text-align: center; font-style: italic; color: #6e5a59; margin: 0 0 14px; }
+.print-doc .pd-intro { font-size: 1.05rem; margin: 0 0 18px; }
+.print-doc .pd-wishes { list-style: none; counter-reset: w; margin: 0 0 18px; padding: 0; }
+.print-doc .pd-wishes li { counter-increment: w; display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-top: 1px dashed #e0c8c4; break-inside: avoid; }
+.print-doc .pd-box { flex: none; width: 26px; height: 26px; border: 2px solid #c97b84; border-radius: 6px; margin-top: 2px; }
+.print-doc .pd-wish { flex: 1; font-family: 'Segoe UI', Arial, sans-serif; } .pd-wish b { display: block; font-size: 1.2rem; color: #3a2c2d; } .pd-wish b::before { content: counter(w) '. '; color: #c97b84; }
+.print-doc .pd-link { display: block; color: #6e5a59; font-size: .8rem; word-break: break-all; margin-top: 2px; }
+.print-doc .pd-done { display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; font-size: .8rem; color: #6e5a59; } .pd-done i { flex: 1; border-bottom: 1px solid #b9a5a1; height: 1em; }
+.print-doc .pd-note { background: #fbf4f2; border-left: 4px solid #c97b84; padding: 10px 14px; border-radius: 4px; margin: 0 0 18px; }
+.print-doc .pd-empty { text-align: center; color: #6e5a59; font-style: italic; }
+.print-doc .pd-foot { border-top: 1px solid #e8d6d2; padding-top: 12px; text-align: center; color: #6e5a59; font-size: .9rem; margin-top: 18px; } .pd-foot p { margin: 0 0 8px; }
+.print-doc .pd-sign { font-family: 'Segoe UI', Arial, sans-serif; letter-spacing: .1em; font-size: .75rem; color: #8b4752; font-weight: 700; } .pd-sign i { letter-spacing: .02em; font-weight: 500; }
+.print-doc .pd-entry { margin: 0 0 22px; break-inside: avoid; }
+.print-doc .pd-date { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #e8d6d2; padding-bottom: 4px; margin-bottom: 8px; font-family: 'Segoe UI', Arial, sans-serif; font-size: .9rem; } .pd-date span { color: #6e5a59; }
+.print-doc .pd-entry p { margin: 0 0 8px; } .print-doc .pd-entry img { max-width: 100%; max-height: 380px; border-radius: 10px; display: block; margin-top: 8px; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff !important; } body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #topbar, #nav, #toast, .no-print, .back, .brand-foot, .fab, #lock, #splash, dialog { display: none !important; }
+  main { padding: 0 !important; max-width: none !important; }
+  .print-sheet { border: 0; box-shadow: none; padding: 0; margin: 0; border-radius: 0; }
+}
+
+/* Wer ist gemeint? Mama (rosé), Papa (blau), gemeinsam (zwei Herzen). Farben fest, damit die Zuordnung immer gleich aussieht */
+.aud-row { margin: 2px 0 14px; }
+.aud { display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px 5px 10px; border-radius: 99px; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.2; border: 1.5px solid transparent; white-space: nowrap; vertical-align: middle; }
+.aud > .bi { font-size: 1.05em; }
+.aud-mama { background: #FBE9EC; color: #8B3A4A; border-color: #E9B7C0; }
+.aud-papa { background: #E4EEF8; color: #2C5A85; border-color: #A9C7E3; }
+.aud-together { background: #F1EAF8; color: #5B4780; border-color: #CDBDE6; }
+:root[data-mode="dark"] .aud-mama { background: #4A2830; color: #F4C7CF; border-color: #7A4352; }
+:root[data-mode="dark"] .aud-papa { background: #1F3447; color: #BFD9F2; border-color: #3E6288; }
+:root[data-mode="dark"] .aud-together { background: #382C4E; color: #DCCFF2; border-color: #5E4B86; }
+.aud-sm { font-size: .6rem; padding: 3px 9px 3px 7px; gap: 5px; letter-spacing: .06em; }
+a.link-card.hub .aud { margin-top: 8px; align-self: flex-start; }
+.daily .aud, .hm .aud { margin-left: 4px; }
+.duo { position: relative; display: inline-flex; align-items: center; width: 1.6em; height: 1em; flex: none; }
+.duo i { position: absolute; top: 50%; transform: translateY(-50%); font-size: 1em; line-height: 1; filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .9)); }
+.duo i:first-child { left: 0; color: #C25A72; }
+.duo i:last-child { left: .6em; color: #3F78B0; }
+h2 .duo { font-size: 1rem; margin-right: 6px; vertical-align: -2px; }
+.card.together .duo { font-size: 1.2rem; margin-right: 6px; }
+
+/* Spruch in der Wochenkarte */
+.hero-quote-row { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--on-primary) 25%, transparent); text-align: left; }
+.hero-quote { margin: 0; flex: 1; font-style: italic; font-size: .98rem; line-height: 1.45; }
+.hero-refresh { flex: none; width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--on-primary) 18%, transparent); color: var(--on-primary); display: flex; align-items: center; justify-content: center; }
+/* Kennzeichnung und Namen unter der Überschrift: klarer Abstand */
+.aud-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 4px 0 16px; }
+.aud-names { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: .86rem; font-weight: 600; color: var(--text-soft); padding-left: 2px; }
+.aud-names .bi { color: var(--primary-strong); margin-left: 4px; }
+
+/* Zwei Herzen (Gemeinsam): immer klein, nebeneinander, in den Lieblingsfarben; werden von keiner Karten-Regel mehr verändert */
+.duo { position: relative; display: inline-flex; align-items: center; width: 1.7em; height: 1em; flex: none; font-size: 1em; }
+.duo i.bi { position: absolute; top: 50%; transform: translateY(-50%); font-size: 1em !important; line-height: 1 !important; margin: 0 !important; width: auto; filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .9)); }
+.duo i.bi:first-child { left: 0; color: var(--heart-mama, #C25A72) !important; }
+.duo i.bi:last-child { left: .62em; color: var(--heart-papa, #3F78B0) !important; }
+.aud .duo { font-size: 1.05em; }
+a.link-card.hub .aud { margin-top: 8px; }
+
+/* Mama- und Papa-Kennzeichnung in den Lieblingsfarben der Personen */
+.aud-mama { background: var(--aud-mama-bg, #FBE9EC); color: var(--aud-mama-fg, #8B3A4A); border-color: var(--aud-mama-bd, #E9B7C0); }
+.aud-papa { background: var(--aud-papa-bg, #E4EEF8); color: var(--aud-papa-fg, #2C5A85); border-color: var(--aud-papa-bd, #A9C7E3); }
+:root[data-mode="dark"] .aud-mama { background: var(--aud-mama-bg, #4A2830); color: var(--aud-mama-fg, #F4C7CF); border-color: var(--aud-mama-bd, #7A4352); }
+:root[data-mode="dark"] .aud-papa { background: var(--aud-papa-bg, #1F3447); color: var(--aud-papa-fg, #BFD9F2); border-color: var(--aud-papa-bd, #3E6288); }
+.by-chip .duo { margin-right: 4px; }
+.by-chip > i.bi { margin-right: 4px; }
+
+/* Lieblingsfarbe im Profil */
+.person-form .swatches { gap: 10px; }
+.swatch[aria-checked="true"] { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+
+/* Zusammengefasste Papa-Karte */
+.papa-daily { padding: 4px 16px; }
+.papa-daily .pd-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; }
+.papa-daily .pd-row + .pd-row { border-top: 1px solid var(--line); }
+.papa-daily .pd-ico { flex: none; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); color: var(--primary-strong); font-size: 1.15rem; }
+.papa-daily .pd-label { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-soft); margin-bottom: 2px; }
+.papa-daily .btn { flex: none; align-self: center; }
+
+/* Deckblatt, Inhalt und Monate im Tagebuch-Buch (Vorschau und Druck) */
+.print-doc .pd-cover { min-height: 62vh; display: flex; flex-direction: column; justify-content: space-between; text-align: center; border: 2px solid #c97b84; border-radius: 14px; padding: 28px 20px; margin-bottom: 26px; break-after: page; }
+.print-doc .pd-cover-mid h2 { font-size: 2.4rem; line-height: 1.15; margin: .3em 0; }
+.print-doc .pd-hearts { display: inline-flex; gap: 2px; font-size: 2.4rem; }
+.print-doc .pd-cover-names { font-size: 1.15rem; margin: .2em 0; } .print-doc .pd-cover-period, .print-doc .pd-cover-foot { color: #6e5a59; margin: 0; } .print-doc .pd-cover-foot { font-size: .85rem; }
+.print-doc .pd-toc { margin: 0 0 28px; break-after: page; } .print-doc .pd-toc h3 { color: #8b4752; border-bottom: 1px solid #e8d6d2; padding-bottom: 6px; font-size: 1.1rem; }
+.print-doc .pd-toc ol { list-style: none; padding: 0; margin: 0; } .print-doc .pd-toc li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #d8c4c0; font-family: 'Segoe UI', Arial, sans-serif; }
+.print-doc .pd-toc a { color: #3a2c2d; text-decoration: none; } .print-doc .pd-toc span { color: #6e5a59; font-size: .9rem; }
+.print-doc .pd-month { color: #8b4752; font-size: 1.35rem; margin: 26px 0 10px; break-after: avoid; }
+@media print { @page { @bottom-center { content: "BABYLOVE by Sarah · Seite " counter(page); font: 9pt 'Segoe UI', Arial, sans-serif; color: #6e5a59; } } }
+/* Freundliche Toasts: in der Farbe der gewählten Farbwelt, mit kleinem Herz */
+#toast { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: var(--on-primary); border: 1px solid color-mix(in srgb, var(--on-primary) 28%, transparent);
+  border-radius: 20px; padding: 12px 20px 12px 16px; font-weight: 600; line-height: 1.35; box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 38%, transparent); max-width: min(92vw, 460px); text-align: left; }
+#toast::before { font-family: 'bootstrap-icons'; content: '\f415'; font-size: 1.1rem; flex: none; opacity: .95; }
+/* Kein Überlauf auf schmalen Handys: lange Wörter umbrechen, Bausteinzeilen umbrechen */
+.print-doc h2, .print-doc .pd-cover-names, .print-doc .pd-for, .print-doc .pd-wish b { overflow-wrap: anywhere; hyphens: auto; }
+.print-doc h2 { font-size: clamp(1.5rem, 7vw, 2.1rem); }
+.print-doc .pd-cover-mid h2 { font-size: clamp(1.5rem, 8vw, 2.4rem); }
+.hm { flex-wrap: wrap; row-gap: 8px; }
+.hm > label { flex: 1 1 150px; min-width: 0; }
+.hm .btn { padding: 4px 6px; min-width: 38px; }
+.hm input[type=checkbox] { flex: none; }
+.version { margin: 18px 0 4px; text-align: center; font-size: .72rem; letter-spacing: .04em; color: var(--text-soft); }
+.trust-list { list-style: none; margin: 0; padding: 0; }
+.trust-list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
+.trust-list li + li { border-top: 1px solid var(--line); }
+.trust-list .bi { color: var(--ok); font-size: 1.2rem; flex: none; margin-top: 2px; }
+/* Kompakte Wochenkarte: Icon, Woche und Trimester nebeneinander */
+.hero { text-align: left; padding: 18px 18px 16px; }
+.hero-top { display: flex; align-items: center; gap: 14px; }
+.hero .fruit { width: 56px; height: 56px; margin: 0; font-size: 1.7rem; flex: none; }
+.hero .big { font-size: 2.3rem; line-height: 1; }
+.hero-sub { font-size: .95rem; opacity: .95; margin-top: 4px; }
+.hero .progress { margin: 14px 0 8px !important; }
+.hero .small { text-align: left; }
+.hero-quote-row { margin-top: 12px; padding-top: 12px; }
+.hero-quote { font-size: .95rem; }
+.papa-rank-big { font-size: 1.8rem; font-weight: 800; line-height: 1.15; margin: 2px 0 6px; }
+/* Eigene Lieblingsfarbe: Farbwähler und Hex-Feld */
+.fav-custom { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.color-input { width: 46px; height: 46px; min-height: 0; padding: 0; border: 3px solid var(--line); border-radius: 50%; background: none; cursor: pointer; overflow: hidden; flex: none; }
+.color-input::-webkit-color-swatch-wrapper { padding: 0; } .color-input::-webkit-color-swatch { border: 0; border-radius: 50%; } .color-input::-moz-color-swatch { border: 0; border-radius: 50%; }
+.fav-custom.is-custom .color-input { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.hex-input { width: 120px !important; flex: none; font-family: ui-monospace, Consolas, monospace; text-transform: uppercase; }
+.hero-days { margin: 0 0 6px; font-size: .98rem; line-height: 1.4; font-weight: 600; }
+
+/* Zurück-Zeile: Häuschen mit Herz (Startseite) und ein Schritt zurück */
+.back-row { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.back-home { width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--primary-strong); font-size: 1.2rem; text-decoration: none; flex: none; }
+.back-home:active { transform: scale(.94); }
+.back-row .back { margin: 0; display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px 8px 8px; border-radius: 99px; text-decoration: none; }
+/* Kopfleiste: aktiver Bereich */
+.topbtns a.active { background: var(--primary); color: var(--on-primary); box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 35%, transparent); }
+/* Kurzanleitung */
+.guide-list { list-style: none; margin: 0; padding: 0; }
+.guide-list li { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; }
+.guide-list li + li { border-top: 1px solid var(--line); }
+.guide-ico { flex: none; width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--on-primary); background: linear-gradient(145deg, var(--primary), var(--primary-strong)); }
+.guide-head { text-align: center; margin-bottom: 8px; }
+.guide-head h2 { font-size: 1.4rem; text-transform: none; letter-spacing: 0; color: var(--text); margin: 6px 0 6px; line-height: 1.25; }
+.guide-heart { font-size: 2rem; display: flex; justify-content: center; margin-bottom: 4px; }
+.guide-cheer { text-align: center; font-weight: 700; color: var(--primary-strong); margin: 14px 0 6px; }
+.guide-brand { display: flex; flex-direction: column; line-height: 1.05; margin: 2px 0 8px; }
+.guide-brand span { font-size: 1.6rem; font-weight: 800; letter-spacing: .07em; color: var(--primary-strong); }
+.guide-brand i { font-size: .9rem; font-weight: 600; color: var(--text-soft); }
+
+/* Marke: Eingabe, Vorschau, aufklappbare Zeile auf der Startseite */
+.by-prefix { font-weight: 800; color: var(--primary-strong); font-style: italic; flex: none; }
+.brand-preview { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); color: var(--primary-strong); font-weight: 800; letter-spacing: .05em; text-align: center; overflow-wrap: anywhere; }
+.brand-home { padding: 0; }
+.brand-home > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+.brand-home > summary::-webkit-details-marker { display: none; }
+.bh-ico { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); color: var(--primary-strong); flex: none; }
+.bh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; } .bh-text .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bh-edit { flex: none; font-size: .82rem; font-weight: 700; color: var(--primary-strong); display: inline-flex; gap: 6px; align-items: center; }
+.bh-body { padding: 0 16px 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.topbrand { min-width: 0; overflow: hidden; } .tb-by { max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-foot { overflow-wrap: anywhere; }
+.sb-by, .guide-brand i, .lock-brand .tb-by { overflow-wrap: anywhere; max-width: 100%; }
+.lock-brand .tb-by { white-space: normal; max-width: none; }
+
+/* "Los geht's"-Button in der Gemeinsam-Karte: gut lesbar und nicht über die ganze Breite */
+.tg-go { display: flex; width: fit-content; color: var(--on-primary) !important; }
+.hstack > .flex-grow-1, .hstack > div { min-width: 0; }
+.pd-for-name { text-transform: none; letter-spacing: .02em; font-weight: 800; color: var(--primary-strong); }
+
+/* Namen mit Herz in der Lieblingsfarbe */
+.aud-names .nm { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.aud-names .nm .nm-heart { margin: 0; font-size: .85em; }
+.tb-by .bh, .sb-by .bh { font-size: .8em; margin-right: 3px; font-style: normal; vertical-align: -.05em; }
+
+/* Schrift: Auswahl der Schriftart und Schriftgröße */
+.font-list { display: grid; gap: 8px; }
+.font-opt { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline; text-align: left; width: 100%; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); cursor: pointer; }
+.font-opt .fo-name { font-weight: 700; font-size: 1.05rem; } .font-opt .fo-sample { color: var(--text-soft); font-size: .95rem; text-align: right; } .font-opt .fo-note { grid-column: 1 / -1; color: var(--text-soft); }
+.font-opt.on { border-color: var(--primary); background: var(--surface-2); box-shadow: 0 0 0 2px var(--primary) inset; }
+.font-opt:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.fs-row { display: flex; align-items: center; gap: 10px; } .fs-row .btn { flex: none; width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+.fs-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--primary); height: 28px; margin: 0; padding: 0; }
+.brand-foot .bh, .guide-brand .bh { font-size: .8em; margin-right: 3px; font-style: normal; vertical-align: -.05em; }
+
+/* Kopfleiste und Karten bleiben bei langen Namen und großer Schrift im Rahmen */
+.topbrand { flex: 1 1 0; }
+.tb-name { font-size: min(1.55rem, 7.4vw); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-by { max-width: 100%; }
+.lock-brand .tb-name { white-space: normal; overflow-wrap: anywhere; }
+.tg-btn { min-width: 0; }
+.quick { grid-template-columns: repeat(4, minmax(0, 1fr)); } .quick-btn { min-width: 0; overflow-wrap: anywhere; text-align: center; }
+.brand-card .hstack { flex-wrap: wrap; }

@@ -5,21 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#C97B84">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="BABYLOVE">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="BABYLOVE by Sarah">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>BABYLOVE by Sarah</title>
+  <meta name="description" content="BABYLOVE by Sarah begleitet deine Schwangerschaft mit Liebe, Humor und Motivation: Wochenstand, Tagebuch und gemeinsame Rituale. Privat, offline und nur auf deinem Gerät.">
+  <meta name="author" content="Sarah">
+  <meta name="application-version" content="1.0.0">
+  <link rel="canonical" href="https://nosz.github.io/babylove/">
+
+  <!-- Link-Vorschau (WhatsApp, iMessage, Facebook, LinkedIn, Slack, Teams, X) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="BABYLOVE by Sarah">
+  <meta property="og:title" content="BABYLOVE by Sarah. Deine Schwangerschaft, liebevoll und humorvoll.">
+  <meta property="og:description" content="Wochenstand, Tagebuch, gemeinsame Rituale und viele kleine Mutmacher. Privat, offline und nur auf deinem Gerät.">
+  <meta property="og:url" content="https://nosz.github.io/babylove/">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:image" content="https://nosz.github.io/babylove/icons/og-image.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="BABYLOVE by Sarah: Handy mit Wochenstand 21. SSW, daneben der Schriftzug und der Satz Deine Schwangerschaft. Liebevoll, humorvoll und ganz privat.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BABYLOVE by Sarah. Deine Schwangerschaft, liebevoll und humorvoll.">
+  <meta name="twitter:description" content="Wochenstand, Tagebuch, gemeinsame Rituale und viele kleine Mutmacher. Privat, offline und nur auf deinem Gerät.">
+  <meta name="twitter:image" content="https://nosz.github.io/babylove/icons/og-image.png">
+  <meta name="twitter:image:alt" content="BABYLOVE by Sarah: Handy mit Wochenstand 21. SSW und der Satz Deine Schwangerschaft. Liebevoll, humorvoll und ganz privat.">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"BABYLOVE by Sarah","url":"https://nosz.github.io/babylove/","description":"Schwangerschaftsbegleiter mit Wochenstand, Tagebuch und gemeinsamen Ritualen. Privat und offline.","applicationCategory":"HealthApplication","operatingSystem":"Any","inLanguage":"de","image":"https://nosz.github.io/babylove/icons/og-image.png","author":{"@type":"Person","name":"Sarah"}}</script>
+
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="icon" href="icons/favicon-64.png" sizes="64x64" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="vendor/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header id="topbar">
-    <a href="#/" class="topbrand" aria-label="BABYLOVE by Sarah, zur Startseite"><span class="tb-name">BABYLOVE</span><span class="tb-by">by Sarah</span></a>
+    <a href="#/" class="topbrand" aria-label="BABYLOVE by Sarah, zur Startseite"><span class="tb-name">BABYLOVE</span><span class="tb-by" data-brand-by>by Sarah</span></a>
     <div class="topbtns">
       <button id="topShare" type="button" aria-label="App teilen"><i class="bi bi-share-fill" aria-hidden="true"></i></button>
-      <button id="topMode" type="button" aria-label="Hell oder Dunkel wechseln"><i class="bi bi-moon-stars-fill" id="topModeIcon" aria-hidden="true"></i></button>
+      <a href="#/more" id="topMore" aria-label="Mehr"><i class="bi bi-grid-fill" aria-hidden="true"></i></a>
       <a href="#/einstellungen" id="topSettings" aria-label="Einstellungen"><i class="bi bi-gear-fill" aria-hidden="true"></i></a>
     </div>
   </header>
@@ -30,7 +57,7 @@
     <a href="#/" data-route="home"><i class="bi bi-house-heart-fill" aria-hidden="true"></i>Heute</a>
     <a href="#/diary" data-route="diary"><i class="bi bi-journal-text" aria-hidden="true"></i>Tagebuch</a>
     <a href="#/photos" data-route="photos"><i class="bi bi-images" aria-hidden="true"></i>Fotos</a>
-    <a href="#/more" data-route="more"><i class="bi bi-grid-fill" aria-hidden="true"></i>Mehr</a>
+
     <a href="#/settings" data-route="settings"><i class="bi bi-person-heart" id="navMeIcon" aria-hidden="true"></i><img id="navMeImg" class="avatar avatar-nav" alt="" hidden><span id="navMe">Ich</span></a>
     <a href="#/papa" data-route="papa"><i class="bi bi-person-fill" id="navPaIcon" aria-hidden="true"></i><img id="navPaImg" class="avatar avatar-nav" alt="" hidden><span id="navPa">Papa</span></a>
   </nav>
@@ -41,6 +68,8 @@
   <script type="module" src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
   <script src="content.js"></script>
   <script src="features.js"></script>
+  <script src="extras.js"></script>
+  <script src="printing.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

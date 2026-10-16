@@ -1,10 +1,12 @@
-﻿const CACHE = 'babylove-v12';
+// BABYLOVE by Sarah: Service Worker. Version muss zu APP_VERSION in content.js passen.
+const VERSION = '1.0.0';
+const CACHE = 'babylove-' + VERSION;
 const SHELL = [
-  './', './index.html', './styles.css', './app.js', './content.js', './features.js',
+  './', './index.html', './styles.css', './app.js', './content.js', './features.js', './extras.js', './printing.js',
   './vendor/bootstrap/bootstrap.min.css', './vendor/bootstrap/bootstrap.bundle.min.js',
   './vendor/bootstrap-icons/bootstrap-icons.min.css', './vendor/bootstrap-icons/fonts/bootstrap-icons.woff2',
   './vendor/bootstrap-icons/fonts/bootstrap-icons.woff',
-  './manifest.webmanifest', './icons/icon.svg', './icons/icon-maskable.svg'
+  './manifest.webmanifest', './icons/icon.svg', './icons/icon-maskable.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 
 self.addEventListener('install', e => {
@@ -19,13 +21,11 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Sofort aus dem Speicher antworten (offline bereit) und im Hintergrund aktualisieren, damit Neuerungen beim nächsten Öffnen da sind
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy));
-      return res;
-    }).catch(() => caches.match('./index.html')))
-  );
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
+  e.respondWith(caches.open(CACHE).then(cache => cache.match(e.request).then(hit => {
+    const refresh = fetch(e.request).then(res => { if (res && res.ok) cache.put(e.request, res.clone()); return res; }).catch(() => hit || cache.match('./index.html'));
+    return hit || refresh;
+  })));
 });
