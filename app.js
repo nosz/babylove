@@ -224,18 +224,23 @@ const hexToHsl = hex => {
 const themeDef = id => id === 'custom' ? customThemeDef() : (THEME_DEFS[id] || THEME_DEFS.mauve);
 const CUSTOM_DEFAULT = { primary: '#A0537A', accent: '#E3B27A', bg: '#FAF3F6' };
 const customColors = () => { const c = state.settings.customTheme || {}; return { primary: isHex(c.primary) ? c.primary.toUpperCase() : CUSTOM_DEFAULT.primary, accent: isHex(c.accent) ? c.accent.toUpperCase() : CUSTOM_DEFAULT.accent, bg: isHex(c.bg) ? c.bg.toUpperCase() : CUSTOM_DEFAULT.bg }; };
+// Die gewählten Farben werden unverändert verwendet. Nur Schrift- und Flächenfarben werden berechnet, damit alles lesbar bleibt (mindestens 4,5:1):
+// Schrift auf dem Hauptton hell oder dunkel, Überschriften- und Linkfarbe abgedunkelt bzw. aufgehellt, Hintergrund hell oder dunkel erkannt.
+const normHex = v => { let x = String(v || '').trim().replace(/\s+/g, ''); if (x && x[0] !== '#') x = '#' + x; if (/^#[0-9a-f]{3}$/i.test(x)) x = '#' + [...x.slice(1)].map(c => c + c).join(''); return isHex(x) ? x.toUpperCase() : ''; };
 function customThemeDef() {
-  const c = customColors(), [h, s0, l0] = hexToHsl(c.primary), [hb, sb] = hexToHsl(c.bg);
-  let l = l0, primary = c.primary; while (contrastHex('#FFFFFF', primary) < 4.6 && l > 8) { l -= 2; primary = hslToHex(h, s0, l); }
-  const strong = hslToHex(h, s0, Math.max(l - 12, 6)), tint = Math.min(Math.max(sb, 8), 50);
-  const bg = hslToHex(hb, tint, 96), s2 = hslToHex(hb, tint, 92), line = hslToHex(hb, Math.min(tint, 40), 85);
-  const text = hslToHex(hb, 22, 15); let sl = 38, soft = hslToHex(hb, 14, sl); while (contrastHex(soft, s2) < 4.6 && sl > 6) { sl -= 2; soft = hslToHex(hb, 14, sl); }
-  return { name: 'Eigene Kombination', bg, s2, line, text, soft, primary, strong, accent: c.accent };
-}
-function themeVars(id, dark) {
+  const c = customColors(), [h, s0] = hexToHsl(c.primary), [hb, sb, lb] = hexToHsl(c.bg), darkBg = contrastHex('#FFFFFF', c.bg) > contrastHex('#000000', c.bg), sat = Math.min(sb, 60);
+  const L = (hue, s, l) => hslToHex(hue, s, Math.max(0, Math.min(100, l)));
+  const onPrimary = contrastHex('#FFFFFF', c.primary) >= contrastHex('#1B1416', c.primary) ? '#FFFFFF' : '#1B1416';
+  const up = darkBg || lb < 55; // Flächen heller als der Hintergrund, wenn der Hintergrund dunkel oder mittel ist
+  const surface = darkBg ? L(hb, sat, lb + 5) : '#FFFFFF', s2 = L(hb, sat, up ? lb + (darkBg ? 9 : 6) : lb - 4), line = L(hb, sat, up ? lb + (darkBg ? 17 : 12) : lb - 11);
+  let tl = darkBg ? 94 : 15, text = L(hb, 22, tl); while (contrastHex(text, c.bg) < 7 && tl > 0 && tl < 100) { tl += darkBg ? 2 : -2; text = L(hb, 22, tl); }
+  let sl = darkBg ? 72 : 38, soft = L(hb, 14, sl); while ((contrastHex(soft, s2) < 4.6 || contrastHex(soft, c.bg) < 4.6) && sl > 0 && sl < 100) { sl += darkBg ? 3 : -2; soft = L(hb, 14, sl); }
+  let pl = hexToHsl(c.primary)[2], strong = c.primary; while ((contrastHex(strong, s2) < 4.6 || contrastHex(strong, c.bg) < 4.6) && pl > 0 && pl < 100) { pl += darkBg ? 3 : -2; strong = L(h, s0, pl); }
+  return { name: 'Eigene Kombination', bg: c.bg, surface, s2, line, text, soft, primary: c.primary, strong, onPrimary, accent: c.accent };
+}function themeVars(id, dark) {
   const t = themeDef(id);
-  if (!dark) return { '--bg': t.bg, '--surface': '#FFFFFF', '--surface-2': t.s2, '--line': t.line, '--text': t.text, '--text-soft': t.soft,
-    '--primary': t.primary, '--primary-strong': t.strong, '--on-primary': '#FFFFFF', '--accent': t.accent, '--shadow': '0 6px 20px rgba(80, 50, 50, .08)' };
+  if (!dark) return { '--bg': t.bg, '--surface': t.surface || '#FFFFFF', '--surface-2': t.s2, '--line': t.line, '--text': t.text, '--text-soft': t.soft,
+    '--primary': t.primary, '--primary-strong': t.strong, '--on-primary': t.onPrimary || '#FFFFFF', '--accent': t.accent, '--shadow': '0 6px 20px rgba(80, 50, 50, .08)' };
   const [h, s] = hexToHsl(t.primary), sat = Math.min(s, 55);
   return { '--bg': `hsl(${h} 14% 10%)`, '--surface': `hsl(${h} 14% 14%)`, '--surface-2': `hsl(${h} 14% 19%)`, '--line': `hsl(${h} 12% 27%)`,
     '--text': `hsl(${h} 25% 94%)`, '--text-soft': `hsl(${h} 12% 72%)`, '--primary': `hsl(${h} ${sat}% 70%)`, '--primary-strong': `hsl(${h} ${sat}% 80%)`,
@@ -698,15 +703,16 @@ routes.colors = () => {
   const refreshCustom = () => {
     const t = themeDef('custom'); if (s.theme === 'custom') applyTheme();
     const pv = $('#customPrev'); if (pv) { pv.style.background = t.bg; pv.style.borderColor = t.line; const i = pv.querySelectorAll('i'); i[0].style.background = t.s2; i[1].style.background = t.primary; i[2].style.background = t.accent; }
-    const r = contrastHex('#FFFFFF', t.primary), rt = contrastHex(t.text, t.bg), ck = $('#ccCheck');
-    if (ck) { const lvl = x => x >= 7 ? 'sehr gut' : x >= 4.5 ? 'gut' : 'schwach'; ck.textContent = `Lesbarkeit: Knöpfe ${lvl(r)} (${r.toFixed(1).replace('.', ',')} : 1), Text ${lvl(rt)} (${rt.toFixed(1).replace('.', ',')} : 1). Die Farben werden bei Bedarf automatisch angepasst.`; }
+    const r = contrastHex(t.onPrimary, t.primary), rt = contrastHex(t.text, t.bg), ck = $('#ccCheck');
+    if (ck) { const lvl = x => x >= 7 ? 'sehr gut' : x >= 4.5 ? 'gut' : 'schwach'; ck.textContent = `Lesbarkeit: Knöpfe ${lvl(r)} (${r.toFixed(1).replace('.', ',')} : 1), Text ${lvl(rt)} (${rt.toFixed(1).replace('.', ',')} : 1). Eure Farben bleiben unverändert, nur die Schrift darauf passt sich an.`; }
   };
-  const setCustom = (k, v) => { s.customTheme = { ...customColors(), ...(s.customTheme || {}), [k]: v.toUpperCase() }; refreshCustom(); };
+  const markCustom = () => { view.querySelectorAll('[data-th]').forEach(b => { b.classList.remove('sel'); b.setAttribute('aria-pressed', 'false'); }); const u = $('#useCustom'); if (u) { u.classList.add('sel'); u.setAttribute('aria-pressed', 'true'); } };
+  const setCustom = (k, v) => { s.customTheme = { ...customColors(), ...(s.customTheme || {}), [k]: v.toUpperCase() }; s.theme = 'custom'; markCustom(); refreshCustom(); };
   view.querySelectorAll('[data-cc]').forEach(inp => {
     const k = inp.dataset.cc, hex = view.querySelector(`[data-cch="${k}"]`);
     inp.addEventListener('input', () => { hex.value = inp.value.toUpperCase(); setCustom(k, inp.value); });
     inp.addEventListener('change', () => { save(); });
-    hex.addEventListener('change', () => { let v = hex.value.trim(); if (v && v[0] !== '#') v = '#' + v; if (isHex(v)) { inp.value = v.toLowerCase(); hex.value = v.toUpperCase(); setCustom(k, v); save(); } else { toast('Bitte einen Farbwert wie #A0537A eingeben'); hex.value = customColors()[k]; } });
+    hex.addEventListener('change', () => { const v = normHex(hex.value); if (v) { inp.value = v.toLowerCase(); hex.value = v; setCustom(k, v); save(); } else { toast('Bitte einen Farbwert wie #A0537A eingeben'); hex.value = customColors()[k]; } });
   });
   $('#ccApply').onclick = () => { s.customTheme = { ...customColors() }; s.theme = 'custom'; save(); applyTheme(); render(); cheer('style'); };
   $('#useCustom').onclick = () => { s.customTheme = { ...customColors() }; s.theme = 'custom'; save(); applyTheme(); render(); cheer('style'); };
