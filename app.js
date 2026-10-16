@@ -388,7 +388,7 @@ routes.home = () => {
     <a class="home-edit" href="#/homeconfig">${bi('sliders')} Startseite anpassen</a>`;
   bindTogether();
   $('#newHeroQuote').onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
-  const np = $('#newPartnerMsg'); if (np) np.onclick = () => { $('#partnerMsg').textContent = partnerMsg(); };
+  const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (q === cur && ++g < 20); $('#partnerMsg').textContent = q; };
   const r = $('#reveal');
   if (r) r.onclick = () => { $('#secret').classList.add('show'); clearTimeout(r.t); r.t = setTimeout(() => $('#secret')?.classList.remove('show'), 5000); };
 };

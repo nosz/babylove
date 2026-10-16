@@ -549,3 +549,5 @@ a.link-card.hub .aud { margin-top: 8px; }
 .tg-btn { min-width: 0; }
 .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); } .quick-btn { min-width: 0; overflow-wrap: anywhere; text-align: center; }
 .brand-card .hstack { flex-wrap: wrap; }
+
+.seg { flex-wrap: wrap; gap: 4px; } .seg button { flex: 1 1 auto; min-width: 0; }
