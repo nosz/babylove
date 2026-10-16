@@ -536,7 +536,7 @@ const weekBody = w => {
   const t = hi[0] === lo[0] ? 0 : (w - lo[0]) / (hi[0] - lo[0]);
   return { mm: Math.round(lo[1] + (hi[1] - lo[1]) * t), g: Math.round(lo[2] + (hi[2] - lo[2]) * t) };
 };
-const fmtMM = mm => mm < 100 ? `${mm} mm` : `${(mm / 10).toFixed(1).replace('.', ',')} cm`;
+const fmtMM = mm => mm < 100 ? `${mm} mm` : `${(mm / 10).toFixed(1).replace('.', ',').replace(/,0$/, '')} cm`;
 const fmtG = g => g < 1 ? 'unter 1 g' : g < 1000 ? `${g} g` : `${(g / 1000).toFixed(1).replace('.', ',')} kg`;
 function weekRange(p) {
   const lmp = new Date(state.settings.dueDate + 'T00:00'); lmp.setDate(lmp.getDate() - 280);
@@ -563,7 +563,7 @@ function storySlideHTML(S, i) {
   const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
     : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong)}</div><p class="st-cap ${sl.quote ? 'st-quote' : ''}">${esc(sl.quote || 'Woche ' + S.week)}</p>`
     : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
-  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${sl.dia ? `<span class="st-dia">auf ${esc(DIALECTS[sl.dia])}</span>` : ''}${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
+  return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot">${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
 }// Bild zum Teilen (1080 x 1920) mit den Farben der gewählten Farbwelt
 function drawStory(S, i, imgs = {}) {
   const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
@@ -572,18 +572,18 @@ function drawStory(S, i, imgs = {}) {
   const wrap = (t, mw, size, weight) => { x.font = `${weight} ${size}px ${fam}`; const out = []; let line = ''; for (const w of String(t).split(' ')) { const test = line ? line + ' ' + w : w; if (x.measureText(test).width > mw && line) { out.push(line); line = w; } else line = test; } if (line) out.push(line); return out; };
   x.textBaseline = 'alphabetic'; x.fillStyle = soft; x.textAlign = 'left'; x.font = `600 44px ${fam}`; x.fillText(`Woche ${S.week} · ${S.range}`, 70, 140);
   const heart = (cx, cy, s, col) => { x.save(); x.translate(cx, cy); x.scale(s, s); x.beginPath(); x.moveTo(0, 30); x.bezierCurveTo(-90, -30, -50, -90, 0, -40); x.bezierCurveTo(50, -90, 90, -30, 0, 30); x.fillStyle = col; x.fill(); x.restore(); };
-  x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96)); if (sl.dia) { x.fillStyle = soft; x.font = `italic 600 40px ${fam}`; x.fillText('auf ' + DIALECTS[sl.dia], W / 2, 380 + tl.length * 96 + 10); x.fillStyle = text; }
+  x.textAlign = 'center'; x.fillStyle = text; const tl = wrap(sl.title, 900, sl.id === 'dev' ? 66 : 76, 700); x.font = `700 ${sl.id === 'dev' ? 66 : 76}px ${fam}`; tl.forEach((l, k) => x.fillText(l, W / 2, 380 + k * 96));
   if (sl.id === 'size') {
-    x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(W / 2, 1090, 360, 0, 7); x.fill();
-    if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 250, 840, 500, 500); else {
+    x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(W / 2, 1090, 250, 0, 7); x.fill();
+    if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 175, 915, 350, 350); else {
     const hue = fruitHue(S.fruit), gr = x.createRadialGradient(W / 2 - 70, 1030, 20, W / 2, 1090, 250); gr.addColorStop(0, `hsl(${hue} 80% 70%)`); gr.addColorStop(1, `hsl(${hue} 70% 45%)`); x.fillStyle = gr; x.beginPath(); x.arc(W / 2, 1110, 240, 0, 7); x.fill();
     x.fillStyle = `hsl(${(hue + 110) % 360} 55% 38%)`; x.beginPath(); x.ellipse(W / 2 + 40, 850, 90, 38, -0.5, 0, 7); x.fill(); x.fillRect(W / 2 - 6, 845, 12, 50); }
     x.fillStyle = text; x.font = `700 56px ${fam}`; x.fillText(sl.lines.join(' · '), W / 2, 1560);
   } else if (sl.id === 'dev') {
-    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 330, 800, 660, 660); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
+    if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 230, 890, 460, 460); else { x.fillStyle = strong; x.beginPath(); x.ellipse(W / 2, 1120, 330, 420, 0, 0, 7); x.fill(); x.strokeStyle = '#FFFFFF'; x.lineWidth = 10; x.beginPath(); x.ellipse(W / 2, 1120, 305, 395, 0, 0, 7); x.stroke(); heart(W / 2, 1130, 5.2, '#FFFFFF'); }
     if (sl.quote) { x.fillStyle = text; wrap(sl.quote, 880, 46, 600); wrap(sl.quote, 880, 46, 600).forEach((l, k) => { x.font = `italic 600 46px ${fam}`; x.fillText(l, W / 2, 1600 + k * 62); }); } else { x.fillStyle = soft; x.font = `600 52px ${fam}`; x.fillText(`Woche ${S.week}`, W / 2, 1680); }
   } else {
-    if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 190, 0, 7); x.fill(); x.drawImage(im, cx - 150, 490, 300, 300); }); }
+    if (imgs.baby && imgs.fruit) { x.fillStyle = '#FFFFFF'; [[300, imgs.baby], [780, imgs.fruit]].forEach(([cx, im]) => { x.beginPath(); x.arc(cx, 640, 140, 0, 7); x.fill(); x.drawImage(im, cx - 110, 530, 220, 220); }); }
     x.textAlign = 'center'; sl.rows.forEach(([k, val], n) => { const cx = n % 2 ? 810 : 270, cy = (imgs.baby ? 960 : 620) + Math.floor(n / 2) * (imgs.baby ? 190 : 280); x.fillStyle = soft; x.font = `600 42px ${fam}`; x.fillText(k, cx, cy); x.fillStyle = text; x.font = `700 70px ${fam}`; x.fillText(val, cx, cy + 80); });
     x.fillStyle = s2; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, 840, 30, 15) : x.rect(120, 1500, 840, 30); x.fill(); x.fillStyle = strong; x.beginPath(); x.roundRect ? x.roundRect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30, 15) : x.rect(120, 1500, Math.max(30, 840 * S.p.pct / 100), 30); x.fill();
   }

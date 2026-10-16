@@ -198,18 +198,27 @@ const SPLASH_LINES = [
   'Eine Schwangerschaft ist ein Abenteuer. Schön, dass du uns mitnimmst.',
   'Du bist nicht allein auf dieser Reise. Hier ist alles, was dich begleitet.'
 ];
+// Begrüßung abhängig von der Uhrzeit (für Startseite und Willkommensbild)
+const TOD_LINES = {
+  morgen: ['Ein neuer Tag, ein bisschen näher am Wunder. Frühstück nicht vergessen!', 'Guten Start! Ein Glas Wasser und ein tiefer Atemzug, dann kann der Tag kommen.', 'Das Baby ist auch schon wach und übt Purzelbäume.'],
+  tag: ['Halbzeit am Tag: Beine hoch, trinken und kurz durchatmen.', 'Zeit für eine kleine Pause. Das Baby wächst, auch wenn ihr nur sitzt.', 'Ein Snack und ein Lächeln machen den Nachmittag gleich leichter.'],
+  abend: ['Der Tag war lang genug. Jetzt gehört der Abend euch beiden.', 'Zeit zum Runterkommen: Tee, Sofa und die Hand auf dem Bauch.', 'Ein Abend zu zweit, plus Baby. Besser geht es kaum.'],
+  nacht: ['Noch wach? Das Baby sicher auch. Gönnt euch bald Ruhe.', 'Nachts darf man ruhig mal das Handy weglegen und kuscheln.', 'Schlaf ist jetzt Gold wert. Gute Nacht, ihr Lieben.']
+};
+function todPeriod(h = new Date().getHours()) { return h >= 5 && h < 11 ? 'morgen' : h >= 11 && h < 17 ? 'tag' : h >= 17 && h < 22 ? 'abend' : 'nacht'; }
+function todGreeting(h) { return { morgen: 'Guten Morgen', tag: 'Guten Tag', abend: 'Guten Abend', nacht: 'Hallo Nachteule' }[todPeriod(h)]; }
 function showSplash() {
   try { if (sessionStorage.getItem('bl-splash')) return; sessionStorage.setItem('bl-splash', '1'); } catch { /* ohne Speicher trotzdem zeigen */ }
   if ($('#splash')) return;
   const s = state.settings, p = s.dueDate ? pregnancy() : null, h = new Date().getHours();
-  const tod = h >= 5 && h < 11 ? 'Guten Morgen' : h >= 11 && h < 17 ? 'Guten Tag' : 'Guten Abend';
+  const tod = todGreeting(h);
   const el = document.createElement('div'); el.id = 'splash'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Willkommen bei ' + brandFull());
   const photo = randomPhoto('mama');
   el.innerHTML = `<div class="splash-in">
     ${photo ? avatar(photo, 'avatar-lg splash-photo') : `<div class="splash-badge">${bi('heart-fill')}</div>`}
     <div class="splash-brand"><span class="sb-name" data-brand-name>${esc(brandName())}</span><span class="sb-by" data-brand-by>${esc(brandSub())}</span></div>
     <h2 class="splash-hello">${tod}${s.mama ? ', ' + esc(s.mama) : ''}</h2>
-    <p class="splash-line">${s.dueDate ? pick(SPLASH_LINES) : 'Schön, dass du da bist. Gemeinsam begleiten wir deine Schwangerschaft mit Liebe, Humor und ganz viel Zuversicht.'}</p>
+    <p class="splash-line">${s.dueDate ? pick(TOD_LINES[todPeriod(h)].concat(SPLASH_LINES)) : 'Schön, dass du da bist. Gemeinsam begleiten wir deine Schwangerschaft mit Liebe, Humor und ganz viel Zuversicht.'}</p>
     ${p ? `<div class="splash-week">${p.weeks}. Schwangerschaftswoche${p.left > 0 ? ` · noch ${p.left} Tage` : ''}</div>` : ''}
     <button class="btn splash-go" id="splashGo" type="button">Los geht’s</button></div>`;
   document.body.appendChild(el); hydrateImages(el);

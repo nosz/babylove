@@ -778,3 +778,23 @@ h1, h2 { overflow-wrap: anywhere; }
 /* Sprache der Wochen-Story */
 .st-lang { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; flex-wrap: wrap; } .st-lang label { margin: 0; font-weight: 700; color: var(--primary-strong); } .st-lang select { flex: 1; min-width: 10rem; max-width: 18rem; }
 .st-quote { font-style: italic; font-weight: 600; font-size: .9rem; margin: 6px 4px auto; line-height: 1.35; }
+
+/* Wochen-Story auf dem Handy: ruhiger, kleinere Schrift, nichts wird abgeschnitten */
+.story-slide { aspect-ratio: auto; max-height: none; min-height: min(33rem, 80vh); padding: 14px 16px 12px; overflow: visible; justify-content: flex-start; }
+.story-slide .st-top { font-size: .72rem; font-weight: 600; letter-spacing: .02em; color: var(--text-soft); padding-bottom: 8px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+.story-slide .st-title { font-size: 1rem; line-height: 1.32; margin: 14px 2px 8px; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; word-break: normal; font-weight: 800; }
+.story-slide .st-dia { margin: 0 0 6px; font-size: .72rem; }
+.story-slide .st-circle { width: 74%; margin: auto; }
+.story-slide .st-baby { width: 72%; margin: auto; }
+.story-slide .st-cap { font-size: .86rem; margin: 6px 2px 8px; line-height: 1.35; }
+.story-slide .st-quote { font-size: .82rem; font-weight: 600; font-style: italic; margin: 4px 4px 8px; }
+.story-slide .st-pair { gap: 10px; margin: 6px auto 4px; } .story-slide .st-bub { width: 34%; }
+.story-slide .st-grid { margin: 8px 0 8px; gap: 10px 8px; } .story-slide .st-grid dt { font-size: .68rem; line-height: 1.2; } .story-slide .st-grid dd { font-size: .92rem; white-space: nowrap; }
+.story-slide .st-prog { margin: 4px auto 8px; }
+.story-slide .st-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); width: 100%; font-size: .7rem; }
+
+/* Wochen-Story: Grafiken kleiner, Texte haben Platz */
+.story-slide .st-circle { width: 54%; margin: 8px auto; } .story-slide .st-baby { width: 50%; margin: 8px auto; } .story-slide .st-pair { gap: 8px; margin: 4px auto; } .story-slide .st-bub { width: 26%; }
+
+/* Update-Hinweis */
+.update-banner{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:1080;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:16px;background:var(--surface,#fff);color:var(--text,#222);border:2px solid var(--primary);box-shadow:0 10px 30px rgba(0,0,0,.2);max-width:560px;margin:0 auto}.update-banner>i{font-size:1.5rem;color:var(--primary)}.update-banner>div{flex:1 1 160px;display:flex;flex-direction:column;line-height:1.25}.update-banner span{font-size:.85rem;opacity:.8}

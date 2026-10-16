@@ -564,7 +564,7 @@ const TOGETHER_IDEAS_MORE = [
   ['Sagt euch gegenseitig Danke für etwas Konkretes von heute.', null]
 ];
 // Version der App. Muss mit sw.js und der Meta-Angabe in index.html uebereinstimmen (wird getestet).
-const APP_VERSION = { number: '1.4.0', date: '2026-10-16', name: 'Wochen-Story mit eigenen Illustrationen, Babywitze, Mundart und eigener Banner' };
+const APP_VERSION = { number: '1.6.0', date: '2026-10-16', name: 'Eigene Messwerte, fünf Mundarten, süße Zeichnungen und Wochen-Story in deiner Sprache' };
 Object.assign(PAGE_ICON, { privacy: 'shield-check' });
 Object.assign(PAGE_AUDIENCE, { privacy: 'together' });
 

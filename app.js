@@ -457,7 +457,7 @@ routes.home = () => {
   const [, name] = fruitFor(p.weeks);
   const names = [s.mama, s.partner].filter(Boolean).map(esc).join(' &amp; ');
   const gname = (v, k) => `<span class="gn">${nmHeart(k)}${esc(v)}</span>`, gl = [s.mama && gname(s.mama, 'mama'), s.partner && gname(s.partner, 'papa')].filter(Boolean).join(' &amp; ');
-  const greet = gl ? `Hallo ${gl}` : 'Hallo, ihr Superhelden';
+  const tg = todGreeting(), greet = gl ? `${tg} ${gl}` : `${tg}, ihr Superhelden`;
   const { order, on } = homeLayout();
   view.innerHTML = `
     <div class="greet">${avatarStack()}
@@ -973,12 +973,15 @@ routes.einstellungen = () => {
     ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, fünf Mundarten wählen (auch Sächsisch und Ostfriesisch)', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('banner', 'image', 'Banner der Startseite', esc(bannerSub()), bannerBody)}
     ${acc('mode', 'circle-half', 'Darstellung', modeLabel, `<div class="seg" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button data-md="${k}" class="${s.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`)}
+    ${acc('nav', 'layout-three-columns', 'Menü unten', s.navIcon === 'photo' ? 'Profilfoto statt Herz' : 'Herz in der Lieblingsfarbe', `<p class="small soft">Was soll unten bei Mama und Papa stehen?</p><div class="seg" role="group" aria-label="Symbol im Menü" style="margin:0">${[['heart', 'Herz in der Lieblingsfarbe'], ['photo', 'Profilfoto']].map(([k, l]) => `<button type="button" data-navicon="${k}" class="${(s.navIcon || 'heart') === k ? 'on' : ''}" aria-pressed="${(s.navIcon || 'heart') === k}">${l}</button>`).join('')}</div>${s.navIcon === 'photo' && !photosOf('mama').length && !photosOf('partner').length ? '<p class="small soft mt-2 mb-0">Noch kein Profilfoto vorhanden. Bis dahin zeigt das Menü das Herz. Fotos lädst du bei Mama und Papa hoch.</p>' : '<p class="small soft mt-2 mb-0">Standard ist das Herz in der Lieblingsfarbe.</p>'}`)}
     ${acc('font', 'fonts', 'Schrift', `${esc((FONT_FAMILIES[s.fontFamily] || FONT_FAMILIES.soft).label)} · ${fontScale()} %`, fontBody)}
     ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
     ${acc('install', 'download', 'App installieren', isStandalone() ? 'Schon installiert, schön!' : 'Auf den Startbildschirm, ohne Browserleiste', `<p class="small soft">Mit der Installation startet BABYLOVE wie jede andere App, auch ohne Internet.</p><button class="btn btn-solid theme-primary" id="openInstall" type="button">${bi('download')} ${isStandalone() ? 'So funktioniert es' : 'Installieren oder Anleitung zeigen'}</button>`)}
+    ${acc('update', 'arrow-repeat', 'Version und Updates', `Version ${APP_VERSION.number}`, `<p class="small soft">Neue Versionen werden automatisch gesucht. Sobald eine bereitsteht, erscheint der Hinweis „Neue Version verfügbar“. Eure Daten bleiben dabei erhalten.</p><button type="button" class="btn btn-solid theme-primary" id="checkUpdate">${bi('arrow-repeat')} Nach Updates suchen</button>`)}
     ${acc('city', 'geo-alt-fill', 'Ort für Tipps', esc(tipsCity()), `<p class="small soft">In welcher Stadt wohnt ihr? Für Frankfurt gibt es ausgewählte Anlaufstellen, für jeden anderen Ort sammelt ihr eigene.</p><label for="cityInput">Stadt oder Region</label><input id="cityInput" maxlength="40" value="${esc(s.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><div class="hstack gap-2 mt-2">${go('#/tips', 'Zu den Tipps')}</div>`)}
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}
+    ${acc('storage', 'hdd', 'Speicherplatz', 'Wie viel Platz Texte und Bilder auf diesem Gerät brauchen', `<div class="storage-box" id="storageBox" aria-live="polite"><p class="small soft">Wird berechnet …</p></div><p class="small soft">Alles liegt nur auf diesem Gerät. Wer nicht mehr gebrauchte Fotos löscht, schafft wieder Platz.</p>`)}
     ${acc('export', 'box-arrow-up', 'Datenexport', 'Alles lesbar mitnehmen: JSON, CSV oder HTML', go('#/export', 'Daten exportieren'))}
     ${acc('privacy', 'shield-check', 'Datenschutz und Sicherheit', 'Offen erklärt: Deine Daten bleiben bei dir', go('#/privacy', 'Datenschutz lesen'))}
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
@@ -1006,6 +1009,8 @@ routes.einstellungen = () => {
   $('#bnReset').onclick = async () => { const old = bannerCfg().bgId; if (old) await delImg(old).catch(() => {}); delete state.settings.banner; save(); render(); toast('Banner ist wieder im Standard'); };
   bindBrandEditor();
   const ci = $('#cityInput'); if (ci) bindCityInput(ci, () => { const sub = $('details[data-acc="city"] summary .small'); if (sub) sub.textContent = tipsCity(); });
+  view.querySelectorAll('[data-navicon]').forEach(b => b.onclick = () => { if (b.dataset.navicon === 'photo') s.navIcon = 'photo'; else delete s.navIcon; save(); updateNavAvatar(); render(); toast(s.navIcon === 'photo' ? 'Im Menü stehen jetzt die Profilfotos.' : 'Im Menü stehen wieder die Herzen.'); });
+  fillStorage(); const cu = $('#checkUpdate'); if (cu) cu.onclick = async () => { cu.disabled = true; const r = await checkForUpdate(); cu.disabled = false; toast(r === 'new' ? 'Neue Version gefunden. Sie wird gleich angeboten.' : r === 'current' ? 'Ihr habt schon die neueste Version.' : r === 'none' ? 'Updates werden in der installierten oder online geöffneten App geprüft.' : 'Updates konnten gerade nicht geprüft werden. Bitte später noch einmal versuchen.'); };
   view.querySelectorAll('[data-ff]').forEach(b => b.onclick = () => { s.fontFamily = b.dataset.ff; save(); applyTheme(); render(); cheer('style'); });
   const range = $('#fsRange'), setScale = (v, commit) => { v = Math.min(FONT_SCALE.max, Math.max(FONT_SCALE.min, Math.round(v / FONT_SCALE.step) * FONT_SCALE.step)); s.fontScale = v; range.value = v; range.setAttribute('aria-valuetext', v + ' Prozent'); $('#fsValue').textContent = v; applyTheme(); if (commit) { save(); cheer('style'); } };
   range.addEventListener('input', () => setScale(+range.value, false)); range.addEventListener('change', () => setScale(+range.value, true));
@@ -1093,7 +1098,7 @@ function migratePhotos() {
 // Menüpunkte unten: Name und erstes Foto je Person
 function updateNavAvatar() {
   for (const who of ['mama', 'partner']) {
-    const w = WHO[who], id = photosOf(who)[0], img = $('#' + w.navImg), icon = $('#' + w.navIcon);
+    const w = WHO[who], id = state.settings.navIcon === 'photo' ? photosOf(who)[0] : null, img = $('#' + w.navImg), icon = $('#' + w.navIcon);
     if (!img || !icon) continue;
     img.hidden = !id; icon.hidden = !!id;
     if (id) { img.dataset.img = id; hydrateImages($('#nav')); }
@@ -1219,5 +1224,65 @@ appStart();
 setTimeout(maybeAskBackup, 800);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAskBackup(); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
+  navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' }).then(trackUpdates).catch(() => {});
+}
+// Updates: neue Version erkennen, anbieten oder beim Start automatisch einspielen
+let swReg = null, reloading = false;
+function showUpdateBanner(worker) {
+  if ($('#updateBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'updateBanner'; b.className = 'update-banner'; b.setAttribute('role', 'status');
+  b.innerHTML = `<i class="bi bi-arrow-repeat" aria-hidden="true"></i><div><strong>Neue Version verfügbar</strong><span>Ein kurzes Update, eure Daten bleiben erhalten.</span></div><button class="btn btn-primary btn-sm" id="updNow">Jetzt aktualisieren</button><button class="btn btn-link btn-sm" id="updLater">Später</button>`;
+  document.body.appendChild(b);
+  $('#updNow').onclick = () => applyUpdate(worker);
+  $('#updLater').onclick = () => b.remove();
+}
+function applyUpdate(worker) {
+  const w = worker || (swReg && swReg.waiting);
+  if (w) w.postMessage({ type: 'SKIP_WAITING' }); else location.reload();
+}
+function trackUpdates(reg) {
+  swReg = reg;
+  if (!reg) return;
+  const watch = w => w && w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(w); });
+  reg.addEventListener('updatefound', () => watch(reg.installing));
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
+  if (reg.waiting && navigator.serviceWorker.controller) {
+    let tried = false;
+    try { tried = sessionStorage.getItem('babylove:autoUpd') === '1'; sessionStorage.setItem('babylove:autoUpd', '1'); } catch (e) {}
+    if (tried) showUpdateBanner(reg.waiting); else applyUpdate(reg.waiting);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+}
+async function checkForUpdate() {
+  if (!swReg) return 'none';
+  try {
+    await swReg.update();
+    if (swReg.waiting || swReg.installing) { if (swReg.waiting) showUpdateBanner(swReg.waiting); return 'new'; }
+    return 'current';
+  } catch (e) { return 'error'; }
+}
+
+// Speicherplatz: Texte (localStorage) und Bilder (IndexedDB) auf diesem Gerät
+const fmtBytes = n => n < 1024 ? `${n} Byte` : n < 1048576 ? `${(n / 1024).toFixed(1).replace('.', ',')} KB` : `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
+async function storageUsage() {
+  let text = 0, imgBytes = 0, imgCount = 0, quota = 0;
+  try { text = new Blob([localStorage.getItem(KEY) || '']).size; } catch (e) {}
+  try {
+    const db = await idb;
+    await new Promise(res => {
+      const req = db.transaction('img', 'readonly').objectStore('img').openCursor();
+      req.onsuccess = () => { const c = req.result; if (!c) return res(); imgCount++; imgBytes += (c.value && c.value.size) || 0; c.continue(); };
+      req.onerror = () => res();
+    });
+  } catch (e) {}
+  try { if (navigator.storage && navigator.storage.estimate) quota = (await navigator.storage.estimate()).quota || 0; } catch (e) {}
+  return { text, imgBytes, imgCount, quota, total: text + imgBytes };
+}
+async function fillStorage() {
+  const box = $('#storageBox'); if (!box) return;
+  const u = await storageUsage(); if (!$('#storageBox')) return;
+  const share = u.quota ? `<tr><th scope="row">Anteil am Gerätespeicher der App</th><td>${(u.total / u.quota * 100).toFixed(2).replace('.', ',')} %</td></tr>` : '';
+  box.innerHTML = `<table class="table table-sm mb-2"><tbody><tr><th scope="row">Texte und Einstellungen</th><td>${fmtBytes(u.text)}</td></tr><tr><th scope="row">Bilder (${u.imgCount})</th><td>${fmtBytes(u.imgBytes)}</td></tr><tr><th scope="row">Gesamt</th><td><strong>${fmtBytes(u.total)}</strong></td></tr>${share}</tbody></table>`;
 }

@@ -1,5 +1,5 @@
 // BABYLOVE by Sarah: Service Worker. Version muss zu APP_VERSION in content.js passen.
-const VERSION = '1.4.0';
+const VERSION = '1.6.0';
 const PREFIX = 'babylove-';
 const CACHE = PREFIX + VERSION;
 // Mehrere Apps teilen sich die Domain (z. B. nosz.github.io/app1, /app2, /babylove): Dieser Service Worker fasst nur eigene Caches und nur Adressen unter seinem eigenen Pfad an
@@ -13,7 +13,12 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+});
+
+// Neue Version wartet, bis die App sie per Nachricht freigibt (Meldung Neue Version verfügbar)
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
