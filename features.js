@@ -71,19 +71,16 @@ const HUB_EXTERNAL = [
   ['https://nosz.github.io/challenge-app/', 'trophy-fill', 'Challenge-App', 'Kleine Challenges für zwischendurch, passend zur Energietankstelle.'],
   ['https://www.mutige-kinderherzen.de/', 'shield-fill-check', 'Mutige Kinderherzen', 'Selbstbehauptungstraining für Kinder: Kurse, Ratgeber und App.']
 ];
+// Empfehlungen: wohnen in den Einstellungen (Bereich "Empfehlungen"), dort auch der Schalter zum Ausblenden
+const extGridHTML = () => `<div class="grid" id="extGrid">${HUB_EXTERNAL.map(([u, i, t, d]) => `<a class="card link-card hub hub-ext" href="${u}" target="_blank" rel="noopener noreferrer">${i === 'fuel-heart' ? `<span class="fuel-heart" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" focusable="false"><rect x="6" y="40" width="28" height="4" rx="2" fill="currentColor"/><rect x="8" y="5" width="24" height="36" rx="5" fill="currentColor"/><rect x="12" y="10" width="16" height="14" rx="3" fill="#fff"/><path d="M20 21.6C14.6 18.2 14.2 14.6 16.6 13.4c1.7-.8 2.9 0 3.4 1 .5-1 1.7-1.8 3.4-1 2.4 1.2 2 4.8-3.4 8.2z" fill="var(--heart-mama,#c4566a)"/><rect x="12" y="29" width="16" height="3" rx="1.5" fill="#fff" opacity=".55"/><path d="M32 15h3.5a3 3 0 0 1 3 3v15a2.5 2.5 0 0 0 5 0V20l-3-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : bi(i)}<b>${t}</b><span class="small soft">${d}</span><span class="small soft hub-ext-note">${bi('box-arrow-up-right')} Öffnet im Browser, Internet nötig</span></a>`).join('')}</div>`;
 X.more = () => {
-  const showExt = state.settings.hideExt !== true;
   const tile = ([k, i, t, d]) => `<a class="card link-card hub" href="#/${k}">${bi(i)}<b>${labelOf(t)}</b><span class="small soft">${d}</span>${audBadge(PAGE_AUDIENCE[k] || 'together', 'sm')}</a>`;
   const out = []; let open = false;
   HUB.forEach(h => { if (HUB_GROUPS[h[0]]) { if (open) out.push('</div>'); out.push(`<h2 class="hub-group">${HUB_GROUPS[h[0]]}</h2><div class="grid">`); open = true; } out.push(tile(h)); });
   if (open) out.push('</div>');
   view.innerHTML = `<div class="title-bar"><h1>Schatzkiste</h1>${searchBoxHTML()}</div><p class="soft">Alles, was eine Schwangerschaft so braucht. Und ein bisschen mehr.</p>
-    ${out.join('')}
-    <h2 class="hub-group">Empfehlungen</h2>
-    <div class="card hub-ext-sw"><div class="hm-row" style="border:0;padding:0"><label class="keep hm-text" for="extSw"><b>Empfehlungen anzeigen</b><span class="small soft">Weitere Angebote, die in einem neuen Tab im Browser öffnen</span></label><input type="checkbox" role="switch" id="extSw" ${showExt ? 'checked' : ''} aria-label="Empfehlungen anzeigen"></div></div>
-    ${showExt ? `<div class="grid" id="extGrid">${HUB_EXTERNAL.map(([u, i, t, d]) => `<a class="card link-card hub hub-ext" href="${u}" target="_blank" rel="noopener noreferrer">${i === 'fuel-heart' ? `<span class="fuel-heart" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" focusable="false"><rect x="6" y="40" width="28" height="4" rx="2" fill="currentColor"/><rect x="8" y="5" width="24" height="36" rx="5" fill="currentColor"/><rect x="12" y="10" width="16" height="14" rx="3" fill="#fff"/><path d="M20 21.6C14.6 18.2 14.2 14.6 16.6 13.4c1.7-.8 2.9 0 3.4 1 .5-1 1.7-1.8 3.4-1 2.4 1.2 2 4.8-3.4 8.2z" fill="var(--heart-mama,#c4566a)"/><rect x="12" y="29" width="16" height="3" rx="1.5" fill="#fff" opacity=".55"/><path d="M32 15h3.5a3 3 0 0 1 3 3v15a2.5 2.5 0 0 0 5 0V20l-3-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : bi(i)}<b>${t}</b><span class="small soft">${d}</span><span class="small soft hub-ext-note">${bi('box-arrow-up-right')} Öffnet im Browser, Internet nötig</span></a>`).join('')}</div>` : ''}`;
+    ${out.join('')}`;
   if (typeof bindSearch === 'function') bindSearch();
-  $('#extSw').onchange = e => { state.settings.hideExt = !e.target.checked; save(); render(); };
 };
 
 /* ---------- Partner-Modus ---------- */

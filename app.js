@@ -1048,6 +1048,8 @@ routes.einstellungen = () => {
     <h2 class="set-group">Inhalte</h2>
     ${acc('quotes', 'chat-quote', 'Eigene Sprüche und Mundart', 'Sprüche importieren, fünf Mundarten wählen (auch Sächsisch und Ostfriesisch)', go('#/quotes', 'Sprüche und Mundart'))}
     ${acc('city', 'geo-alt-fill', 'Ort für Tipps', esc(tipsCity()), `<p class="small soft">In welcher Stadt wohnt ihr? Für Frankfurt gibt es ausgewählte Anlaufstellen, für jeden anderen Ort sammelt ihr eigene.</p><label for="cityInput">Stadt oder Region</label><input id="cityInput" maxlength="40" value="${esc(s.tipsCity || '')}" placeholder="Frankfurt" autocomplete="off"><div class="hstack gap-2 mt-2">${go('#/tips', 'Zu den Tipps')}</div>`)}
+    <h2 class="set-group">Empfehlungen</h2>
+    ${acc('ext', 'stars', 'Empfehlungen', 'Weitere Angebote außerhalb der App', `<p class="small soft">Weitere Angebote, die in einem neuen Tab im Browser öffnen und Internet brauchen.</p><div id="extWrap" class="mt-2">${extGridHTML()}</div>`)}
     <h2 class="set-group">Sicherheit und Daten</h2>
     ${acc('lock', 'shield-lock-fill', 'App-Sperre', `${s.lock && s.lock.hash ? 'Aktiv' : 'Aus'} · eine PIN schützt die ganze App`, go('#/applock', 'PIN verwalten'))}
     ${acc('backup', 'shield-lock', 'Datensicherung', `${last ? `Letztes Backup vor ${daysSince(last)} Tagen` : 'Noch kein Backup'} · Erinnerung alle ${backupDays()} Tage`, go('#/backup', 'Zur Datensicherung'))}

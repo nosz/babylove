@@ -6,32 +6,41 @@
 const SEARCH_MIN = 2, SEARCH_RECENT = 10, SEARCH_PER_GROUP = 5, SEARCH_TOTAL = 24;
 const searchFoldCh = ch => ch === 'ß' ? 's' : ((ch.toLowerCase().normalize('NFD')[0]) || ch);
 const searchFold = s => Array.from(String(s == null ? '' : s), searchFoldCh).join('');
-// Suchwörter: so getippt und mit "ss" wie "ß" ("gross" findet "groß")
-const searchNeedles = q => { const f = searchFold(q).trim(); return [...new Set([f, f.replace(/ss/g, 's')])].filter(Boolean); };
-const searchHas = (text, q) => { const f = searchFold(text); return searchNeedles(q).some(n => f.includes(n)); };
+// Suchwörter: jedes Wort einzeln, in beliebiger Reihenfolge ("Mutige Kinder" findet "Mutige Kinderherzen"); "ss" zählt wie "ß" ("gross" findet "groß")
+const searchTokens = q => searchFold(q).trim().split(/\s+/).filter(Boolean);
+const searchVariants = tok => [...new Set([tok, tok.replace(/ss/g, 's')])];
+const searchNeedles = q => [...new Set(searchTokens(q).flatMap(searchVariants))];
+// Treffer nur, wenn ALLE Wörter vorkommen
+const searchHas = (text, q) => { const f = searchFold(text), tk = searchTokens(q); return tk.length > 0 && tk.every(w => searchVariants(w).some(n => f.includes(n))); };
 
+// Fundstellen aller Suchwörter im (gefalteten) Text, zusammengelegt und sortiert
+function searchRanges(ft, q) {
+  const r = []; searchNeedles(q).forEach(n => { let i = 0, k; while ((k = ft.indexOf(n, i)) >= 0) { r.push([k, k + n.length]); i = k + n.length; } });
+  r.sort((a, b) => a[0] - b[0] || b[1] - a[1]); const m = [];
+  r.forEach(x => { const l = m[m.length - 1]; if (l && x[0] <= l[1]) l[1] = Math.max(l[1], x[1]); else m.push(x.slice()); });
+  return m;
+}
 // Text mit markierten Fundstellen (HTML, alles sicher maskiert)
 function searchHL(text, q) {
-  const t = String(text == null ? '' : text), ft = searchFold(t), fq = searchNeedles(q).find(n => ft.includes(n));
-  if (!fq || ft.length !== t.length) return esc(t);
-  let out = '', i = 0, k;
-  while ((k = ft.indexOf(fq, i)) >= 0) { out += esc(t.slice(i, k)) + '<mark>' + esc(t.slice(k, k + fq.length)) + '</mark>'; i = k + fq.length; }
+  const t = String(text == null ? '' : text), ft = searchFold(t);
+  if (ft.length !== t.length) return esc(t);
+  const rs = searchRanges(ft, q); if (!rs.length) return esc(t);
+  let out = '', i = 0; rs.forEach(([s, e]) => { out += esc(t.slice(i, s)) + '<mark>' + esc(t.slice(s, e)) + '</mark>'; i = e; });
   return out + esc(t.slice(i));
 }
 function searchSnippet(text, q, len = 96) {
-  const t = String(text || '').replace(/\s+/g, ' ').trim(), ft = searchFold(t), nd = searchNeedles(q).find(n => ft.includes(n)), k = nd ? ft.indexOf(nd) : -1;
+  const t = String(text || '').replace(/\s+/g, ' ').trim(), ft = searchFold(t), rs = ft.length === t.length ? searchRanges(ft, q) : [], k = rs.length ? rs[0][0] : -1;
   if (k < 0 || t.length <= len) return t.slice(0, len) + (t.length > len ? '…' : '');
   const from = Math.max(0, k - 28), to = Math.min(t.length, from + len);
   return (from > 0 ? '…' : '') + t.slice(from, to) + (to < t.length ? '…' : '');
 }
-
 const SEARCH_SETTINGS = [
   ['brand', 'Name der App', 'Titel Untertitel Marke by'], ['install', 'App installieren', 'Startbildschirm Installation'],
   ['home', 'Startseite einrichten', 'Bausteine Reihenfolge Vorlage Favoriten'], ['nav', 'Menü unten', 'Symbole Reihenfolge Profilfoto Herz'],
   ['colors', 'Farben', 'Farbwelt Lieblingsfarbe Design'], ['banner', 'Banner der Startseite', 'Hintergrund Foto'],
   ['mode', 'Darstellung', 'Hell Dunkel Modus'], ['font', 'Schrift', 'Größe Schriftart lesbar'],
   ['hints', 'Hinweise nach dem Speichern', 'Bestätigungen Meldungen'], ['quotes', 'Eigene Sprüche und Mundart', 'Sprüche Sprache Hessisch Bayrisch Schwäbisch Sächsisch Ostfriesisch'],
-  ['city', 'Ort für Tipps', 'Stadt Region'], ['lock', 'App-Sperre', 'PIN Passwort Schutz'], ['backup', 'Datensicherung', 'Backup sichern laden Import Export Gerätewechsel neues Handy Daten übernehmen'],
+  ['city', 'Ort für Tipps', 'Stadt Region'], ['ext', 'Empfehlungen', 'Energietankstelle Challenge Kinderherzen Links Angebote'], ['lock', 'App-Sperre', 'PIN Passwort Schutz'], ['backup', 'Datensicherung', 'Backup sichern laden Import Export Gerätewechsel neues Handy Daten übernehmen'],
   ['storage', 'Speicherplatz', 'Datenspeicher Bilder Größe'], ['export', 'Datenexport', 'JSON CSV Daten mitnehmen'], ['privacy', 'Datenschutz und Sicherheit', 'Privatsphäre'],
   ['guide', 'Kurzanleitung', 'Hilfe erklärt'], ['update', 'Version und Updates', 'Neue Version aktualisieren']
 ];
@@ -53,6 +62,7 @@ function buildSearchIndex() {
   HUB.forEach(([k, i, t, d]) => { if (k !== 'einstellungen') add('Bereiche', i, k, labelOf(t), [d, SEARCH_SYNONYMS[k] || ''].join(' ')); });
   add('Bereiche', 'heart-fill', 'settings', navLabel('mama'), 'Foto, Titel und Lieblingsfarbe'); add('Bereiche', 'heart-fill', 'papa', navLabel('papa'), 'Foto, Titel und Lieblingsfarbe');
   SEARCH_SETTINGS.forEach(([id, t, kw]) => add('Einstellungen', 'gear-fill', 'einstellungen', t, kw, { open: id }));
+  if (typeof HUB_EXTERNAL !== 'undefined') HUB_EXTERNAL.forEach(([, i, t, d]) => add('Empfehlungen', i === 'fuel-heart' ? 'lightning-charge-fill' : i, 'einstellungen', t, d, { open: 'ext' }));
   (state.wishes || []).forEach(w => add('Wunschliste', 'gift', 'wishes', w.text, [w.assigned ? 'bei ' + w.assigned : '', w.link || ''].join(' ')));
   (state.diary || []).forEach(d => add('Tagebuch', 'journal-text', 'diary', (d.date ? fmtDate(d.date) + ': ' : '') + String(d.text || '').slice(0, 60), d.text));
   (state.todos || []).forEach(x => add('Aufgaben', 'check2-square', 'planner', x.text));
@@ -70,8 +80,8 @@ function buildSearchIndex() {
 
 function runSearch(q) {
   const fq = searchFold(q).trim(); if (fq.length < SEARCH_MIN) return null;
-  const rank = it => { const t = searchFold(it.title), nd = searchNeedles(q); return nd.some(n => t.startsWith(n)) ? 0 : nd.some(n => t.includes(n)) ? 1 : 2; };
-  const hits = buildSearchIndex().filter(it => searchHas(it.title, q) || searchHas(it.text, q)).map(it => ({ ...it, r: rank(it) })).sort((a, b) => a.r - b.r);
+  const rank = it => { const t = searchFold(it.title), tk = searchTokens(q); return searchVariants(tk[0]).some(n => t.startsWith(n)) ? 0 : searchHas(it.title, q) ? 1 : 2; };
+  const hits = buildSearchIndex().filter(it => searchHas(it.title + ' ' + it.text, q)).map(it => ({ ...it, r: rank(it) })).sort((a, b) => a.r - b.r);
   const groups = new Map(); let total = 0;
   for (const h of hits) { if (total >= SEARCH_TOTAL) break; const g = groups.get(h.group) || []; if (g.length >= SEARCH_PER_GROUP) continue; g.push(h); groups.set(h.group, g); total++; }
   return { groups: [...groups.entries()].sort((a, b) => Math.min(...a[1].map(x => x.r)) - Math.min(...b[1].map(x => x.r))), total, all: hits.length };
