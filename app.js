@@ -96,10 +96,33 @@ let state = (() => {
   try { return Object.assign(emptyState(), JSON.parse(localStorage.getItem(KEY)) || {}); }
   catch { return emptyState(); }
 })();
+// Speichern gibt immer eine sichtbare Rückmeldung (kleines "Gespeichert" und, auf Seiten mit Sofort-Speicherung, ein Hinweis mit Uhrzeit).
+// Geschrieben und gemeldet wird nur, wenn sich wirklich etwas geändert hat. So steht "Gespeichert" nie zu Unrecht da.
+let lastSaved = JSON.stringify(state), lastSavedAt = 0, saveTimer = 0, chipTimer = 0;
+const clockTime = d => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const save = () => {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); }
-  catch { toast('Speichern fehlgeschlagen – Speicher voll?'); }
+  try {
+    const s = JSON.stringify(state); if (s === lastSaved) return;
+    localStorage.setItem(KEY, s); lastSaved = s; saveSignal();
+  } catch { toast('Speichern fehlgeschlagen – Speicher voll?'); }
 };
+// Stille Speicherungen beim Start (Aufräumen alter Daten) melden sich nicht: das Häkchen kommt nur nach einer Handlung der Person
+let userActive = false; for (const ev of ['pointerdown', 'click', 'keydown', 'input', 'change']) document.addEventListener(ev, () => { userActive = true; }, true);
+function saveSignal() {
+  if (!userActive) return;
+  lastSavedAt = Date.now();
+  const chip = document.getElementById('saveChip');
+  if (chip) { chip.innerHTML = bi('check-circle-fill') + ' Gespeichert'; chip.classList.add('show'); clearTimeout(chipTimer); chipTimer = setTimeout(() => chip.classList.remove('show'), 2200); }
+  document.querySelectorAll('.autosave-note').forEach(n => { const t = n.querySelector('.as-time'); if (t) t.textContent = `Zuletzt gespeichert um ${clockTime(new Date(lastSavedAt))} Uhr`; n.classList.add('flash'); setTimeout(() => n.classList.remove('flash'), 1000); });
+}
+// Sicherheitsnetz: Eingaben werden kurz nach dem Tippen gesichert, und beim Verlassen oder Verstecken der App sofort
+document.addEventListener('input', () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 350); }, true);
+addEventListener('pagehide', () => save());
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+// Seiten, auf denen Eingaben und Schalter sofort gespeichert werden (a = Einstellungen und Auswahl, t = Abhaken und Ändern)
+const AUTOSAVE_PAGES = { einstellungen: 'a', settings: 'a', homeconfig: 'a', colors: 'a', quotes: 'a', backup: 'a', wishprint: 'a', diaryprint: 'a', lettersprint: 'a', wishlistprint: 'a', export: 'a', lists: 't', planner: 't', vits: 't', water: 't', wishes: 't', tips: 't', names: 't', jokes: 't', baby: 't', contacts: 't', pass: 't', applock: 'a' };
+const AUTOSAVE_TEXT = { a: 'Alles, was du hier einstellst oder auswählst, wird sofort automatisch gespeichert. Du musst nichts bestätigen.', t: 'Abhaken und Ändern wird sofort automatisch gespeichert. Neue Einträge sicherst du mit „Speichern“.' };
+const autosaveNoteHTML = kind => `<p class="autosave-note no-print" id="autosaveNote" role="note"><span class="as-ico" aria-hidden="true">${bi('check-circle-fill')}</span><span class="as-text"><b>Automatisch gespeichert.</b> ${AUTOSAVE_TEXT[kind]}<small class="as-time">${lastSavedAt ? `Zuletzt gespeichert um ${clockTime(new Date(lastSavedAt))} Uhr` : 'Dein Stand ist sicher auf diesem Gerät.'}</small></span></p>`;
 
 const idb = new Promise((res, rej) => {
   const r = indexedDB.open('babylove', 1);
@@ -1352,6 +1375,8 @@ function render() {
   const au = PAGE_AUDIENCE[key];
   if (h1 && au && key !== 'home') (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', `<div class="aud-row">${audBadge(au)}${key === 'home' ? '' : namesTag()}</div>`);
   if (h1 && pinInfo()[key]) { if (!view.querySelector('.aud-row')) (h1.closest('.title-bar') || h1).insertAdjacentHTML('afterend', '<div class="aud-row"></div>'); view.querySelector('.aud-row').insertAdjacentHTML('beforeend', pinBtnHTML(key)); bindPinBtn(); }
+  // Seiten mit Sofort-Speicherung sagen es klar, direkt unter der Überschrift
+  if (h1 && AUTOSAVE_PAGES[key]) { let a = view.querySelector('.aud-row') || h1.closest('.title-bar') || h1; const nx = a.nextElementSibling; if (nx && nx.matches('p.soft')) a = nx; a.insertAdjacentHTML('afterend', autosaveNoteHTML(AUTOSAVE_PAGES[key])); }
   // Immer gleiche Orientierung: Häuschen mit Herz (Startseite) und ein Schritt zurück in den Bereich
   const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? (cameFromHome ? ['#/', 'Startseite'] : ['#/more', 'Schatzkiste']) : null;
   if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite" title="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back" aria-label="Zurück zu ${backTo[1]}">${bi('arrow-left-circle-fill')} Zurück zu ${backTo[1]}</a></div>`);
@@ -1378,6 +1403,7 @@ applyTheme();
 render();
 syncTopbar();
 appStart();
+save();   // stiller Abgleich nach dem Start: Aufräumarbeiten beim Laden sind danach gesichert und lösen später kein falsches "Gespeichert" aus
 setTimeout(maybeAskBackup, 800);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') maybeAskBackup(); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
