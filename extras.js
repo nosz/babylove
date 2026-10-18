@@ -360,9 +360,10 @@ EXTRA_ROUTES.privacy = () => {
 };
 /* ==================== App installieren (PWA) ==================== */
 // Fragt einmal freundlich nach, ob BABYLOVE als App auf den Startbildschirm soll. Nur im Browser, nie wenn schon installiert, höchstens dreimal im Abstand von 7 Tagen, jederzeit wieder in den Einstellungen.
-let installEvt = null;
+// "Installiert" wird bewusst nur für diese Sitzung gemerkt: Wird die App später wieder entfernt, bleiben die Daten im Browser, und der Knopf muss wieder erscheinen
+let installEvt = null, installedNow = false;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
-window.addEventListener('appinstalled', () => { installEvt = null; document.getElementById('installCta')?.remove(); if (typeof state !== 'undefined') { state.settings.installAsk = { ...(state.settings.installAsk || {}), done: true }; save(); } });
+window.addEventListener('appinstalled', () => { installEvt = null; installedNow = true; document.getElementById('installCta')?.remove(); });
 const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const installPlatform = () => { const ua = navigator.userAgent || ''; if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios'; return /Android/.test(ua) ? 'android' : 'desktop'; };
 const INSTALL_BENEFITS = [
@@ -395,13 +396,13 @@ function showInstall(manual) {
 }
 function maybeInstall() {
   const s = state.settings, a = s.installAsk || {};
-  if (!s.dueDate || !s.guideSeen || a.never || a.done || (a.n || 0) >= 3 || isStandalone() || !window.isSecureContext || appLocked || $('#splash') || sheet.open) return;
+  if (!s.dueDate || !s.guideSeen || a.never || (a.n || 0) >= 3 || isStandalone() || !window.isSecureContext || appLocked || $('#splash') || sheet.open) return;
   if (a.at && daysSince(a.at) < 7) return;
   try { if (sessionStorage.getItem('bl-install')) return; sessionStorage.setItem('bl-install', '1'); } catch { /* ohne Speicher trotzdem fragen */ }
   showInstall(false);
 }
 // Startseite: dauerhafter, ruhiger Hinweis zum Installieren, solange die App nicht installiert ist (viele suchen in den Einstellungen nie danach)
-const installNeeded = () => !isStandalone() && !(state.settings.installAsk || {}).done;
+const installNeeded = () => !isStandalone() && !installedNow;
 const installCtaHTML = () => installNeeded() ? `<button type="button" class="install-cta" id="installCta" aria-haspopup="dialog"><span class="ic-ico" aria-hidden="true">${bi('download')}</span><span class="ic-text"><b>Mir gefällt die App, ich möchte sie installieren</b><small>Ein Tipp, und BABYLOVE liegt auf eurem Startbildschirm. Kostenlos, auch ohne Internet.</small></span><i class="bi bi-chevron-right ic-go" aria-hidden="true"></i></button>` : '';
 const bindInstallCta = () => { const b = document.getElementById('installCta'); if (b) b.onclick = () => showInstall(true); };
 /* ==================== Kurzanleitung: sofort verstehen ==================== */
