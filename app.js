@@ -477,10 +477,11 @@ routes.home = () => {
       <div class="greet-text"><p class="greet-hello">${greet}</p></div>${searchBoxHTML()}</div>
     <div class="today-row"><p class="today" id="todayLine">${bi('calendar-heart')}${esc(todayLong())}</p></div>
     <h1 class="visually-hidden">${p.left > 0 ? `Noch ${daysTxt(p.left)} bis ${nick()}` : p.left === 0 ? `Heute ist ${nick()}s Termin!` : `${nick()} lässt sich Zeit (${-p.left} Tage drüber)`}</h1>
+    ${installCtaHTML()}
     ${heroHTML(p)}
     ${order.filter(id => on.has(id)).map(id => HOME_RENDER[id]()).join('')}
     <a class="home-edit" href="#/homeconfig">${bi('sliders')} Startseite anpassen</a>`;
-  bindTogether();
+  bindTogether(); bindInstallCta();
   const nhq = $('#newHeroQuote'); if (nhq) nhq.onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
   const nm = $('#newMamaMsg'); if (nm) nm.onclick = () => { const pool = quotePool('daily'), cur = $('#mamaMsg').textContent; let q, g = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++g < 20); $('#mamaMsg').textContent = q; };
   const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (papaName(q) === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };

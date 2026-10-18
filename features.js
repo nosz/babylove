@@ -574,8 +574,8 @@ X.jokes = () => {
 let storyIdx = 0;
 // Eigene Messwerte (z. B. vom Ultraschall oder aus dem Mutterpass): ersetzen in der Wochen-Story die Durchschnittswerte der jeweiligen Woche
 const fetalList = () => (state.fetal = state.fetal || []);
-const fetalFor = week => fetalList().filter(e => weekFor(e.date) === week).sort((a, b) => b.date.localeCompare(a.date))[0] || null;
-function bodyFor(p) { const w = Math.max(4, Math.min(42, p.weeks)), avg = weekBody(w), e = fetalFor(p.weeks); return { mm: e && e.mm ? e.mm : avg.mm, g: e && e.g ? e.g : avg.g, mmM: !!(e && e.mm), gM: !!(e && e.g), date: e ? e.date : '' }; }
+const fetalFor = week => fetalList().filter(e => weekFor(e.date) === week).reverse().sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+function bodyFor(p) { const w = Math.max(4, Math.min(42, p.weeks)), avg = weekBody(w), e = fetalFor(p.weeks); return { mm: e && e.mm ? e.mm : avg.mm, g: e && e.g ? e.g : avg.g, mmM: !!(e && e.mm), gM: !!(e && e.g), date: e ? e.date : '', note: e && e.note ? e.note : '' }; }
 const parseNum = v => parseFloat(String(v || '').trim().replace(',', '.'));
 // Prüft eine Eingabe: liefert { err } oder { mm, g }
 function fetalCheck(date, sizeCm, weightG) {
@@ -610,7 +610,7 @@ function storyData() {
   const sizeTitle = tpl ? tpl.replace('{kid}', kid).replace(/\{a\}/g, DIA_ART[dia] || 'a').replace('{fruit}', fruit) : `${kid} ist so groß wie ${art} ${fruit}`;
   const due = new Date(s.dueDate + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
   return { p, week: p.weeks, range: weekRange(p), fruit, kid, body, slides: [
-    { id: 'size', title: sizeTitle, dia, lines: [`${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`, `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`, ...(body.date ? [`gemessen am ${fmtDate(body.date)}`] : [])] },
+    { id: 'size', title: sizeTitle, dia, lines: [`${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`, `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`, ...(body.date ? [`gemessen am ${fmtDate(body.date)}`] : [])], note: body.note },
     { id: 'dev', title: WEEK_DEV[w], dia, quote: dia ? dailyPick(DIALECT_QUOTES[dia].mama, 'storyq-' + dia) : '' },
     { id: 'sum', title: 'Unsere Zusammenfassung', rows: [['SSW', `${p.weeks}+${p.days}`], ['Errechneter Termin', due], [body.mmM ? 'Größe (gemessen)' : 'Größe (Richtwert)', `${body.mmM ? '' : 'ca. '}${fmtMM(body.mm)}`], [body.gM ? 'Gewicht (gemessen)' : 'Gewicht (Richtwert)', `${body.gM ? '' : 'ca. '}${fmtG(body.g)}`], ['Schon geschafft', `${Math.max(0, p.elapsed)} Tage`], ['Noch ca.', `${Math.max(0, p.left)} Tage`]] }
   ] };
@@ -619,7 +619,7 @@ const fruitHue = name => [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) %
 const storyColors = () => { const cs = getComputedStyle(document.documentElement); return { strong: cs.getPropertyValue('--primary-strong').trim() || '#0d3b24', text: cs.getPropertyValue('--text').trim() || '#1d3b2e' }; };
 function storySlideHTML(S, i) {
   const sl = S.slides[i], col = storyColors();
-  const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>`
+  const art = sl.id === 'size' ? `<div class="st-circle" aria-hidden="true">${fruitSVG(S.fruit)}</div><p class="st-cap">${sl.lines.map(esc).join(' · ')}</p>${sl.note ? `<p class="st-note">${esc(sl.note)}</p>` : ''}`
     : sl.id === 'dev' ? `<div class="st-baby" aria-hidden="true">${babySVG(col.text, '#ffffff', col.strong, S.week, S.fruit)}</div><p class="st-cap ${sl.quote ? 'st-quote' : ''}">${esc(sl.quote || 'Woche ' + S.week)}</p>`
     : `<div class="st-pair" aria-hidden="true"><span class="st-bub">${babySVG(col.text, '#ffffff', col.strong, S.week, S.fruit)}</span><span class="st-bub st-bub-w">${fruitSVG(S.fruit)}</span></div><dl class="st-grid">${sl.rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><div class="st-prog" role="img" aria-label="Fortschritt der Schwangerschaft"><i style="width:${S.p.pct}%"></i></div>`;
   return `<article class="story-slide story-${sl.id}"><div class="st-top">Woche ${S.week} · ${esc(S.range)}</div><h2 class="st-title">${esc(sl.title)}</h2>${art}<div class="st-foot"><span class="st-hearts">${duoHearts()}</span> ${esc(brandName())} <i>${esc(brandSub())}</i></div></article>`;
@@ -641,9 +641,10 @@ function drawStory(S, i, imgs = {}) {
   x.fillStyle = text; const ts = sl.id === 'dev' ? 68 : 80, tl = wrap(sl.title, 900, ts, 800); x.font = `800 ${ts}px ${fam}`; tl.slice(0, 4).forEach((l, k) => x.fillText(l, W / 2, 340 + k * (ts + 22)));
   const titleEnd = 340 + Math.min(tl.length, 4) * (ts + 22);
   if (sl.id === 'size') {
-    const cy = Math.max(titleEnd + 380, 1000); card(W / 2, cy, 330);
+    const cy = Math.max(titleEnd + 380, sl.note ? 960 : 1000); card(W / 2, cy, 330);
     if (imgs.fruit) x.drawImage(imgs.fruit, W / 2 - 280, cy - 285, 560, 560); else { const hue = fruitHue(S.fruit), gr = x.createRadialGradient(W / 2 - 70, cy - 60, 20, W / 2, cy, 250); gr.addColorStop(0, `hsl(${hue} 80% 70%)`); gr.addColorStop(1, `hsl(${hue} 70% 45%)`); x.fillStyle = gr; x.beginPath(); x.arc(W / 2, cy + 10, 240, 0, 7); x.fill(); }
-    x.fillStyle = strong; { const cl = wrap(sl.lines.join(' · '), 900, 64, 800); x.font = `800 64px ${fam}`; cl.slice(0, 3).forEach((l, k) => x.fillText(l, W / 2, cy + 470 + k * 80)); }
+    x.fillStyle = strong; { const cl = wrap(sl.lines.join(' · '), 900, 64, 800); x.font = `800 64px ${fam}`; cl.slice(0, 3).forEach((l, k) => x.fillText(l, W / 2, cy + 470 + k * 80));
+      if (sl.note) { x.fillStyle = soft; const nl = wrap(sl.note, 860, 44, 700).slice(0, 2); x.font = `italic 700 44px ${fam}`; nl.forEach((l, k) => x.fillText(l, W / 2, cy + 470 + (Math.min(cl.length, 3) - 1) * 80 + 76 + k * 56)); } }
   } else if (sl.id === 'dev') {
     const cy = Math.max(titleEnd + 380, 1000); card(W / 2, cy, 330);
     if (imgs.baby) x.drawImage(imgs.baby, W / 2 - 300, cy - 300, 600, 600); else { x.fillStyle = strong; x.beginPath(); x.arc(W / 2, cy, 280, 0, 7); x.fill(); heart(W / 2, cy + 10, 4.2, '#FFFFFF'); }
