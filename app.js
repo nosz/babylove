@@ -1034,11 +1034,16 @@ routes.einstellungen = () => {
     <h2 class="set-group">Hilfe und Updates</h2>
     ${acc('guide', 'compass', 'Kurzanleitung', 'So funktioniert BABYLOVE, in einer Minute erklärt', `<button class="btn btn-solid theme-primary" id="openGuide" type="button">${bi('compass')} Kurzanleitung öffnen</button>`)}
     ${acc('update', 'arrow-repeat', 'Version und Updates', `Version ${APP_VERSION.number}`, `<p class="small soft">Neue Versionen werden automatisch gesucht. Sobald eine bereitsteht, erscheint der Hinweis „Neue Version verfügbar“. Eure Daten bleiben dabei erhalten.</p><button type="button" class="btn btn-solid theme-primary" id="checkUpdate">${bi('arrow-repeat')} Nach Updates suchen</button>`)}
-    <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
-    <p class="version" id="appVersion">${esc(versionLine())}</p>
-    <p class="version" id="appThanks">Viel Spaß und Freude wünscht euch Norbert Szpak</p>
-    <p class="version" id="appIdeas">Wenn du Ideen hast, wie die BABYLOVE-App noch besser wird, dann schreib mir einfach eine Mail: <a href="mailto:n.szpak@web.de">n.szpak@web.de</a></p>
-    <p class="version" id="appOpen">Open-Source-Projekt: offen, ohne Werbung und ohne Tracking.</p>`;
+    <section class="card app-info" id="appInfo" aria-labelledby="appInfoT">
+      <h2 id="appInfoT">${bi('info-circle')} App-Info</h2>
+      <p class="ai-version" id="appVersion">${esc(versionLine())}</p>
+      <div class="ai-maker"><small>Hersteller</small><p id="appThanks">Viel Spaß und Freude wünscht euch <b>Norbert Szpak</b></p></div>
+      <div class="ai-ideas" id="appIdeas"><p>Wenn du Ideen hast, wie die BABYLOVE-App noch besser wird, dann schreib mir einfach eine Mail.</p>
+        <a class="btn btn-solid theme-primary" id="ideaMail" href="mailto:n.szpak@web.de?subject=${encodeURIComponent('BABYLOVE ' + APP_VERSION.number + ': Verbesserungsvorschlag')}&body=${encodeURIComponent('Hallo Norbert,\r\n\r\nmein Vorschlag für BABYLOVE:\r\n\r\n')}">${bi('envelope-heart')} Verbesserungsvorschlag per Mail</a>
+        <small class="soft">oder direkt an <a href="mailto:n.szpak@web.de">n.szpak@web.de</a></small></div>
+      <p class="ai-open" id="appOpen">${bi('code-slash')} Open-Source-Projekt: offen, ohne Werbung und ohne Tracking.</p>
+      <p class="ai-note" id="appNote">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>
+    </section>`;
   const panels = [...view.querySelectorAll('details.acc')];
   panels.forEach(d => d.addEventListener('toggle', () => {
     if (d.open) { settingsOpen = d.dataset.acc; panels.forEach(o => { if (o !== d && o.open) o.open = false; }); }

@@ -1013,3 +1013,19 @@ body:not(.onboarding) #view > .page-search + h1{position:sticky;top:calc(var(--t
 
 /* Wochen-Story: eigene Notiz zur Messung */
 .st-note{margin:6px 0 0;font-style:italic;font-weight:600;font-size:.82em;line-height:1.3;opacity:.8;text-align:center}
+
+/* Einstellungen: Block "App-Info" ganz unten */
+.app-info { margin: 26px 0 8px; padding: 18px 16px; display: grid; gap: 14px; border: 1.5px solid color-mix(in srgb, var(--primary) 35%, var(--line)); text-align: left; }
+.app-info h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+.app-info h2 .bi { color: var(--primary); }
+.ai-version { margin: 0; font-size: .8rem; letter-spacing: .03em; color: var(--text-soft); }
+.ai-maker { padding: 14px; border-radius: 16px; text-align: center; background: color-mix(in srgb, var(--primary) 12%, var(--surface)); }
+.ai-maker small { display: block; text-transform: uppercase; letter-spacing: .1em; font-size: .7rem; font-weight: 700; color: var(--text-soft); }
+.ai-maker p { margin: 4px 0 0; font-size: .95rem; }
+.ai-maker b { display: block; margin-top: 2px; font-size: 1.3rem; color: var(--primary-strong); }
+.ai-ideas { display: grid; gap: 8px; justify-items: center; text-align: center; }
+.ai-ideas p { margin: 0; }
+.ai-ideas .btn { width: 100%; }
+.ai-ideas small a { color: var(--primary-strong); font-weight: 600; }
+.ai-open { margin: 0; font-size: .85rem; color: var(--text-soft); display: flex; gap: 8px; align-items: center; justify-content: center; text-align: center; }
+.ai-note { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: .8rem; color: var(--text-soft); text-align: center; }

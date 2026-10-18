@@ -564,7 +564,7 @@ const TOGETHER_IDEAS_MORE = [
   ['Sagt euch gegenseitig Danke für etwas Konkretes von heute.', null]
 ];
 // Version der App. Muss mit sw.js und der Meta-Angabe in index.html uebereinstimmen (wird getestet).
-const APP_VERSION = { number: '2.6.2', date: '2026-10-16', name: 'Installieren-Knopf erscheint auch nach dem Deinstallieren wieder' };
+const APP_VERSION = { number: '2.6.3', date: '2026-10-16', name: 'Neuer Block App-Info in den Einstellungen mit Verbesserungsvorschlag per Mail' };
 Object.assign(PAGE_ICON, { privacy: 'shield-check' });
 Object.assign(PAGE_AUDIENCE, { privacy: 'together' });
 
