@@ -45,7 +45,7 @@ const WISH_LINES = ['Wir freuen uns riesig auf dich und das Baby!', 'Du machst u
 const WISH_DEFAULT = { to: '', count: 3, tone: 'humor', child: 'nick', message: '', sel: [] };
 const wishCfg = () => Object.assign({}, WISH_DEFAULT, state.settings.wishPrint || {});
 const saveWishCfg = c => { state.settings.wishPrint = c; save(); };
-const childLabel = c => c.child === 'secret' && state.settings.secretName ? state.settings.secretName : c.child === 'nick' ? (state.settings.nick || '') : '';
+const childLabel = c => c.child === 'nick' ? (state.settings.nick || '') : '';
 
 // Nachricht zum Versenden (Text für Teilen, E-Mail, WhatsApp): gleicher Inhalt wie der Zettel, mit Humor und klarer Bitte
 function wishMessage(cfg) {
@@ -98,14 +98,13 @@ EXTRA_ROUTES.wishprint = () => {
       <div class="hstack gap-2 flex-wrap mt-2"><a class="btn btn-subtle theme-secondary flex-grow-1" id="wsWa" href="#" target="_blank" rel="noopener noreferrer">${bi('chat-heart')} WhatsApp</a><a class="btn btn-subtle theme-secondary flex-grow-1" id="wsMail" href="#" rel="noopener">${bi('envelope-heart')} E-Mail</a><button type="button" class="btn btn-subtle theme-secondary flex-grow-1" id="wsCopy">${bi('clipboard-heart')} Text kopieren</button><button class="btn btn-subtle theme-secondary flex-grow-1" id="doPrint">${bi('printer')} Drucken oder PDF</button></div>
       <p class="wish-note mt-3 mb-0">${bi('info-circle-fill')} <span><b>Gut zu wissen:</b> Die gewählten Wünsche werden beim Verschicken automatisch der Person zugewiesen. So wird nichts doppelt gekauft.</span></p>
     </div>
-    <details class="card wp-more" ${cfg.child === 'secret' ? 'open' : ''}><summary><b>${bi('sliders')} Weitere Einstellungen</b><span class="small soft">Anzahl, Tonfall, Name des Kindes, persönliche Zeile</span></summary>
+    <details class="card wp-more"><summary><b>${bi('sliders')} Weitere Einstellungen</b><span class="small soft">Anzahl, Tonfall, Name des Kindes, persönliche Zeile</span></summary>
       <label for="wp-count">Wie viele Wünsche soll die Person erfüllen?</label>
       <select id="wp-count">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${cfg.count === n ? 'selected' : ''}>${n}${n === 3 ? ' (empfohlen)' : ''}</option>`).join('')}</select>
       <label class="keep form-label">Tonfall</label>
       <div class="seg" style="margin:0">${Object.entries(WISH_TONES).map(([k, t]) => `<button data-tone="${k}" class="${cfg.tone === k ? 'on' : ''}">${t.label}</button>`).join('')}</div>
       <label class="keep form-label">Name des Kindes auf dem Zettel</label>
-      <div class="seg" style="margin:0"><button data-child="none" class="${cfg.child === 'none' ? 'on' : ''}">Kein Name</button><button data-child="nick" class="${cfg.child === 'nick' ? 'on' : ''}">Kosename${state.settings.nick ? ' (' + esc(state.settings.nick) + ')' : ''}</button>${state.settings.secretName ? `<button data-child="secret" class="${cfg.child === 'secret' ? 'on' : ''}">Echter Name</button>` : ''}</div>
-      ${cfg.child === 'secret' ? '<p class="small soft mt-2 mb-0">Achtung: Der geheime Name wird dann gedruckt.</p>' : ''}
+      <div class="seg" style="margin:0"><button data-child="none" class="${cfg.child === 'none' ? 'on' : ''}">Kein Name</button><button data-child="nick" class="${cfg.child === 'nick' ? 'on' : ''}">Kosename${state.settings.nick ? ' (' + esc(state.settings.nick) + ')' : ''}</button></div>
       <label for="wp-msg">Persönliche Zeile (optional)</label><textarea id="wp-msg" maxlength="240" style="min-height:70px" placeholder="z. B. Wir freuen uns auf Sonntag bei euch!">${esc(cfg.message)}</textarea>
       <div class="hstack gap-2 flex-wrap mt-2"><button type="button" class="btn btn-subtle theme-secondary" id="wsLine">${bi('magic')} Zeile vorschlagen</button><button type="button" class="btn btn-subtle theme-secondary" id="wsShuffle">${bi('shuffle')} Andere Texte</button></div>
       <button class="btn btn-subtle theme-secondary mt-2" id="doAssign">${bi('person-check')} Nur zuweisen, ohne zu verschicken</button>
@@ -368,14 +367,14 @@ EXTRA_ROUTES.wishlistprint = () => {
 // PIN-Daten werden nie exportiert. Der geheime Name nur auf ausdrücklichen Wunsch.
 const EXPORT_AREAS = [['profil', 'Profil und Namen'], ['diary', 'Tagebuch'], ['photos', 'Fotoalbum'], ['letters', 'Briefe ans Baby'], ['pass', 'Mutterpass'], ['fetal', 'Messwerte des Babys'],
   ['water', 'Wasser'], ['baby', 'Baby-Tracker'], ['wishes', 'Wunschliste'], ['lists', 'Checklisten und To-dos'], ['appts', 'Termine'], ['names', 'Namensfinder'], ['milestones', 'Meilensteine'], ['contacts', 'Kontakte'], ['vits', 'Vitamine']];
-const EXPORT_DEFAULT = { areas: EXPORT_AREAS.map(a => a[0]), media: false, secret: false };
+const EXPORT_DEFAULT = { areas: EXPORT_AREAS.map(a => a[0]), media: false };
 const byDate = list => [...list].sort((a, b) => String(a.date || a.ts).localeCompare(String(b.date || b.ts)));
 const yn = v => v ? 'ja' : 'nein';
 // Liefert { head, rows, imgs } je Bereich; imgs (optional) hält pro Zeile die Bild-ID
 function exportTable(area, opt = {}) {
   const s = state.settings, ssw = d => { const w = weekFor(d); return w === null ? '' : w; };
   switch (area) {
-    case 'profil': { const rows = [['Mama', s.mama || ''], ['Papa', s.partner || ''], ['Kosename des Kindes', s.nick || ''], ['Errechneter Termin', s.dueDate || '']]; if (opt.secret) rows.push(['Geheimer Name', s.secretName || '']); return { head: ['Feld', 'Wert'], rows }; }
+    case 'profil': { const rows = [['Mama', s.mama || ''], ['Papa', s.partner || ''], ['Kosename des Kindes', s.nick || ''], ['Errechneter Termin', s.dueDate || '']]; return { head: ['Feld', 'Wert'], rows }; }
     case 'diary': { const l = byDate(state.diary); return { head: ['Datum', 'SSW', 'Stimmung', 'Von', 'Text'], rows: l.map(d => [d.date, ssw(d.date), MOOD_LABEL[d.mood] || '', d.by ? authorName(d.by) : '', d.text || '']), imgs: l.map(d => d.photoId || null) }; }
     case 'photos': { const l = byDate(state.photos); return { head: ['Datum', 'SSW', 'Beschriftung'], rows: l.map(p => [p.date, ssw(p.date), p.caption || '']), imgs: l.map(p => p.photoId || null) }; }
     case 'letters': return { head: ['Datum', 'Text', 'Sprachnachricht'], rows: byDate(state.letters).map(l => [l.date, l.text || '', yn(l.audioId)]) };
@@ -425,7 +424,7 @@ EXTRA_ROUTES.export = () => {
       <div class="hstack gap-2 mt-3"><button class="btn btn-subtle theme-secondary btn-sm" id="ex-all">Alle</button><button class="btn btn-subtle theme-secondary btn-sm" id="ex-none">Keine</button></div></div>
     <h2>Optionen</h2>
     <div class="card"><div class="todo"><input type="checkbox" id="ex-media" ${cfg.media ? 'checked' : ''}><label for="ex-media" class="keep" style="margin:0;font-weight:400;flex:1"><b>Fotos einbetten</b><div class="small soft">Macht die Datei deutlich größer.</div></label></div>
-      <div class="todo"><input type="checkbox" id="ex-secret" ${cfg.secret ? 'checked' : ''}><label for="ex-secret" class="keep" style="margin:0;font-weight:400;flex:1"><b>Geheimen Namen des Kindes einschließen</b><div class="small soft">Standard: nein. Dein Geheimnis bleibt geheim.</div></label></div></div>
+    </div>
     <h2>Format</h2>
     <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-solid theme-primary" id="ex-json">${bi('filetype-json')} JSON</button><button class="btn btn-solid theme-primary" id="ex-csv">${bi('filetype-csv')} CSV (Excel)</button><button class="btn btn-solid theme-primary" id="ex-html">${bi('filetype-html')} HTML (lesbar, druckbar)</button></div>
     <p class="small soft" id="ex-sum">${cfg.areas.length} Bereiche, ${total} Einträge ausgewählt. PIN-Daten werden nie exportiert. Die Dateien enthalten persönliche Daten, bewahre sie sicher auf.</p>`;
@@ -434,7 +433,6 @@ EXTRA_ROUTES.export = () => {
   $('#ex-all').onclick = () => { cfg.areas = EXPORT_AREAS.map(a => a[0]); upd(); render(); };
   $('#ex-none').onclick = () => { cfg.areas = []; upd(); render(); };
   $('#ex-media').onchange = e => { cfg.media = e.target.checked; upd(); };
-  $('#ex-secret').onchange = e => { cfg.secret = e.target.checked; upd(); };
   const run = async (kind) => {
     if (!cfg.areas.length) return toast('Bitte mindestens einen Bereich auswählen');
     const media = cfg.media ? await collectMedia(cfg) : null, name = exportStamp();

@@ -398,7 +398,7 @@ const HOME_MODULES = {
   story:     { label: 'Wochen-Story', desc: 'Die aktuelle Entwicklung schön teilen: drei Bilder', icon: 'stars' },
   pins:      { label: 'Meine Favoriten', desc: 'Seiten, die du mit „Zur Startseite“ hinzugefügt hast', icon: 'pin-angle-fill' },
   family:    { label: 'Foto von euch', desc: 'Zufällig aus euren Profilfotos', icon: 'image' },
-  secret:    { label: 'Der geheime Name', desc: 'Verdeckt, nur auf Antippen sichtbar', icon: 'lock-fill' },
+  secret:    { label: 'Der geheime Name', desc: 'Wird nie angezeigt, nur „gespeichert“', icon: 'lock-fill' },
   milestone: { label: 'Meilenstein der Woche', desc: 'Ein Hinweis, sobald eine Etappe erreicht ist', icon: 'stars' },
   planner:   { label: 'To-dos und Termine', desc: 'Offene Aufgaben und der nächste Termin', icon: 'check2-square' },
   tips:      { label: 'Tipps vor Ort', desc: 'Hebammen, Kurse, Beratung, Infoabende (Ort frei wählbar)', icon: 'geo-alt-fill' },
@@ -453,9 +453,10 @@ const HOME_RENDER = {
     <p class="mb-0 mt-1" id="partnerMsg">${esc(papaName(partnerMsgToday()))}</p></div>`,
   family: () => familyCard(),
   secret: () => { const s = state.settings;
-    return `<div class="card" id="secretCard"><div class="hstack gap-3">${bi('lock-fill')}<div class="flex-grow-1"><b>Psst!</b> Den Namen von ${nick()} wissen bisher nur Mama und Papa.</div>
-      ${s.secretName ? `<button class="btn btn-subtle theme-secondary btn-sm" id="reveal" aria-label="Namen kurz anzeigen">${bi('eye')}</button>` : ''}</div>
-      ${s.secretName ? `<div class="secret-line"><span class="secret" id="secret">${esc(s.secretName)}</span></div>` : ''}</div>`; },
+    const stars = Array.from({ length: 8 }, (_, i) => `<span style="--i:${i}">★</span>`).join('');   /* feste Anzahl: verrät weder Name noch Länge */
+    return `<div class="card secret-card" id="secretCard"><div class="hstack gap-3">${bi('lock-fill')}<div class="flex-grow-1"><b>Psst!</b> ${s.secretName ? `${nick()} ist nur der Kosename. Den echten Namen wissen bisher nur Mama und Papa.` : `${nick()} ist erst einmal nur der Kosename. Der echte Name ist noch nicht eingetragen.`}</div></div>
+      ${s.secretName ? `<div class="secret-plate" id="secretSet" role="img" aria-label="Der echte Name ist gespeichert und bleibt geheim"><span class="plate-lbl">Der echte Name</span><span class="plate-stars" aria-hidden="true">${stars}</span><span class="plate-ok">${bi('lock-fill')} geheim gespeichert</span></div>`
+        : `<a class="secret-plate plate-empty" id="secretEmpty" href="#/settings"><span class="plate-lbl">Der echte Name</span><span class="plate-stars" aria-hidden="true">${stars.replace(/★/g, '☆')}</span><span class="plate-ok">Noch leer – tippe hier zum Eintragen ${bi('arrow-right')}</span></a>`}</div>`; },
   milestone: () => { const ms = MILESTONES.filter(m => pregnancy().weeks >= m[0]).pop(); return ms ? `<div class="card"><b>Meilenstein</b><br>${ms[1]}</div>` : ''; },
   planner: () => { const open = state.todos.filter(t => !t.done).length;
     const next = state.appts.filter(a => a.date >= iso(today())).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
@@ -508,8 +509,6 @@ routes.home = () => {
   const nhq = $('#newHeroQuote'); if (nhq) nhq.onclick = () => { const cur = $('#heroQuote').textContent; const pool = quotePool('hero'); let q, guard = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++guard < 20); $('#heroQuote').textContent = q; };
   const nm = $('#newMamaMsg'); if (nm) nm.onclick = () => { const pool = quotePool('daily'), cur = $('#mamaMsg').textContent; let q, g = 0; do { q = pick(pool); } while (q === cur && pool.length > 1 && ++g < 20); $('#mamaMsg').textContent = q; };
   const np = $('#newPartnerMsg'); if (np) np.onclick = () => { const cur = $('#partnerMsg').textContent; let q, g = 0; do { q = partnerMsg(); } while (papaName(q) === cur && ++g < 20); $('#partnerMsg').textContent = papaName(q); };
-  const r = $('#reveal');
-  if (r) r.onclick = () => { $('#secret').classList.add('show'); clearTimeout(r.t); r.t = setTimeout(() => $('#secret')?.classList.remove('show'), 5000); };
   if (typeof bindSearch === 'function') bindSearch();
 };
 
@@ -961,15 +960,24 @@ routes.settings = () => {
     <div class="card">
       <label for="sd">Errechneter Termin</label><input id="sd" type="date" value="${s.dueDate}" min="${iso(today())}" max="${iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))}">
       <label for="sn">Kosename fürs Baby</label><input id="sn" value="${esc(s.nick)}" maxlength="24">
-      <label for="ss">Geheimer Name</label><div class="ss-wrap"><input id="ss" type="password" value="${esc(s.secretName)}" maxlength="40" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="Nur Mama und Papa wissen’s"><button type="button" class="btn btn-subtle" id="ssEye" aria-label="Geheimen Namen kurz anzeigen" aria-pressed="false">${bi('eye')}</button></div>
-      <p class="small soft" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und auf der Startseite verdeckt angezeigt.</p>
+      <label for="ss">Geheimer Name</label>${s.secretName ? `<div class="ss-set" id="ssSet"><span class="ss-ico" aria-hidden="true">${bi('check-circle-fill')}</span><div class="flex-grow-1"><b>Gespeichert</b><div class="small soft">${bi('lock-fill')} ••••••••</div></div><button type="button" class="btn btn-subtle" id="ssChange">Ändern</button><button type="button" class="btn btn-subtle" id="ssClear" aria-label="Geheimen Namen löschen">${bi('trash')}</button></div>` : `<div class="ss-set ss-empty" id="ssEmpty"><span class="ss-ico" aria-hidden="true">${bi('exclamation-circle-fill')}</span><div class="flex-grow-1"><b>Noch kein Name eingetragen</b><div class="small soft">Trag unten den echten Namen ein. Er bleibt geheim und wird nirgends angezeigt.</div></div></div>`}
+      <div class="ss-wrap" id="ssWrap"${s.secretName ? ' hidden' : ''}><input id="ss" type="password" value="" maxlength="40" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="${s.secretName ? 'Neuen Namen eingeben' : 'Nur Mama und Papa wissen’s'}"><button type="button" class="btn btn-subtle" id="ssSave" style="width:auto" disabled>${bi('check-lg')} Speichern</button>${s.secretName ? '<button type="button" class="btn btn-subtle" id="ssCancel" style="width:auto">Abbrechen</button>' : ''}</div>
+      <p class="small soft ss-hint" id="ssHint" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und nirgends angezeigt.</p>
       ${favPicker('kid', s.nick || 'das Baby', 'Lieblingsfarbe vom Baby', 'Die Farbe vom Herz deines Babys, sichtbar bei den Namen unter jeder Überschrift.')}
       ${kidPhotoBlock()}
     </div>
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>`;
   bindPerson('mama'); bindName('#sm', 'mama'); bindPerson('kid');
   const bind = (id, key) => $(id).onchange = e => { s[key] = e.target.value.trim(); save(); cheer(); };
-  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); bind('#ss', 'secretName'); const eye = $('#ssEye'); if (eye) eye.onclick = () => { const f = $('#ss'), show = f.type === 'password'; f.type = show ? 'text' : 'password'; eye.setAttribute('aria-pressed', show); eye.innerHTML = bi(show ? 'eye-slash' : 'eye'); };
+  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); const saveSecret = () => { const f = $('#ss'); if (!f) return; const v = f.value.trim(); f.value = ''; if (!v) return; s.secretName = v; save(); cheer(); render(); };
+  /* Speichern-Knopf: grau und gesperrt, solange nichts eingegeben ist; sobald getippt wird, wird er aktiv und der Hinweis zeigt „Noch nicht gespeichert“ */
+  const ssHintText = $('#ssHint').textContent, ssBtn = $('#ssSave'), ssDirty = () => {
+    const dirty = !!$('#ss').value.trim(); ssBtn.disabled = !dirty; ssBtn.classList.toggle('btn-solid', dirty); ssBtn.classList.toggle('theme-primary', dirty); ssBtn.classList.toggle('btn-subtle', !dirty);
+    $('#ssHint').classList.toggle('dirty', dirty); $('#ssHint').textContent = dirty ? 'Noch nicht gespeichert – tippe auf „Speichern“.' : ssHintText; };
+  $('#ss').oninput = ssDirty; $('#ss').onchange = saveSecret; ssBtn.onclick = saveSecret;
+  const ssSwap = edit => { $('#ssSet').hidden = edit; $('#ssWrap').hidden = !edit; $('#ss').value = ''; if (edit) $('#ss').focus(); };
+  if ($('#ssChange')) { $('#ssChange').onclick = () => ssSwap(true); $('#ssCancel').onclick = () => { ssSwap(false); ssDirty(); }; }
+  const clr = $('#ssClear'); if (clr) clr.onclick = () => { if (!confirm('Geheimen Namen wirklich löschen?')) return; s.secretName = ''; save(); render(); };
   // Kosename: Kennzeichnung unter der Überschrift zieht beim Tippen sofort mit
   $('#sn').addEventListener('input', e => { s.nick = e.target.value.trim(); document.querySelectorAll('[data-kid]').forEach(n => { n.textContent = e.target.value.trim() || 'Baby'; }); });
 };

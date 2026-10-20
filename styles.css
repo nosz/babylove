@@ -864,7 +864,19 @@ body:not(.onboarding) #view > h1:first-child{position:sticky;top:calc(var(--topb
 
 .story-slide .st-hearts{display:inline-flex;vertical-align:middle;margin-right:4px;font-size:1.05em}
 
-.ss-wrap{display:flex;gap:8px;align-items:stretch}.ss-wrap input{flex:1;min-width:0}.ss-wrap .btn{flex:none;width:48px}
+.ss-set{display:flex;gap:10px;align-items:center;padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:var(--surface)}.ss-set .ss-ico{font-size:1.5rem;flex:none;line-height:1;color:var(--success,#3d7a52)}.ss-set .btn{flex:none}.ss-empty{margin-bottom:8px;border-style:dashed;border-color:#d9a441;background:color-mix(in srgb,#d9a441 12%,var(--surface))}.ss-empty .ss-ico{color:#b45309}
+.ss-wrap[hidden],.ss-set[hidden]{display:none}
+#ssSave{transition:background .2s,color .2s,box-shadow .2s,opacity .2s}#ssSave:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}#ssSave:not(:disabled){box-shadow:0 0 0 3px color-mix(in srgb,var(--bs-primary,#4e7a5c) 25%,transparent)}
+.secret-plate{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:12px;padding:12px 14px;border-radius:16px;border:2px dashed color-mix(in srgb,#c9a227 55%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,#c9a227 12%,var(--surface)),var(--surface))}
+.secret-plate .plate-lbl{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
+.secret-plate .plate-stars{display:flex;gap:6px;font-size:1.5rem;line-height:1;color:#c9a227;text-shadow:0 1px 6px color-mix(in srgb,#c9a227 45%,transparent)}
+.secret-plate .plate-stars span{display:inline-block;animation:plateTwinkle 2.4s ease-in-out infinite;animation-delay:calc(var(--i) * .22s)}
+.secret-plate .plate-ok{font-size:.78rem;font-weight:700;opacity:.7}
+.secret-plate.plate-empty{text-decoration:none;color:inherit;border-color:#d9a441;background:color-mix(in srgb,#d9a441 10%,var(--surface))}.secret-plate.plate-empty .plate-stars{color:#b45309;opacity:.7;text-shadow:none}.secret-plate.plate-empty .plate-stars span{animation:none}.secret-plate.plate-empty .plate-ok{opacity:1;color:#b45309}
+@keyframes plateTwinkle{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.secret-plate .plate-stars span{animation:none}}
+.ss-hint.dirty{color:#b45309;font-weight:700}
+.ss-wrap{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}.ss-wrap input#ss{flex:1 1 11em}.ss-wrap input{flex:1;min-width:0}.ss-wrap .btn{flex:none;width:48px}
 
 .aud-names{display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
 
