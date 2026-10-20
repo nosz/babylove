@@ -299,6 +299,9 @@ input:focus, textarea:focus, select:focus { border-color: var(--primary); outlin
 .brand-foot { text-align: center; margin: 28px 0 4px; font-size: .8rem; letter-spacing: .14em; color: var(--text-soft); }
 .brand-foot span { font-weight: 800; color: var(--primary-strong); }
 .brand-foot i { letter-spacing: .02em; font-weight: 600; }
+.creator-foot { text-align: center; margin: 2px 0 4px; font-size: .8rem; letter-spacing: .02em; font-weight: 600; font-style: italic; }
+.creator-foot a { color: var(--text-soft); text-decoration: none; }
+.creator-foot a:hover, .creator-foot a:focus-visible { color: var(--primary-strong); text-decoration: underline; }
 
 /* Rezepte */
 .chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; margin-bottom: 4px; scrollbar-width: none; }
