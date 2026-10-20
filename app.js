@@ -87,7 +87,7 @@ function toast(msg) {
 /* ---------- Speicher: Daten in localStorage, Bilder in IndexedDB (nur lokal) ---------- */
 const KEY = 'babylove:v1';
 const emptyState = () => ({
-  settings: { dueDate: '', nick: 'Krümel', secretName: '', mama: '', partner: '', theme: 'mauve', mode: 'auto' },
+  settings: { dueDate: '', nick: 'Krümel', secretName: '', noSecret: false, mama: '', partner: '', theme: 'mauve', mode: 'auto' },
   diary: [], photos: [], todos: DEFAULT_TODOS.map(text => ({ id: uid(), text, done: false })), appts: [],
   together: {}, letters: [], names: [], wishes: [], lists: {}, water: {}, waterGoal: 8, vits: [], vitLog: {}, contacts: [], pass: [], baby: [], sleepStart: null,
   milestones: MEILENSTEINE.map(([id, title, icon]) => ({ id, title, icon, date: '', note: '', photoId: null }))
@@ -374,8 +374,9 @@ routes.onboarding = () => {
       <p class="small ob-err" id="dueErr" role="alert" hidden></p>
       <div class="ob-grid"><div><label for="mama">Mama (optional)</label><input id="mama" autocomplete="given-name" placeholder="z. B. Anna" maxlength="30"></div>
         <div><label for="partner">Papa (optional)</label><input id="partner" placeholder="z. B. Max" maxlength="30"></div></div>
-      <label for="nick">Kosename fürs Baby</label>
-      <input id="nick" value="Krümel" maxlength="24">
+      <label for="nick">Name oder Kosename fürs Baby</label>
+      <input id="nick" value="Krümel" maxlength="24" aria-describedby="nickHint">
+      <p class="small soft" id="nickHint" style="margin-top:6px">Noch kein Name? Dann ein Kosename wie Krümel. Den echten Namen kannst du später geheim hinterlegen oder hier direkt eintragen.</p>
       <button class="btn btn-solid theme-primary w-100 ob-go">Los geht’s</button>
       <p class="small soft center mb-0">Den echten Namen später geheim hinterlegen.</p>
     </form>
@@ -452,7 +453,7 @@ const HOME_RENDER = {
       <button class="btn btn-subtle theme-secondary btn-sm" id="newPartnerMsg" aria-label="Neuer Spruch">${bi('arrow-repeat')}</button></div>
     <p class="mb-0 mt-1" id="partnerMsg">${esc(papaName(partnerMsgToday()))}</p></div>`,
   family: () => familyCard(),
-  secret: () => { const s = state.settings;
+  secret: () => { const s = state.settings; if (s.noSecret) return '';
     const stars = Array.from({ length: 8 }, (_, i) => `<span style="--i:${i}">★</span>`).join('');   /* feste Anzahl: verrät weder Name noch Länge */
     return `<div class="card secret-card" id="secretCard"><div class="hstack gap-3">${bi('lock-fill')}<div class="flex-grow-1"><b>Psst!</b> ${s.secretName ? `${nick()} ist nur der Kosename. Den echten Namen wissen bisher nur Mama und Papa.` : `${nick()} ist erst einmal nur der Kosename. Der echte Name ist noch nicht eingetragen.`}</div></div>
       ${s.secretName ? `<div class="secret-plate" id="secretSet" role="img" aria-label="Der echte Name ist gespeichert und bleibt geheim"><span class="plate-lbl">Der echte Name</span><span class="plate-stars" aria-hidden="true">${stars}</span><span class="plate-ok">${bi('lock-fill')} geheim gespeichert</span></div>`
@@ -959,17 +960,24 @@ routes.settings = () => {
     <h2>${duoHearts()} Gemeinsam</h2>
     <div class="card">
       <label for="sd">Errechneter Termin</label><input id="sd" type="date" value="${s.dueDate}" min="${iso(today())}" max="${iso(new Date(today().getTime() + DUE_MAX_DAYS * DAY))}">
-      <label for="sn">Kosename fürs Baby</label><input id="sn" value="${esc(s.nick)}" maxlength="24">
-      <label for="ss">Geheimer Name</label>${s.secretName ? `<div class="ss-set" id="ssSet"><span class="ss-ico" aria-hidden="true">${bi('check-circle-fill')}</span><div class="flex-grow-1"><b>Gespeichert</b><div class="small soft">${bi('lock-fill')} ••••••••</div></div><button type="button" class="btn btn-subtle" id="ssChange">Ändern</button><button type="button" class="btn btn-subtle" id="ssClear" aria-label="Geheimen Namen löschen">${bi('trash')}</button></div>` : `<div class="ss-set ss-empty" id="ssEmpty"><span class="ss-ico" aria-hidden="true">${bi('exclamation-circle-fill')}</span><div class="flex-grow-1"><b>Noch kein Name eingetragen</b><div class="small soft">Trag unten den echten Namen ein. Er bleibt geheim und wird nirgends angezeigt.</div></div></div>`}
-      <div class="ss-wrap" id="ssWrap"${s.secretName ? ' hidden' : ''}><input id="ss" type="password" value="" maxlength="40" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="${s.secretName ? 'Neuen Namen eingeben' : 'Nur Mama und Papa wissen’s'}"><button type="button" class="btn btn-subtle" id="ssSave" style="width:auto" disabled>${bi('check-lg')} Speichern</button>${s.secretName ? '<button type="button" class="btn btn-subtle" id="ssCancel" style="width:auto">Abbrechen</button>' : ''}</div>
-      <p class="small soft ss-hint" id="ssHint" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und nirgends angezeigt.</p>
+      <label id="ssLbl">Wie ist das mit dem Namen deines Babys?</label>
+      <div class="seg ss-seg" role="radiogroup" aria-labelledby="ssLbl"><button type="button" role="radio" id="ssNo" aria-checked="${!!s.noSecret}" class="${s.noSecret ? 'on' : ''}">${bi('emoji-smile')} Name ist bekannt</button><button type="button" role="radio" id="ssYes" aria-checked="${!s.noSecret}" class="${s.noSecret ? '' : 'on'}">${bi('lock-fill')} Name bleibt geheim</button></div>
+      <label for="sn">${s.noSecret ? 'Name des Babys' : 'Kosename (Spitzname)'}</label><input id="sn" value="${esc(s.nick)}" maxlength="24">
+      <p class="small soft" id="snHint" style="margin-top:6px">${s.noSecret ? 'So heißt dein Baby. Dieser Name wird in der App angezeigt.' : 'Ein Spitzname für die App, zum Beispiel Krümel. Er wird überall angezeigt. Der echte Name bleibt unten geheim.'}</p>
+      <div id="ssBlock"${s.noSecret ? ' hidden' : ''}>
+      <label for="ss">Echter Name (geheim)</label>${s.secretName ? `<div class="ss-set" id="ssSet"><span class="ss-ico" aria-hidden="true">${bi('check-circle-fill')}</span><div class="flex-grow-1"><b>Gespeichert</b><div class="small soft">${bi('lock-fill')} ••••••••</div></div><button type="button" class="btn btn-subtle" id="ssChange">Ändern</button><button type="button" class="btn btn-subtle" id="ssClear" aria-label="Geheimen Namen löschen">${bi('trash')}</button></div>` : `<div class="ss-set ss-empty" id="ssEmpty"><span class="ss-ico" aria-hidden="true">${bi('exclamation-circle-fill')}</span><div class="flex-grow-1"><b>Noch kein Name eingetragen</b><div class="small soft">Trag unten den echten Namen ein. Er bleibt geheim und wird nirgends angezeigt.</div></div></div>`}
+      <div class="ss-wrap" id="ssWrap"${s.secretName || s.noSecret ? ' hidden' : ''}><input id="ss" type="password" value="" maxlength="40" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="${s.secretName ? 'Neuen Namen eingeben' : 'Nur Mama und Papa wissen’s'}"><button type="button" class="btn btn-subtle" id="ssSave" style="width:auto" disabled>${bi('check-lg')} Speichern</button>${s.secretName ? '<button type="button" class="btn btn-subtle" id="ssCancel" style="width:auto">Abbrechen</button>' : ''}</div>
+      <p class="small soft ss-hint" id="ssHint" style="margin-top:6px">Wird nie geteilt, nie hochgeladen und nirgends angezeigt.</p></div>
       ${favPicker('kid', s.nick || 'das Baby', 'Lieblingsfarbe vom Baby', 'Die Farbe vom Herz deines Babys, sichtbar bei den Namen unter jeder Überschrift.')}
       ${kidPhotoBlock()}
     </div>
     <p class="small soft center">BABYLOVE ersetzt keine ärztliche oder Hebammen-Beratung. Bei Beschwerden: Frauenarzt oder Hebamme fragen, im Notfall 112.</p>`;
   bindPerson('mama'); bindName('#sm', 'mama'); bindPerson('kid');
   const bind = (id, key) => $(id).onchange = e => { s[key] = e.target.value.trim(); save(); cheer(); };
-  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); const saveSecret = () => { const f = $('#ss'); if (!f) return; const v = f.value.trim(); f.value = ''; if (!v) return; s.secretName = v; save(); cheer(); render(); };
+  $('#sd').onchange = e => { const err = dueError(e.target.value); if (err) { e.target.value = s.dueDate; toast(err); return; } s.dueDate = e.target.value; save(); cheer(); }; bind('#sn', 'nick'); const saveSecret = () => { const f = $('#ss'); if (!f) return; const v = f.value.trim(); f.value = ''; if (!v) return; s.secretName = v; s.noSecret = false; save(); cheer(); render(); };
+  /* „Kein geheimer Name“: blendet die Karte auf der Startseite aus; ein gespeicherter Name wird dabei (nach Rückfrage) gelöscht */
+  $('#ssYes').onclick = () => { if (!s.noSecret) return; s.noSecret = false; save(); render(); };
+  $('#ssNo').onclick = () => { if (s.noSecret) return; if (s.secretName && !confirm('Der gespeicherte geheime Name wird gelöscht. Der Name oben gilt dann als der richtige Name. Fortfahren?')) return; s.secretName = ''; s.noSecret = true; save(); render(); };
   /* Speichern-Knopf: grau und gesperrt, solange nichts eingegeben ist; sobald getippt wird, wird er aktiv und der Hinweis zeigt „Noch nicht gespeichert“ */
   const ssHintText = $('#ssHint').textContent, ssBtn = $('#ssSave'), ssDirty = () => {
     const dirty = !!$('#ss').value.trim(); ssBtn.disabled = !dirty; ssBtn.classList.toggle('btn-solid', dirty); ssBtn.classList.toggle('theme-primary', dirty); ssBtn.classList.toggle('btn-subtle', !dirty);

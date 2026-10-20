@@ -45,7 +45,8 @@ const WISH_LINES = ['Wir freuen uns riesig auf dich und das Baby!', 'Du machst u
 const WISH_DEFAULT = { to: '', count: 3, tone: 'humor', child: 'nick', message: '', sel: [] };
 const wishCfg = () => Object.assign({}, WISH_DEFAULT, state.settings.wishPrint || {});
 const saveWishCfg = c => { state.settings.wishPrint = c; save(); };
-const childLabel = c => c.child === 'nick' ? (state.settings.nick || '') : '';
+const kidNote = () => state.settings.noSecret ? '' : ' (Kosename)';
+const childLabel =c => c.child === 'nick' ? (state.settings.nick || '') : '';
 
 // Nachricht zum Versenden (Text für Teilen, E-Mail, WhatsApp): gleicher Inhalt wie der Zettel, mit Humor und klarer Bitte
 function wishMessage(cfg) {
@@ -104,7 +105,7 @@ EXTRA_ROUTES.wishprint = () => {
       <label class="keep form-label">Tonfall</label>
       <div class="seg" style="margin:0">${Object.entries(WISH_TONES).map(([k, t]) => `<button data-tone="${k}" class="${cfg.tone === k ? 'on' : ''}">${t.label}</button>`).join('')}</div>
       <label class="keep form-label">Name des Kindes auf dem Zettel</label>
-      <div class="seg" style="margin:0"><button data-child="none" class="${cfg.child === 'none' ? 'on' : ''}">Kein Name</button><button data-child="nick" class="${cfg.child === 'nick' ? 'on' : ''}">Kosename${state.settings.nick ? ' (' + esc(state.settings.nick) + ')' : ''}</button></div>
+      <div class="seg" style="margin:0"><button data-child="none" class="${cfg.child === 'none' ? 'on' : ''}">Kein Name</button><button data-child="nick" class="${cfg.child === 'nick' ? 'on' : ''}">${state.settings.noSecret ? 'Name' : 'Kosename'}${state.settings.nick ? ' (' + esc(state.settings.nick) + ')' : ''}</button></div>
       <label for="wp-msg">Persönliche Zeile (optional)</label><textarea id="wp-msg" maxlength="240" style="min-height:70px" placeholder="z. B. Wir freuen uns auf Sonntag bei euch!">${esc(cfg.message)}</textarea>
       <div class="hstack gap-2 flex-wrap mt-2"><button type="button" class="btn btn-subtle theme-secondary" id="wsLine">${bi('magic')} Zeile vorschlagen</button><button type="button" class="btn btn-subtle theme-secondary" id="wsShuffle">${bi('shuffle')} Andere Texte</button></div>
       <button class="btn btn-subtle theme-secondary mt-2" id="doAssign">${bi('person-check')} Nur zuweisen, ohne zu verschicken</button>
@@ -210,7 +211,7 @@ function diaryPrintPage(who) {
     <div class="card">
       <label for="dp-title">Titel</label><input id="dp-title" value="${esc(cfg.title)}" maxlength="60">
       <div class="hstack gap-2"><div class="flex-grow-1"><label for="dp-from">Von</label><input id="dp-from" type="date" value="${cfg.from}"></div><div class="flex-grow-1"><label for="dp-to">Bis</label><input id="dp-to" type="date" value="${cfg.to}"></div></div>
-      ${check('dp-cover', 'Deckblatt', cfg.cover)}${check('dp-toc', 'Inhaltsverzeichnis (ab zwei Monaten)', cfg.toc)}${check('dp-photos', 'Fotos mit drucken', cfg.photos)}${check('dp-mood', 'Stimmung anzeigen', cfg.mood)}${check('dp-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('dp-kid', 'Namen des Kindes nennen (Kosename)', cfg.kid)}
+      ${check('dp-cover', 'Deckblatt', cfg.cover)}${check('dp-toc', 'Inhaltsverzeichnis (ab zwei Monaten)', cfg.toc)}${check('dp-photos', 'Fotos mit drucken', cfg.photos)}${check('dp-mood', 'Stimmung anzeigen', cfg.mood)}${check('dp-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('dp-kid', 'Namen des Kindes nennen' + kidNote(), cfg.kid)}
       <p class="small soft mt-2 mb-0" id="dp-count"></p></div>
     <h2>Drucken</h2>
     <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-solid theme-primary" id="dp-print">${bi('printer')} Drucken oder als PDF speichern</button></div>
@@ -279,7 +280,7 @@ EXTRA_ROUTES.lettersprint = () => {
     <div class="card">
       <label for="lp-title">Titel</label><input id="lp-title" value="${esc(cfg.title)}" maxlength="60" placeholder="${esc(lettersTitle({ title: '' }))}">
       <div class="hstack gap-2"><div class="flex-grow-1"><label for="lp-from">Von</label><input id="lp-from" type="date" value="${cfg.from}"></div><div class="flex-grow-1"><label for="lp-to">Bis</label><input id="lp-to" type="date" value="${cfg.to}"></div></div>
-      ${check('lp-cover', 'Deckblatt', cfg.cover)}${check('lp-toc', 'Inhaltsverzeichnis (ab vier Briefen)', cfg.toc)}${check('lp-week', 'Schwangerschaftswoche anzeigen', cfg.week)}${check('lp-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('lp-kid', 'Namen des Kindes nennen (Kosename)', cfg.kid)}${check('lp-audio', 'Sprachnachrichten berücksichtigen', cfg.audio)}${check('lp-newest', 'Neueste Briefe zuerst', cfg.newest)}
+      ${check('lp-cover', 'Deckblatt', cfg.cover)}${check('lp-toc', 'Inhaltsverzeichnis (ab vier Briefen)', cfg.toc)}${check('lp-week', 'Schwangerschaftswoche anzeigen', cfg.week)}${check('lp-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('lp-kid', 'Namen des Kindes nennen' + kidNote(), cfg.kid)}${check('lp-audio', 'Sprachnachrichten berücksichtigen', cfg.audio)}${check('lp-newest', 'Neueste Briefe zuerst', cfg.newest)}
       <p class="small soft mt-2 mb-0" id="lp-count"></p></div>
     <h2>Drucken</h2>
     <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-solid theme-primary" id="lp-print">${bi('printer')} Drucken oder als PDF speichern</button></div>
@@ -342,7 +343,7 @@ EXTRA_ROUTES.wishlistprint = () => {
   view.innerHTML = `<div class="no-print">${intro('Wunschliste als Vorschau und Export', 'Eure ganze Wunschliste als schönes Dokument: mit Deckblatt, Nummern und Hinweisen, wer was übernimmt. Drucken, als PDF speichern oder verschicken. Für den kleinen Zettel an eine Person gibt es den Wunschzettel.')}
     <div class="card">
       <label for="wl-title">Titel</label><input id="wl-title" value="${esc(cfg.title)}" maxlength="60" placeholder="Unsere Wunschliste">
-      ${check('wl-cover', 'Deckblatt', cfg.cover)}${check('wl-links', 'Links anzeigen', cfg.links)}${check('wl-got', 'Erfüllte Wünsche anzeigen', cfg.got)}${check('wl-group', 'Nach Personen sortieren (wer übernimmt was)', cfg.group)}${check('wl-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('wl-kid', 'Namen des Kindes nennen (Kosename)', cfg.kid)}
+      ${check('wl-cover', 'Deckblatt', cfg.cover)}${check('wl-links', 'Links anzeigen', cfg.links)}${check('wl-got', 'Erfüllte Wünsche anzeigen', cfg.got)}${check('wl-group', 'Nach Personen sortieren (wer übernimmt was)', cfg.group)}${check('wl-names', 'Namen von Mama und Papa nennen', cfg.names)}${check('wl-kid', 'Namen des Kindes nennen' + kidNote(), cfg.kid)}
       <p class="small soft mt-2 mb-0" id="wl-count"></p></div>
     <h2>Drucken</h2>
     <div class="hstack gap-2 flex-wrap mb-2"><button class="btn btn-solid theme-primary" id="wl-print">${bi('printer')} Drucken oder als PDF speichern</button><a class="btn btn-subtle theme-secondary" href="#/wishprint">${bi('gift')} Wunschzettel für eine Person</a></div>
@@ -374,7 +375,7 @@ const yn = v => v ? 'ja' : 'nein';
 function exportTable(area, opt = {}) {
   const s = state.settings, ssw = d => { const w = weekFor(d); return w === null ? '' : w; };
   switch (area) {
-    case 'profil': { const rows = [['Mama', s.mama || ''], ['Papa', s.partner || ''], ['Kosename des Kindes', s.nick || ''], ['Errechneter Termin', s.dueDate || '']]; return { head: ['Feld', 'Wert'], rows }; }
+    case 'profil': { const rows = [['Mama', s.mama || ''], ['Papa', s.partner || ''], [s.noSecret ? 'Name des Kindes' : 'Kosename des Kindes', s.nick || ''], ['Errechneter Termin', s.dueDate || '']]; return { head: ['Feld', 'Wert'], rows }; }
     case 'diary': { const l = byDate(state.diary); return { head: ['Datum', 'SSW', 'Stimmung', 'Von', 'Text'], rows: l.map(d => [d.date, ssw(d.date), MOOD_LABEL[d.mood] || '', d.by ? authorName(d.by) : '', d.text || '']), imgs: l.map(d => d.photoId || null) }; }
     case 'photos': { const l = byDate(state.photos); return { head: ['Datum', 'SSW', 'Beschriftung'], rows: l.map(p => [p.date, ssw(p.date), p.caption || '']), imgs: l.map(p => p.photoId || null) }; }
     case 'letters': return { head: ['Datum', 'Text', 'Sprachnachricht'], rows: byDate(state.letters).map(l => [l.date, l.text || '', yn(l.audioId)]) };

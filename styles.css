@@ -865,6 +865,9 @@ body:not(.onboarding) #view > h1:first-child{position:sticky;top:calc(var(--topb
 .story-slide .st-hearts{display:inline-flex;vertical-align:middle;margin-right:4px;font-size:1.05em}
 
 .ss-set{display:flex;gap:10px;align-items:center;padding:10px 12px;border:2px solid var(--line);border-radius:14px;background:var(--surface)}.ss-set .ss-ico{font-size:1.5rem;flex:none;line-height:1;color:var(--success,#3d7a52)}.ss-set .btn{flex:none}.ss-empty{margin-bottom:8px;border-style:dashed;border-color:#d9a441;background:color-mix(in srgb,#d9a441 12%,var(--surface))}.ss-empty .ss-ico{color:#b45309}
+.ss-seg{margin:0 0 8px}.ss-seg button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
+.ss-off{border-style:solid;background:color-mix(in srgb,var(--text,#444) 5%,var(--surface))}.ss-off .ss-ico{color:var(--text,#555);opacity:.6}
+#ssBlock[hidden],.ss-hint[hidden]{display:none}
 .ss-wrap[hidden],.ss-set[hidden]{display:none}
 #ssSave{transition:background .2s,color .2s,box-shadow .2s,opacity .2s}#ssSave:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}#ssSave:not(:disabled){box-shadow:0 0 0 3px color-mix(in srgb,var(--bs-primary,#4e7a5c) 25%,transparent)}
 .secret-plate{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:12px;padding:12px 14px;border-radius:16px;border:2px dashed color-mix(in srgb,#c9a227 55%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,#c9a227 12%,var(--surface)),var(--surface))}
