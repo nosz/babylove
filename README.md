@@ -27,4 +27,4 @@ Kostenlos, ohne Konto, läuft im Browser auf Handy, Tablet und Computer und läs
 - Notrufnummern und Anlaufstellen ohne Gewähr; bitte für deine Region prüfen.
 - Deine Daten liegen nur auf deinem Gerät. Mit der Datensicherung nimmst du sie auf ein neues Handy mit.
 
-**BABYLOVE by Sarah** · Version 2.8.8 (23.10.2026)
+**BABYLOVE by Sarah** · Version 2.8.9 (23.10.2026)
