@@ -53,6 +53,7 @@ Ordner über einen beliebigen lokalen Webserver bereitstellen (zum Beispiel `htt
 - Notrufnummern und Anlaufstellen ohne Gewähr, bitte vor Veröffentlichung für eure Region prüfen.
 
 ## Änderungen
+- 2.8.10 (23.10.2026): **Autoren-Knopf** mit deutlichem Link-Symbol, Symbol für externe Seite und sichtbarer Adresse. Version angehoben.
 - 2.8.9 (23.10.2026): Autoren-Hinweis im Fuß als auffälliger Knopf überarbeitet (ganzer Text ist der Link auf https://nosz.github.io/norbert-szpak/); Version angehoben, alle Tests und die Link-Pflicht-Prüfung erneut.
 - 2.8.8 (23.10.2026): Ganz unten steht jetzt „Website Design by Norbert“ statt „Created by Norbert“ (auffälliger Knopf unter der Version, der ganze Text ist der Link auf https://nosz.github.io/norbert-szpak/).
 - 2.8.7 (20.10.2026): Ganz unten unter dem Markenfuß neue Zeile „Created by Norbert“ im gleichen Stil; der Link öffnet https://nosz.github.io/norbert-szpak in einem neuen Tab. Wird nicht gedruckt.
