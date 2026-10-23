@@ -53,6 +53,7 @@ Ordner über einen beliebigen lokalen Webserver bereitstellen (zum Beispiel `htt
 - Notrufnummern und Anlaufstellen ohne Gewähr, bitte vor Veröffentlichung für eure Region prüfen.
 
 ## Änderungen
+- 2.8.8 (23.10.2026): Ganz unten steht jetzt „Website Design by Norbert“ statt „Created by Norbert“ (gleicher Stil, gleicher Link).
 - 2.8.7 (20.10.2026): Ganz unten unter dem Markenfuß neue Zeile „Created by Norbert“ im gleichen Stil; der Link öffnet https://nosz.github.io/norbert-szpak in einem neuen Tab. Wird nicht gedruckt.
 - 2.8.6 (20.10.2026): Namensbereich eindeutig: ganz oben die Frage „Wie ist das mit dem Namen deines Babys?“ mit „Name ist bekannt“ / „Name bleibt geheim“; Feldbeschriftungen („Name des Babys“ oder „Kosename (Spitzname)“ plus „Echter Name (geheim)“) und Hinweistexte passen sich an, Onboarding-Feld „Name oder Kosename fürs Baby“, Druck und Export sagen „Name“, wenn er bekannt ist.
 - 2.8.5 (20.10.2026): Geheimer Name optional: Auswahl „Name ist bekannt“ / „Name bleibt geheim“ ganz oben im Namensbereich der Einstellungen (Einstellung `noSecret`); bei „bekannt“ heißt das Feld „Name des Babys“, bei „geheim“ „Kosename (Spitzname)“ plus „Echter Name (geheim)“. Onboarding-Feld „Name oder Kosename fürs Baby“; Druck und Export sagen „Name“ statt „Kosename“, wenn der Name bekannt ist. Bei „Kein geheimer Name“ wird die Karte „Psst!“ auf der Startseite ausgeblendet, ein gespeicherter Name wird nach Rückfrage gelöscht; jederzeit umstellbar.

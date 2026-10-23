@@ -1399,7 +1399,7 @@ function render() {
   const backTo = BACK[key] ? BACK[key] : SETTINGS_SUB.has(key) ? ['#/einstellungen', 'Einstellungen'] : SUBPAGES.has(key) ? (cameFromHome ? ['#/', 'Startseite'] : ['#/more', 'Schatzkiste']) : null;
   if (backTo) view.insertAdjacentHTML('afterbegin', `<div class="back-row no-print"><a href="#/" class="back-home" aria-label="Zur Startseite" title="Zur Startseite">${bi('house-heart-fill')}</a><a href="${backTo[0]}" class="back" aria-label="Zurück zu ${backTo[1]}">${bi('arrow-left-circle-fill')} Zurück zu ${backTo[1]}</a></div>`);
   if (backTo) view.insertAdjacentHTML('beforeend', `<div class="back-foot no-print"><a href="${backTo[0]}" class="back-bottom">${bi('arrow-left')} Zurück zu ${backTo[1]}</a></div>`);
-  view.insertAdjacentHTML('beforeend', `<div class="brand-foot"><span data-brand-name>${esc(brandName())}</span> <i data-brand-by>${esc(brandSub())}</i></div><div class="creator-foot no-print"><a href="https://nosz.github.io/norbert-szpak" target="_blank" rel="noopener noreferrer">Created by Norbert</a></div>`);
+  view.insertAdjacentHTML('beforeend', `<div class="brand-foot"><span data-brand-name>${esc(brandName())}</span> <i data-brand-by>${esc(brandSub())}</i></div><div class="creator-foot no-print"><a href="https://nosz.github.io/norbert-szpak" target="_blank" rel="noopener noreferrer">Website Design by Norbert</a></div>`);
   enhance(view);
   if (typeof applySearchMark === 'function') applySearchMark(key);
   hydrateImages();
